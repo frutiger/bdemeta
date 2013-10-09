@@ -8,7 +8,9 @@ def resolve_group(group):
         candidate = os.path.join(root, 'groups', group)
         if os.path.isdir(candidate):
             return candidate
-    raise RuntimeError(group + ' not found in roots')
+    raise RuntimeError('"' + group + '" not found in roots. Set the ROOTS ' +
+                       'environment variable to a colon-separated set of ' +
+                       'paths pointing to a set of BDE-style source roots.')
 
 def get_items(items_file):
     items = []
