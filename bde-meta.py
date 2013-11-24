@@ -101,7 +101,7 @@ def print_group_targets(group):
     components = get_group_components(group)
     objects    = ' '.join(c['object'] for c in components.values())
 
-    print('''{lib}: {objects}
+    print('''{lib}: {objects} | out/libs
 	ar -qs {lib} {objects}
 '''.format(lib=lib, objects=objects))
 
