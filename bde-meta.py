@@ -103,13 +103,13 @@ def main():
                 }
         objects = ' '.join(c['object'] for c in components.values())
 
-        print('''{lib}: out/libs {objects}
+        print('''{lib}: {objects} | out/libs
 	ar -qs {lib} {objects}
 '''.format(lib=lib, objects=objects))
 
         for c in components.values():
-            print('''{obj}: out/objs
-	$(CXX) -c -Dunix {includes} {cpp} -o {obj}
+            print('''{obj}: | out/objs
+	$(CXX) -c {includes} {cpp} -o {obj}
 '''.format(obj=c['object'], cpp=c['cpp'], includes=c['includes']))
 
         print('''out/libs:
