@@ -3,8 +3,9 @@ bde-meta(1) -- a script to assist building 'BDE' style code on Unix
 
 ## SYNOPSIS
 
-`bde-meta cflags <group>`    
-`bde-meta mkmk <group>`
+`bde-meta cflags <group>`<br/>
+`bde-meta mkmk <group>`<br/>
+`bde-meta deps <group>`
 
 ## DESCRIPTION
 
@@ -27,6 +28,10 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a makefile that will build a statically linked library for the
     specified `<group>`.
 
+  * `deps <group>`:
+    Print the list of dependencies of the specified `<group>` in topologically
+    sorted order.
+
 ## ROOTS
 <a name="roots"></a>
 
@@ -38,10 +43,10 @@ across multiple BDE-style repositories, including your own.
 
 The following examples are shown as given to the shell:
 
-`make -f <(bde-meta mkmk bsl)`    
+`make -f <(bde-meta mkmk bsl)`<br/>
 Build `out/lib/libbsl.a`.
 
-`g++ $(bde-meta cflags bsl) -Lout/lib -lbsl m.cpp`    
+`g++ $(bde-meta cflags bsl) -Lout/lib -lbsl m.cpp`<br/>
 Build `m.cpp`, linking against `bsl`.
 
 ## SEE ALSO

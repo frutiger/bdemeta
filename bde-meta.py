@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import argparse
 import os
 
@@ -66,16 +67,35 @@ def package_dependencies(group, package):
 def package_path(group, package):
     return os.path.join(resolve_group(group), package)
 
+def tsort(name, dependencies):
+    tsorted = []
+    nodes   = {}
+
+    def visit(node):
+        if node['mark'] == 'temporary':
+            raise RuntimeError('cyclic graph')
+        if node['mark'] == 'none':
+            node['mark'] = 'temporary'
+            for child in dependencies(node['name']):
+                if child not in nodes:
+                    nodes[child] = {'mark': 'none', 'name': child}
+                visit(nodes[child])
+            node['mark'] = 'permanent'
+            tsorted.insert(0, node['name'])
+    visit({'mark': 'none', 'name': name})
+
+    return tsorted
+
 def main():
     parser = argparse.ArgumentParser();
-    parser.add_argument('action', choices={'cflags', 'mkmk'})
+    parser.add_argument('action', choices={'cflags', 'mkmk', 'deps'})
     parser.add_argument('group', type=str)
     args = parser.parse_args()
 
     group = args.group
     if args.action == 'cflags':
         paths = []
-        for g in set([group]) | group_dependencies(group):
+        for g in tsort(group, group_dependencies):
             for p in group_members(g):
                 paths.append(package_path(g, p))
         print(' '.join(['-I' + path for path in paths]))
@@ -83,10 +103,10 @@ def main():
         components = {}
         for package in group_members(group):
             paths = []
-            for g in group_dependencies(group):
+            for g in tsort(group, group_dependencies)[1:]:
                 for p in group_members(g):
                     paths.append(package_path(g, p))
-            for p in set([package]) | package_dependencies(group, package):
+            for p in tsort(package, lambda p: package_dependencies(group, p)):
                 paths.append(package_path(group, p))
 
             for c in package_members(group, package):
@@ -115,6 +135,10 @@ def main():
         print('''out/objs:
 	mkdir -p out/objs
 ''')
+    elif args.action == 'deps':
+        print(' '.join(tsort(group, group_dependencies)))
+    else:
+        raise RuntimeError('Unknown action: ' + args.action)
 
 if __name__ == '__main__':
     main()
