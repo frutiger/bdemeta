@@ -68,13 +68,13 @@ def get_group_includes(groups):
     for g in groups:
         for p in get_packages(g):
             incs.append('-I' + os.path.join(resolve_group(g), p))
-    return ' '.join(incs)
+    return incs
 
 def get_package_includes(group, packages):
     incs = []
     for p in packages:
         incs.append('-I' + os.path.join(resolve_group(group), p))
-    return ' '.join(incs)
+    return incs
 
 def main():
     parser = argparse.ArgumentParser();
@@ -84,28 +84,26 @@ def main():
 
     group = args.group
     if args.action == 'cflags':
-        print(get_group_includes(
-            set([group]) | get_group_dependencies(group)))
+        print(' '.join(get_group_includes(
+            set([group]) | get_group_dependencies(group))))
     elif args.action == 'mkmk':
-        lib = os.path.join('out', 'libs', 'lib{}.a'.format(group))
-        group_includes = get_group_includes(get_group_dependencies(group))
-
         components = {}
         for p in get_packages(group):
-            includes = group_includes + ' ' + get_package_includes(group,
-                    set([p]) | get_package_dependencies(group, p))
-            cs = get_components(group, p)
-            for c in cs:
+            includes = ' '.join(\
+                    get_group_includes(get_group_dependencies(group)) +
+                    get_package_includes(group,
+                        set([p]) | get_package_dependencies(group, p)))
+            for c in get_components(group, p):
                 components[c] = {
                     'cpp': os.path.join(resolve_group(group), p, c + '.cpp'),
                     'object': os.path.join('out', 'objs', c + '.o'),
                     'includes': includes,
                 }
-        objects = ' '.join(c['object'] for c in components.values())
 
         print('''{lib}: {objects} | out/libs
 	ar -qs {lib} {objects}
-'''.format(lib=lib, objects=objects))
+'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)), \
+           objects=' '.join(c['object'] for c in components.values())))
 
         for c in components.values():
             print('''{obj}: | out/objs
