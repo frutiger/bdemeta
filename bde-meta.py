@@ -19,14 +19,14 @@ def get_items(items_file):
             items = items + l.split()
     return items
 
-def get_packages(group):
+def group_members(group):
     packages_filename = os.path.join( resolve_group(group),
                                      'group',
                                       group + '.mem')
     with open(packages_filename) as packages_file:
         return get_items(packages_file)
 
-def get_components(group, package):
+def package_members(group, package):
     components_filename = os.path.join( resolve_group(group),
                                         package,
                                        'package',
@@ -34,7 +34,7 @@ def get_components(group, package):
     with open(components_filename) as components_file:
         return get_items(components_file)
 
-def get_group_dependencies(group):
+def group_dependencies(group):
     dependencies_filename = os.path.join( resolve_group(group),
                                          'group',
                                           group + '.dep')
@@ -46,9 +46,9 @@ def get_group_dependencies(group):
     else:
         return items | reduce(\
                 lambda x, y: x | y,
-                [get_group_dependencies(i) for i in items])
+                [group_dependencies(i) for i in items])
 
-def get_package_dependencies(group, package):
+def package_dependencies(group, package):
     dependencies_filename = os.path.join( resolve_group(group),
                                           package,
                                          'package',
@@ -61,20 +61,10 @@ def get_package_dependencies(group, package):
     else:
         return items | reduce(\
                 lambda x, y: x | y,
-                [get_package_dependencies(group, i) for i in items])
+                [package_dependencies(group, i) for i in items])
 
-def get_group_includes(groups):
-    incs = []
-    for g in groups:
-        for p in get_packages(g):
-            incs.append('-I' + os.path.join(resolve_group(g), p))
-    return incs
-
-def get_package_includes(group, packages):
-    incs = []
-    for p in packages:
-        incs.append('-I' + os.path.join(resolve_group(group), p))
-    return incs
+def package_path(group, package):
+    return os.path.join(resolve_group(group), package)
 
 def main():
     parser = argparse.ArgumentParser();
@@ -84,31 +74,39 @@ def main():
 
     group = args.group
     if args.action == 'cflags':
-        print(' '.join(get_group_includes(
-            set([group]) | get_group_dependencies(group))))
+        paths = []
+        for g in set([group]) | group_dependencies(group):
+            for p in group_members(g):
+                paths.append(package_path(g, p))
+        print(' '.join(['-I' + path for path in paths]))
     elif args.action == 'mkmk':
         components = {}
-        for p in get_packages(group):
-            includes = ' '.join(\
-                    get_group_includes(get_group_dependencies(group)) +
-                    get_package_includes(group,
-                        set([p]) | get_package_dependencies(group, p)))
-            for c in get_components(group, p):
+        for package in group_members(group):
+            paths = []
+            for g in group_dependencies(group):
+                for p in group_members(g):
+                    paths.append(package_path(g, p))
+            for p in set([package]) | package_dependencies(group, package):
+                paths.append(package_path(group, p))
+
+            for c in package_members(group, package):
                 components[c] = {
-                    'cpp': os.path.join(resolve_group(group), p, c + '.cpp'),
+                    'cpp': os.path.join(resolve_group(group), package, c + '.cpp'),
                     'object': os.path.join('out', 'objs', c + '.o'),
-                    'includes': includes,
+                    'includes': ' '.join(['-I' + path for path in paths]),
                 }
 
         print('''{lib}: {objects} | out/libs
 	ar -qs {lib} {objects}
-'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)), \
+'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
            objects=' '.join(c['object'] for c in components.values())))
 
-        for c in components.values():
+        for component in components.values():
             print('''{obj}: | out/objs
 	$(CXX) -c {includes} {cpp} -o {obj}
-'''.format(obj=c['object'], cpp=c['cpp'], includes=c['includes']))
+'''.format(obj=component['object'],
+           cpp=component['cpp'],
+           includes=component['includes']))
 
         print('''out/libs:
 	mkdir -p out/libs
