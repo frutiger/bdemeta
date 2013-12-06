@@ -133,10 +133,13 @@ def main():
     group = args.group
     if args.action == 'cflags':
         paths = []
+        deps  = tsort(group, group_dependencies)
         for g in tsort(group, group_dependencies):
             for p in group_members(g):
                 paths.append(package_path(g, p))
-        print(' '.join(['-I' + path for path in paths]))
+        print(' '.join(['-I' + path for path in paths] +
+                       ['-Lout/libs'] +
+                       ['-l' + dep for dep in deps]))
     elif args.action == 'mkmk':
         lib      = group_library(group)
         deps     = get_group_dependencies(group)
