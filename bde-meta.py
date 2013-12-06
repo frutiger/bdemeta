@@ -119,7 +119,7 @@ def print_group_targets(group):
 
     for component in components.values():
         print('''{obj}: | out/objs
-	$(CXX) -c {includes} {cpp} -o {obj}
+	$(CXX) $(CXXFLAGS) -c {includes} {cpp} -o {obj}
 '''.format(obj=component['object'],
            cpp=component['cpp'],
            includes=component['includes']))
@@ -142,7 +142,7 @@ def main():
                        ['-l' + dep for dep in deps]))
     elif args.action == 'mkmk':
         lib      = group_library(group)
-        deps     = get_group_dependencies(group)
+        deps     = group_dependencies(group)
         dep_libs = (group_library(g) for g in deps)
 
         components = group_components(group)
