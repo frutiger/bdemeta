@@ -45,8 +45,8 @@ The following examples are shown as given to the shell:
 `make -f <(bde-meta mkmk bsl)`<br/>
 Build `out/lib/libbsl.a`.
 
-`g++ $(bde-meta cflags bsl) -Lout/lib -lbsl m.cpp`<br/>
-Build `m.cpp`, linking against `bsl`.
+`g++ m.cpp $(bde-meta cflags bsl)`<br/>
+Build `m.cpp`, linking against `bsl` and any of its dependencies.
 
 ### SEE ALSO
 
