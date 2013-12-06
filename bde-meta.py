@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 from __future__ import print_function
 import argparse
@@ -86,6 +86,44 @@ def tsort(name, dependencies):
 
     return tsorted
 
+def group_library(group):
+    return os.path.join('out', 'libs', 'lib{}.a'.format(group))
+
+def group_components(group):
+    components = {}
+    for package in group_members(group):
+        paths = []
+        for g in tsort(group, group_dependencies)[1:]:
+            for p in group_members(g):
+                paths.append(package_path(g, p))
+        for p in tsort(package, lambda p: package_dependencies(group, p)):
+            paths.append(package_path(group, p))
+
+        for c in package_members(group, package):
+            components[c] = {
+                'cpp': os.path.join(resolve_group(group), package, c + '.cpp'),
+                'object': os.path.join('out', 'objs', c + '.o'),
+                'includes': ' '.join(['-I' + path for path in paths]),
+            }
+    return components
+
+def print_group_targets(group):
+    lib        = group_library(group)
+    components = group_components(group)
+    objects    = ' '.join(c['object'] for c in components.values())
+
+    print('''{lib}: {objects} | out/libs
+	ar -qs {lib} {objects}
+'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
+           objects=' '.join(c['object'] for c in components.values())))
+
+    for component in components.values():
+        print('''{obj}: | out/objs
+	$(CXX) $(CXXFLAGS) -c {includes} {cpp} -o {obj}
+'''.format(obj=component['object'],
+           cpp=component['cpp'],
+           includes=component['includes']))
+
 def main():
     parser = argparse.ArgumentParser();
     parser.add_argument('action', choices={'cflags', 'mkmk', 'deps'})
@@ -95,38 +133,32 @@ def main():
     group = args.group
     if args.action == 'cflags':
         paths = []
+        deps  = tsort(group, group_dependencies)
         for g in tsort(group, group_dependencies):
             for p in group_members(g):
                 paths.append(package_path(g, p))
-        print(' '.join(['-I' + path for path in paths]))
+        print(' '.join(['-I' + path for path in paths] +
+                       ['-Lout/libs'] +
+                       ['-l' + dep for dep in deps]))
     elif args.action == 'mkmk':
-        components = {}
-        for package in group_members(group):
-            paths = []
-            for g in tsort(group, group_dependencies)[1:]:
-                for p in group_members(g):
-                    paths.append(package_path(g, p))
-            for p in tsort(package, lambda p: package_dependencies(group, p)):
-                paths.append(package_path(group, p))
+        lib      = group_library(group)
+        deps     = group_dependencies(group)
+        dep_libs = (group_library(g) for g in deps)
 
-            for c in package_members(group, package):
-                components[c] = {
-                    'cpp': os.path.join(resolve_group(group), package, c + '.cpp'),
-                    'object': os.path.join('out', 'objs', c + '.o'),
-                    'includes': ' '.join(['-I' + path for path in paths]),
-                }
+        components = group_components(group)
+        objects = ' '.join(c['object'] for c in components.values())
 
-        print('''{lib}: {objects} | out/libs
-	ar -qs {lib} {objects}
-'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
-           objects=' '.join(c['object'] for c in components.values())))
+        print('.PHONY: all deps\n')
+        print('CXXFLAGS+=-Dunix\n')
 
-        for component in components.values():
-            print('''{obj}: | out/objs
-	$(CXX) -c {includes} {cpp} -o {obj}
-'''.format(obj=component['object'],
-           cpp=component['cpp'],
-           includes=component['includes']))
+        print_group_targets(group)
+
+        print('all: {lib} deps\n'.format(lib=lib))
+
+        print('deps: ' + ' '.join(list(dep_libs)) + '\n')
+
+        for g in deps:
+            print_group_targets(g)
 
         print('''out/libs:
 	mkdir -p out/libs
