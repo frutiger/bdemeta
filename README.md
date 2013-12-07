@@ -44,9 +44,16 @@ To build a static library named `bsl` in `out/lib`:
 
     $ make -f <(bde-meta mkmk bsl)
 
-To build `m.cpp` with `bsl` as a dependency and link it:
+To build `bsl` and all its dependencies as separate libraries in `out/lib`:
 
-    $ cc $(bde-meta cflags bsl) \
+    $ bde-meta deps bsl | while read group
+                            do make -f <(bde-meta mkmk $group)
+                          done
+
+To build `m.cpp` with `bsl` as a dependency and link it with all its
+dependencies:
+
+    $ c++ $(bde-meta cflags bsl) \
         -Lout/lib $(bde-meta deps bsl | sed 's/^/-l/' | xargs) \
         m.cpp
 
