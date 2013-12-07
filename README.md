@@ -40,13 +40,15 @@ across multiple BDE-style repositories, including your own.
 
 ### EXAMPLES
 
-The following examples are shown as given to the shell:
+To build a static library named `bsl` in `out/lib`:
 
-`make -f <(bde-meta mkmk bsl)`<br/>
-Build `out/lib/libbsl.a`.
+    $ make -f <(bde-meta mkmk bsl)
 
-`g++ $(bde-meta cflags bsl) -Lout/lib -lbsl m.cpp`<br/>
-Build `m.cpp`, linking against `bsl`.
+To build `m.cpp` with `bsl` as a dependency and link it:
+
+    $ cc $(bde-meta cflags bsl) \
+        -Lout/lib $(bde-meta deps bsl | sed 's/^/-l/' | xargs) \
+        m.cpp
 
 ### LICENSE
 

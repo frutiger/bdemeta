@@ -136,7 +136,7 @@ def main():
 	mkdir -p out/objs
 ''')
     elif args.action == 'deps':
-        print(' '.join(tsort(group, group_dependencies)))
+        map(print, tsort(group, group_dependencies))
     else:
         raise RuntimeError('Unknown action: ' + args.action)
 
