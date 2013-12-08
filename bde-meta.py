@@ -110,6 +110,8 @@ def components(group):
                 'includes': includes,
                 'cpp':      os.path.join(path, c + '.cpp'),
                 'object':   os.path.join('out', 'objs', c + '.o'),
+                'drivers':  os.path.join(path, c + '.t.cpp'),
+                'test':     os.path.join('out', 'tests', c + '.t'),
             }
     return components
 
@@ -136,12 +138,19 @@ def makefile(args):
 {object}: {cpp} {headers} | out/objs
 	$(CXX) -c {includes} {cpp} -o {object}
 '''
+    test_rule = '''\
+{test}: {drivers} {headers} | out/tests
+	$(CXX) -c {includes} {drivers} -o {test}
+'''
     out_dir_rules = '''\
 out/libs:
 	mkdir -p out/libs
 
 out/objs:
 	mkdir -p out/objs
+
+out/tests:
+	mkdir -p out/tests
 '''
 
     lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
@@ -158,6 +167,10 @@ out/objs:
                                  cpp      = cs[c]['cpp'],
                                  headers  = headers,
                                  includes = includes))
+        print(test_rule.format(test     = cs[c]['test'],
+                               drivers  = cs[c]['drivers'],
+                               headers  = headers,
+                               includes = includes))
     print(out_dir_rules)
 
 def ninja(args):
@@ -169,18 +182,29 @@ rule cc
 
 rule ar
   command = ar -crs $out $in
+
+rule ld
+  command = ld $ldflags $in -o $out
 '''
     lib_template='''\
 build {lib}: ar {objects}
+default {lib}
 '''
     object_template='''\
 build {object}: cc {cpp}
   cflags = -Dunix {includes}
 '''
+    test_template='''\
+build {test}: cc {drivers}
+  cflags  = -Dunix {includes}
+  ldflags = {ldflags}
+'''
 
     deps    = tsort({ args.group }, group_dependencies)
     libs    = ['-l' + dep for dep in deps]
     lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
+    ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
+                                       libs = ' '.join(libs))
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
@@ -192,6 +216,10 @@ build {object}: cc {cpp}
         print(object_template.format(object   = cs[c]['object'],
                                      cpp      = cs[c]['cpp'],
                                      includes = includes))
+        print(test_template.format(test     = cs[c]['test'],
+                                   drivers  = cs[c]['drivers'],
+                                   includes = includes,
+                                   ldflags  = ldflags))
 
 def main():
     parser    = argparse.ArgumentParser();
