@@ -3,8 +3,8 @@
 ### SYNOPSIS
 
 `bde-meta cflags <group>`<br/>
-`bde-meta deps <group>`<br/>
-`bde-meta ldflags <group>`<br/>
+`bde-meta deps <group> [<group> ...]`<br/>
+`bde-meta ldflags <group> [<group> ...]`<br/>
 `bde-meta makefile <group>`<br/>
 `bde-meta ninja <group>`
 
@@ -25,13 +25,13 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a set of `-I` directives that will allow a compilation unit
     depending on the specified `<group>` to compile correctly.
 
-  * `deps <group>`:
-    Print the list of dependencies of the specified `<group>` in topologically
+  * `deps <group> [<group> ...]`:
+    Print the list of dependencies of the specified `<group>`s in topologically
     sorted order.
 
-  * `ldflags <group>`:
+  * `ldflags <group> [<group> ...]`:
     Generate a set of `-L` and `-l` directives that allow a link of objects
-    depending on the specified `<group>` to link correctly.
+    depending on the specified `<group>`s to link correctly.
 
   * `makefile <group>`:
     Generate a makefile that will build a statically linked library for the

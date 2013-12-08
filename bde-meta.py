@@ -67,129 +67,165 @@ def package_dependencies(group, package):
 def package_path(group, package):
     return os.path.join(resolve_group(group), package)
 
-def tsort(name, dependencies):
+def traverse(node, deps):
+    return {node} | reduce(set.union,
+                           [traverse(n, deps) for n in deps(node)],
+                           set())
+
+def tsort(top_nodes, dependencies):
     tsorted = []
-    nodes   = {}
+    nodes = reduce(set.union,
+                   [traverse(node, dependencies) for node in top_nodes])
+    nodes = {node: {'mark': 'none', 'name': node} for node in nodes}
 
     def visit(node):
-        if node['mark'] == 'temporary':
-            raise RuntimeError('cyclic graph')
         if node['mark'] == 'none':
             node['mark'] = 'temporary'
             for child in dependencies(node['name']):
-                if child not in nodes:
-                    nodes[child] = {'mark': 'none', 'name': child}
                 visit(nodes[child])
             node['mark'] = 'permanent'
             tsorted.insert(0, node['name'])
-    visit({'mark': 'none', 'name': name})
+        elif node['mark'] == 'permanent':
+            return
+        else:
+            raise RuntimeError('cyclic graph')
 
+    map(visit, nodes.values())
     return tsorted
 
-def main():
-    parser = argparse.ArgumentParser();
-    parser.add_argument('action', choices={'cflags',
-                                           'deps',
-                                           'ldflags',
-                                           'makefile',
-                                           'ninja'})
-    parser.add_argument('group', type=str)
-    args = parser.parse_args()
+def cflags(args):
+    paths = []
+    for g in tsort({args.group}, group_dependencies):
+        for p in group_members(g):
+            paths.append(package_path(g, p))
+    print(' '.join(['-I' + path for path in paths]))
 
-    group = args.group
-    if args.action == 'cflags':
+def deps(args):
+    map(print, tsort(set(args.groups), group_dependencies))
+
+def ldflags(args):
+    deps = tsort(set(args.groups), group_dependencies)
+    print('-Lout/libs {}'.format(' '.join(['-l' + dep for dep in deps])))
+
+def makefile(args):
+    components = {}
+    for package in group_members(args.group):
         paths = []
-        for g in tsort(group, group_dependencies):
+        for g in tsort({args.group}, group_dependencies)[1:]:
             for p in group_members(g):
                 paths.append(package_path(g, p))
-        print(' '.join(['-I' + path for path in paths]))
-    elif args.action == 'deps':
-        map(print, tsort(group, group_dependencies))
-    elif args.action == 'ldflags':
-        deps = tsort(group, group_dependencies)
-        print('-Lout/libs {}'.format(' '.join(['-l' + dep for dep in deps])))
-    elif args.action == 'makefile':
-        components = {}
-        for package in group_members(group):
-            paths = []
-            for g in tsort(group, group_dependencies)[1:]:
-                for p in group_members(g):
-                    paths.append(package_path(g, p))
-            for p in tsort(package, lambda p: package_dependencies(group, p)):
-                paths.append(package_path(group, p))
+        for p in tsort({package},
+                       lambda p: package_dependencies(args.group, p)):
+            paths.append(package_path(args.group, p))
 
-            for c in package_members(group, package):
-                components[c] = {
-                    'cpp': os.path.join(resolve_group(group),
-                                        package,
-                                        c + '.cpp'),
-                    'object': os.path.join('out', 'objs', c + '.o'),
-                    'includes': paths,
-                }
+        for c in package_members(args.group, package):
+            components[c] = {
+                'cpp': os.path.join(resolve_group(args.group),
+                                    package,
+                                    c + '.cpp'),
+                'object': os.path.join('out', 'objs', c + '.o'),
+                'includes': paths,
+            }
 
-        print('''{lib}: {objects} | out/libs
+    print('''{lib}: {objects} | out/libs
 	ar -crs {lib} {objects}
-'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
+'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(args.group)),
            objects=' '.join(c['object'] for c in components.values())))
 
-        for c in sorted(components.keys()):
-            component = components[c]
-            print('''{obj}: {cpp} {headers} | out/objs
+    for c in sorted(components.keys()):
+        component = components[c]
+        print('''{obj}: {cpp} {headers} | out/objs
 	$(CXX) -c {includes} {cpp} -o {obj}
 '''.format(obj=component['object'],
-           cpp=component['cpp'],
-           headers=' '.join([os.path.join(path, '*') for path in \
-                   component['includes']]),
-           includes=' '.join(['-I' + path for path in component['includes']])))
+       cpp=component['cpp'],
+       headers=' '.join([os.path.join(path, '*') for path in \
+               component['includes']]),
+       includes=' '.join(['-I' + path for path in component['includes']])))
 
-        print('''out/libs:
+    print('''out/libs:
 	mkdir -p out/libs
 ''')
 
-        print('''out/objs:
+    print('''out/objs:
 	mkdir -p out/objs
 ''')
-    elif args.action == 'ninja':
-        components = {}
-        for package in group_members(group):
-            paths = []
-            for g in tsort(group, group_dependencies)[1:]:
-                for p in group_members(g):
-                    paths.append(package_path(g, p))
-            for p in tsort(package, lambda p: package_dependencies(group, p)):
-                paths.append(package_path(group, p))
 
-            for c in package_members(group, package):
-                components[c] = {
-                    'cpp': os.path.join(resolve_group(group),
-                                        package,
-                                        c + '.cpp'),
-                    'object': os.path.join('out', 'objs', c + '.o'),
-                    'includes': ' '.join(['-I' + path for path in paths]),
-                }
+def ninja(args):
+    components = {}
+    for package in group_members(args.group):
+        paths = []
+        for g in tsort({args.group}, group_dependencies)[1:]:
+            for p in group_members(g):
+                paths.append(package_path(g, p))
+        for p in tsort({package},
+                       lambda p: package_dependencies(args.group, p)):
+            paths.append(package_path(args.group, p))
 
-        print('''rule cc
+        for c in package_members(args.group, package):
+            components[c] = {
+                'cpp': os.path.join(resolve_group(args.group),
+                                    package,
+                                    c + '.cpp'),
+                'object': os.path.join('out', 'objs', c + '.o'),
+                'includes': ' '.join(['-I' + path for path in paths]),
+            }
+
+    print('''rule cc
   deps = gcc
   depfile = $out.d
   command = c++ $cflags -c $in -MMD -MF $out.d -o $out
 ''')
 
-        print('''rule ar
+    print('''rule ar
   command = ar -crs $out $in
 ''')
 
-        print('''build {lib}: ar {objects}
-'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
+    print('''build {lib}: ar {objects}
+'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(args.group)),
            objects=' '.join(c['object'] for c in components.values())))
 
-        for c in sorted(components.keys()):
-            print('''build {obj}: cc {cpp}
+    for c in sorted(components.keys()):
+        print('''build {obj}: cc {cpp}
   cflags = -Dunix {includes}
 '''.format(obj=components[c]['object'],
-           cpp=components[c]['cpp'],
-           includes=components[c]['includes']))
-    else:
-        raise RuntimeError('Unknown action: ' + args.action)
+        cpp=components[c]['cpp'],
+        includes=components[c]['includes']))
+
+def main():
+    parser    = argparse.ArgumentParser();
+    subparser = parser.add_subparsers(title='subcommands')
+
+    cflags_parser = subparser.add_parser('cflags', help='Generate a set of '
+    '`-I` directives that will allow a compilation unit depending on the '
+    'specified `<group>` to compile correctly.')
+    cflags_parser.add_argument('group', type=str)
+    cflags_parser.set_defaults(func=cflags)
+
+    deps_parser = subparser.add_parser('deps', help='Print the list of '
+    'dependencies of the specified `<group>`s in topologically sorted order.')
+    deps_parser.add_argument('groups', type=str, nargs='+')
+    deps_parser.set_defaults(func=deps)
+
+    ldflags_parser = subparser.add_parser('ldflags', help='Generate a set of '
+    '`-L` and `-l` directives that allow a link of objects depending on the '
+    'specified `<group>`s to link correctly.')
+    ldflags_parser.add_argument('groups', type=str, nargs='+')
+    ldflags_parser.set_defaults(func=ldflags)
+
+    makefile_parser = subparser.add_parser('makefile', help='Generate a '
+    'makefile that will build a statically linked library for the specified '
+    '`<group>`.')
+    makefile_parser.add_argument('group', type=str)
+    makefile_parser.set_defaults(func=makefile)
+
+    ninja_parser = subparser.add_parser('ninja', help=' Generate a ninja '
+    'build file that will build a statically linked library for the specified '
+    '`<group>`.')
+    ninja_parser.add_argument('group', type=str)
+    ninja_parser.set_defaults(func=ninja)
+
+    args = parser.parse_args()
+    args.func(args)
 
 if __name__ == '__main__':
     main()
