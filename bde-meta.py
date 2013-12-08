@@ -111,9 +111,11 @@ def main():
 
             for c in package_members(group, package):
                 components[c] = {
-                    'cpp': os.path.join(resolve_group(group), package, c + '.cpp'),
+                    'cpp': os.path.join(resolve_group(group),
+                                        package,
+                                        c + '.cpp'),
                     'object': os.path.join('out', 'objs', c + '.o'),
-                    'includes': ' '.join(['-I' + path for path in paths]),
+                    'includes': paths,
                 }
 
         print('''{lib}: {objects} | out/libs
@@ -123,11 +125,13 @@ def main():
 
         for c in sorted(components.keys()):
             component = components[c]
-            print('''{obj}: | out/objs
+            print('''{obj}: {cpp} {headers} | out/objs
 	$(CXX) -c {includes} {cpp} -o {obj}
 '''.format(obj=component['object'],
            cpp=component['cpp'],
-           includes=component['includes']))
+           headers=' '.join([os.path.join(path, '*') for path in \
+                   component['includes']]),
+           includes=' '.join(['-I' + path for path in component['includes']])))
 
         print('''out/libs:
 	mkdir -p out/libs
