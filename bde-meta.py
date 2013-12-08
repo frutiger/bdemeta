@@ -88,7 +88,7 @@ def tsort(name, dependencies):
 
 def main():
     parser = argparse.ArgumentParser();
-    parser.add_argument('action', choices={'cflags', 'makefile', 'deps'})
+    parser.add_argument('action', choices={'cflags', 'deps', 'makefile'})
     parser.add_argument('group', type=str)
     args = parser.parse_args()
 
@@ -99,6 +99,8 @@ def main():
             for p in group_members(g):
                 paths.append(package_path(g, p))
         print(' '.join(['-I' + path for path in paths]))
+    elif args.action == 'deps':
+        map(print, tsort(group, group_dependencies))
     elif args.action == 'makefile':
         components = {}
         for package in group_members(group):
@@ -140,8 +142,6 @@ def main():
         print('''out/objs:
 	mkdir -p out/objs
 ''')
-    elif args.action == 'deps':
-        map(print, tsort(group, group_dependencies))
     else:
         raise RuntimeError('Unknown action: ' + args.action)
 

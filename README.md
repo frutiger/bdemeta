@@ -3,8 +3,8 @@
 ### SYNOPSIS
 
 `bde-meta cflags <group>`<br/>
+`bde-meta deps <group>`<br/>
 `bde-meta makefile <group>`<br/>
-`bde-meta deps <group>`
 
 ### DESCRIPTION
 
@@ -23,13 +23,13 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a set of `-I` directives that will allow a compilation unit
     depending on the specified `<group>` to compile correctly.
 
-  * `makefile <group>`:
-    Generate a makefile that will build a statically linked library for the
-    specified `<group>`.
-
   * `deps <group>`:
     Print the list of dependencies of the specified `<group>` in topologically
     sorted order.
+
+  * `makefile <group>`:
+    Generate a makefile that will build a statically linked library for the
+    specified `<group>`.
 
 ### ROOTS
 <a name="roots"></a>
