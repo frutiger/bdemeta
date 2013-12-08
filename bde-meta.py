@@ -88,7 +88,7 @@ def tsort(name, dependencies):
 
 def main():
     parser = argparse.ArgumentParser();
-    parser.add_argument('action', choices={'cflags', 'mkmk', 'deps'})
+    parser.add_argument('action', choices={'cflags', 'makefile', 'deps'})
     parser.add_argument('group', type=str)
     args = parser.parse_args()
 
@@ -99,7 +99,7 @@ def main():
             for p in group_members(g):
                 paths.append(package_path(g, p))
         print(' '.join(['-I' + path for path in paths]))
-    elif args.action == 'mkmk':
+    elif args.action == 'makefile':
         components = {}
         for package in group_members(group):
             paths = []

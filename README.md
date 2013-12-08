@@ -3,7 +3,7 @@
 ### SYNOPSIS
 
 `bde-meta cflags <group>`<br/>
-`bde-meta mkmk <group>`<br/>
+`bde-meta makefile <group>`<br/>
 `bde-meta deps <group>`
 
 ### DESCRIPTION
@@ -23,7 +23,7 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a set of `-I` directives that will allow a compilation unit
     depending on the specified `<group>` to compile correctly.
 
-  * `mkmk <group>`:
+  * `makefile <group>`:
     Generate a makefile that will build a statically linked library for the
     specified `<group>`.
 
@@ -42,12 +42,12 @@ across multiple BDE-style repositories, including your own.
 
 To build a static library named `bsl` in `out/lib`:
 
-    $ make -f <(bde-meta mkmk bsl)
+    $ make -f <(bde-meta makefile bsl)
 
 To build `bsl` and all its dependencies as separate libraries in `out/lib`:
 
     $ bde-meta deps bsl | while read group
-                            do make -f <(bde-meta mkmk $group)
+                            do make -f <(bde-meta makefile $group)
                           done
 
 To build `m.cpp` with `bsl` as a dependency and link it with all its
