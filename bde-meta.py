@@ -102,51 +102,61 @@ def deps(args):
 
 def ldflags(args):
     deps = tsort(set(args.groups), group_dependencies)
-    print('-Lout/libs {}'.format(' '.join(['-l' + dep for dep in deps])))
+    libs = ['-l' + dep for dep in deps]
+    path = os.path.join('out', 'libs')
+
+    print('-L{path} {libs}'.format(path=path, libs=' '.join(libs)))
 
 def makefile(args):
     lib_rule = '''\
-{lib}: {objects} | out/libs
+{lib}: {objects} | {libpath}
 	ar -crs {lib} {objects}
 '''
     object_rule = '''\
-{object}: {cpp} {headers} | out/objs
+{object}: {cpp} {headers} | {objpath}
 	$(CXX) -c {includes} {cpp} -o {object}
 '''
     test_rule = '''\
-{test}: {drivers} {headers} | out/tests
+{test}: {drivers} {headers} | {testpath}
 	$(CXX) -c {includes} {drivers} -o {test}
 '''
     out_dir_rules = '''\
-out/libs:
-	mkdir -p out/libs
+{libpath}:
+	mkdir -p {libpath}
 
-out/objs:
-	mkdir -p out/objs
+{objpath}:
+	mkdir -p {objpath}
 
-out/tests:
-	mkdir -p out/tests
+{testpath}:
+	mkdir -p {testpath}
 '''
 
-    lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
+    libpath  = os.path.join('out', 'libs')
+    objpath  = os.path.join('out', 'objs')
+    testpath = os.path.join('out', 'tests')
+    lib      = os.path.join(libpath, 'lib{}.a'.format(args.group))
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
 
-    print(lib_rule.format(lib = lib, objects = objects))
+    print(lib_rule.format(lib = lib, libpath = libpath, objects = objects))
     for c in sorted(cs.keys()):
         incls    = cs[c]['includes']
         headers  = ' '.join([os.path.join(path, '*') for path in incls])
         includes = ' '.join(['-I' + path             for path in incls])
         print(object_rule.format(object   = cs[c]['object'],
+                                 objpath  = objpath,
                                  cpp      = cs[c]['cpp'],
                                  headers  = headers,
                                  includes = includes))
         print(test_rule.format(test     = cs[c]['test'],
+                               testpath = testpath,
                                drivers  = cs[c]['drivers'],
                                headers  = headers,
                                includes = includes))
-    print(out_dir_rules)
+    print(out_dir_rules.format(libpath  = libpath,
+                               objpath  = objpath,
+                               testpath = testpath))
 
 def ninja(args):
     rules = '''\
