@@ -117,7 +117,7 @@ def main():
                 }
 
         print('''{lib}: {objects} | out/libs
-	ar -qs {lib} {objects}
+	ar -crs {lib} {objects}
 '''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
            objects=' '.join(c['object'] for c in components.values())))
 
