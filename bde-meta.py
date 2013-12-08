@@ -13,69 +13,45 @@ def resolve_group(group):
                        'environment variable to a colon-separated set of ' +
                        'paths pointing to a set of BDE-style source roots.')
 
-def get_items(items_file):
-    items = []
-    for l in items_file:
-        if len(l) > 1 and l[0] != '#':
-            items = items + l.split()
-    return items
-
-def group_members(group):
-    packages_filename = os.path.join( resolve_group(group),
-                                     'group',
-                                      group + '.mem')
-    with open(packages_filename) as packages_file:
-        return get_items(packages_file)
-
-def package_members(group, package):
-    components_filename = os.path.join( resolve_group(group),
-                                        package,
-                                       'package',
-                                        package + '.mem')
-    with open(components_filename) as components_file:
-        return get_items(components_file)
-
-def group_dependencies(group):
-    dependencies_filename = os.path.join( resolve_group(group),
-                                         'group',
-                                          group + '.dep')
-    with open(dependencies_filename) as dependencies_file:
-        items = set(get_items(dependencies_file))
-
-    if len(items) == 0:
-        return items
-    else:
-        return items | reduce(\
-                lambda x, y: x | y,
-                [group_dependencies(i) for i in items])
-
-def package_dependencies(group, package):
-    dependencies_filename = os.path.join( resolve_group(group),
-                                          package,
-                                         'package',
-                                          package + '.dep')
-    with open(dependencies_filename) as dependencies_file:
-        items = set(get_items(dependencies_file))
-
-    if len(items) == 0:
-        return items
-    else:
-        return items | reduce(\
-                lambda x, y: x | y,
-                [package_dependencies(group, i) for i in items])
-
 def package_path(group, package):
     return os.path.join(resolve_group(group), package)
 
-def traverse(node, deps):
-    return {node} | reduce(set.union,
-                           [traverse(n, deps) for n in deps(node)],
-                           set())
+def get_items(items_filename):
+    items = []
+    with open(items_filename) as items_file:
+        for l in items_file:
+            if len(l) > 1 and l[0] != '#':
+                items = items + l.split()
+    return set(items)
+
+def group_members(group):
+    return get_items(os.path.join( resolve_group(group),
+                                  'group',
+                                   group + '.mem'))
+
+def package_members(group, package):
+    return get_items(os.path.join( resolve_group(group),
+                                   package,
+                                  'package',
+                                   package + '.mem'))
+
+def group_dependencies(group):
+    return get_items(os.path.join( resolve_group(group),
+                                  'group',
+                                   group + '.dep'))
+
+def package_dependencies(group):
+    return lambda package: get_items(os.path.join( resolve_group(group),
+                                                   package,
+                                                  'package',
+                                                   package + '.dep'))
+
+def traverse(nodes, deps):
+    return reduce(set.union, [traverse(deps(n), deps) for n in nodes], nodes)
 
 def tsort(top_nodes, dependencies):
     tsorted = []
-    nodes = reduce(set.union,
-                   [traverse(node, dependencies) for node in top_nodes])
+    nodes = traverse(top_nodes, dependencies)
     nodes = {node: {'mark': 'none', 'name': node} for node in nodes}
 
     def visit(node):
@@ -100,8 +76,7 @@ def components(group):
         for g in tsort({group}, group_dependencies)[1:]:
             for p in group_members(g):
                 includes.append(package_path(g, p))
-        for p in tsort({package},
-                       lambda p: package_dependencies(group, p)):
+        for p in tsort({package}, package_dependencies(group)):
             includes.append(package_path(group, p))
 
         for c in package_members(group, package):
