@@ -93,6 +93,26 @@ def tsort(top_nodes, dependencies):
     map(visit, nodes.values())
     return tsorted
 
+def components(group):
+    components = {}
+    for package in group_members(group):
+        includes = []
+        for g in tsort({group}, group_dependencies)[1:]:
+            for p in group_members(g):
+                includes.append(package_path(g, p))
+        for p in tsort({package},
+                       lambda p: package_dependencies(group, p)):
+            includes.append(package_path(group, p))
+
+        for c in package_members(group, package):
+            path = os.path.join(resolve_group(group), package)
+            components[c] = {
+                'includes': includes,
+                'cpp':      os.path.join(path, c + '.cpp'),
+                'object':   os.path.join('out', 'objs', c + '.o'),
+            }
+    return components
+
 def cflags(args):
     paths = []
     for g in tsort({args.group}, group_dependencies):
@@ -108,88 +128,70 @@ def ldflags(args):
     print('-Lout/libs {}'.format(' '.join(['-l' + dep for dep in deps])))
 
 def makefile(args):
-    components = {}
-    for package in group_members(args.group):
-        paths = []
-        for g in tsort({args.group}, group_dependencies)[1:]:
-            for p in group_members(g):
-                paths.append(package_path(g, p))
-        for p in tsort({package},
-                       lambda p: package_dependencies(args.group, p)):
-            paths.append(package_path(args.group, p))
-
-        for c in package_members(args.group, package):
-            components[c] = {
-                'cpp': os.path.join(resolve_group(args.group),
-                                    package,
-                                    c + '.cpp'),
-                'object': os.path.join('out', 'objs', c + '.o'),
-                'includes': paths,
-            }
-
-    print('''{lib}: {objects} | out/libs
+    lib_rule = '''\
+{lib}: {objects} | out/libs
 	ar -crs {lib} {objects}
-'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(args.group)),
-           objects=' '.join(c['object'] for c in components.values())))
-
-    for c in sorted(components.keys()):
-        component = components[c]
-        print('''{obj}: {cpp} {headers} | out/objs
-	$(CXX) -c {includes} {cpp} -o {obj}
-'''.format(obj=component['object'],
-       cpp=component['cpp'],
-       headers=' '.join([os.path.join(path, '*') for path in \
-               component['includes']]),
-       includes=' '.join(['-I' + path for path in component['includes']])))
-
-    print('''out/libs:
+'''
+    object_rule = '''\
+{object}: {cpp} {headers} | out/objs
+	$(CXX) -c {includes} {cpp} -o {object}
+'''
+    out_dir_rules = '''\
+out/libs:
 	mkdir -p out/libs
-''')
 
-    print('''out/objs:
+out/objs:
 	mkdir -p out/objs
-''')
+'''
+
+    lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
+
+    cs      = components(args.group)
+    objects = ' '.join(c['object'] for c in cs.values())
+
+    print(lib_rule.format(lib = lib, objects = objects))
+    for c in sorted(cs.keys()):
+        incls    = cs[c]['includes']
+        headers  = ' '.join([os.path.join(path, '*') for path in incls])
+        includes = ' '.join(['-I' + path             for path in incls])
+        print(object_rule.format(object   = cs[c]['object'],
+                                 cpp      = cs[c]['cpp'],
+                                 headers  = headers,
+                                 includes = includes))
+    print(out_dir_rules)
 
 def ninja(args):
-    components = {}
-    for package in group_members(args.group):
-        paths = []
-        for g in tsort({args.group}, group_dependencies)[1:]:
-            for p in group_members(g):
-                paths.append(package_path(g, p))
-        for p in tsort({package},
-                       lambda p: package_dependencies(args.group, p)):
-            paths.append(package_path(args.group, p))
-
-        for c in package_members(args.group, package):
-            components[c] = {
-                'cpp': os.path.join(resolve_group(args.group),
-                                    package,
-                                    c + '.cpp'),
-                'object': os.path.join('out', 'objs', c + '.o'),
-                'includes': ' '.join(['-I' + path for path in paths]),
-            }
-
-    print('''rule cc
-  deps = gcc
+    rules = '''\
+rule cc
+  deps    = gcc
   depfile = $out.d
   command = c++ $cflags -c $in -MMD -MF $out.d -o $out
-''')
 
-    print('''rule ar
+rule ar
   command = ar -crs $out $in
-''')
-
-    print('''build {lib}: ar {objects}
-'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(args.group)),
-           objects=' '.join(c['object'] for c in components.values())))
-
-    for c in sorted(components.keys()):
-        print('''build {obj}: cc {cpp}
+'''
+    lib_template='''\
+build {lib}: ar {objects}
+'''
+    object_template='''\
+build {object}: cc {cpp}
   cflags = -Dunix {includes}
-'''.format(obj=components[c]['object'],
-        cpp=components[c]['cpp'],
-        includes=components[c]['includes']))
+'''
+
+    deps    = tsort({ args.group }, group_dependencies)
+    libs    = ['-l' + dep for dep in deps]
+    lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
+
+    cs      = components(args.group)
+    objects = ' '.join(c['object'] for c in cs.values())
+
+    print(rules)
+    print(lib_template.format(lib = lib, objects = objects))
+    for c in sorted(cs.keys()):
+        includes = ' '.join(['-I' + path for path in cs[c]['includes']])
+        print(object_template.format(object   = cs[c]['object'],
+                                     cpp      = cs[c]['cpp'],
+                                     includes = includes))
 
 def main():
     parser    = argparse.ArgumentParser();
