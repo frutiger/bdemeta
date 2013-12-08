@@ -88,7 +88,10 @@ def tsort(name, dependencies):
 
 def main():
     parser = argparse.ArgumentParser();
-    parser.add_argument('action', choices={'cflags', 'deps', 'makefile'})
+    parser.add_argument('action', choices={'cflags',
+                                           'deps',
+                                           'makefile',
+                                           'ninja'})
     parser.add_argument('group', type=str)
     args = parser.parse_args()
 
@@ -142,6 +145,45 @@ def main():
         print('''out/objs:
 	mkdir -p out/objs
 ''')
+    elif args.action == 'ninja':
+        components = {}
+        for package in group_members(group):
+            paths = []
+            for g in tsort(group, group_dependencies)[1:]:
+                for p in group_members(g):
+                    paths.append(package_path(g, p))
+            for p in tsort(package, lambda p: package_dependencies(group, p)):
+                paths.append(package_path(group, p))
+
+            for c in package_members(group, package):
+                components[c] = {
+                    'cpp': os.path.join(resolve_group(group),
+                                        package,
+                                        c + '.cpp'),
+                    'object': os.path.join('out', 'objs', c + '.o'),
+                    'includes': ' '.join(['-I' + path for path in paths]),
+                }
+
+        print('''rule cc
+  deps = gcc
+  depfile = $out.d
+  command = c++ $cflags -c $in -MMD -MF $out.d -o $out
+''')
+
+        print('''rule ar
+  command = ar -crs $out $in
+''')
+
+        print('''build {lib}: ar {objects}
+'''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
+           objects=' '.join(c['object'] for c in components.values())))
+
+        for c in sorted(components.keys()):
+            print('''build {obj}: cc {cpp}
+  cflags = -Dunix {includes}
+'''.format(obj=components[c]['object'],
+           cpp=components[c]['cpp'],
+           includes=components[c]['includes']))
     else:
         raise RuntimeError('Unknown action: ' + args.action)
 

@@ -5,6 +5,7 @@
 `bde-meta cflags <group>`<br/>
 `bde-meta deps <group>`<br/>
 `bde-meta makefile <group>`<br/>
+`bde-meta ninja <group>`
 
 ### DESCRIPTION
 
@@ -31,6 +32,10 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a makefile that will build a statically linked library for the
     specified `<group>`.
 
+  * `ninja <group>`:
+    Generate a ninja build file that will build a statically linked library for
+    the specified `<group>`.
+
 ### ROOTS
 <a name="roots"></a>
 
@@ -40,14 +45,18 @@ across multiple BDE-style repositories, including your own.
 
 ### EXAMPLES
 
-To build a static library named `bsl` in `out/lib`:
+To build a static library named `bsl` in `out/lib` using `make`:
 
     $ make -f <(bde-meta makefile bsl)
+
+To build a static library named `bsl` in `out/lib` using `ninja`:
+
+    $ ninja -f <(bde-meta ninja bsl)
 
 To build `bsl` and all its dependencies as separate libraries in `out/lib`:
 
     $ bde-meta deps bsl | while read group
-                            do make -f <(bde-meta makefile $group)
+                            do ninja -f <(bde-meta ninja $group)
                           done
 
 To build `m.cpp` with `bsl` as a dependency and link it with all its
