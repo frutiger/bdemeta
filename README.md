@@ -4,6 +4,7 @@
 
 `bde-meta cflags <group>`<br/>
 `bde-meta deps <group>`<br/>
+`bde-meta ldflags <group>`<br/>
 `bde-meta makefile <group>`<br/>
 `bde-meta ninja <group>`
 
@@ -27,6 +28,10 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
   * `deps <group>`:
     Print the list of dependencies of the specified `<group>` in topologically
     sorted order.
+
+  * `ldflags <group>`:
+    Generate a set of `-L` and `-l` directives that allow a link of objects
+    depending on the specified `<group>` to link correctly.
 
   * `makefile <group>`:
     Generate a makefile that will build a statically linked library for the
@@ -62,9 +67,7 @@ To build `bsl` and all its dependencies as separate libraries in `out/lib`:
 To build `m.cpp` with `bsl` as a dependency and link it with all its
 dependencies:
 
-    $ c++ $(bde-meta cflags bsl) \
-        -Lout/lib $(bde-meta deps bsl | sed 's/^/-l/' | xargs) \
-        m.cpp
+    $ c++ $(bde-meta cflags bsl) $(bde-meta ldflags bsl) m.cpp
 
 ### LICENSE
 

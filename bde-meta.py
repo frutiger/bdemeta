@@ -90,6 +90,7 @@ def main():
     parser = argparse.ArgumentParser();
     parser.add_argument('action', choices={'cflags',
                                            'deps',
+                                           'ldflags',
                                            'makefile',
                                            'ninja'})
     parser.add_argument('group', type=str)
@@ -104,6 +105,9 @@ def main():
         print(' '.join(['-I' + path for path in paths]))
     elif args.action == 'deps':
         map(print, tsort(group, group_dependencies))
+    elif args.action == 'ldflags':
+        deps = tsort(group, group_dependencies)
+        print('-Lout/libs {}'.format(' '.join(['-l' + dep for dep in deps])))
     elif args.action == 'makefile':
         components = {}
         for package in group_members(group):
