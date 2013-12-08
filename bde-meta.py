@@ -121,7 +121,8 @@ def main():
 '''.format(lib=os.path.join('out', 'libs', 'lib{}.a'.format(group)),
            objects=' '.join(c['object'] for c in components.values())))
 
-        for component in components.values():
+        for c in sorted(components.keys()):
+            component = components[c]
             print('''{obj}: | out/objs
 	$(CXX) -c {includes} {cpp} -o {obj}
 '''.format(obj=component['object'],
