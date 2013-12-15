@@ -139,11 +139,14 @@ tests: {tests}
     objpath  = os.path.join('out', 'objs')
     testpath = os.path.join('out', 'tests')
 
-    deps    = tsort({ args.group }, group_dependencies)
-    libs    = ['-l' + dep for dep in deps]
-    lib     = os.path.join(libpath, 'lib{}.a'.format(args.group))
-    ldflags = '-L{libpath} {libs}'.format(libpath = libpath,
-                                          libs    = ' '.join(libs))
+    lib  = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
+    deps = tsort({ args.group }, group_dependencies)[1:]
+    if deps:
+        libs    = ['-l' + dep for dep in deps]
+        ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
+                                           libs = ' '.join(libs))
+    else:
+        ldflags = ''
     if args.ldflags:
         ldflags = args.ldflags + ' ' + ldflags
 
@@ -206,14 +209,16 @@ build {test}: cc-test {drivers}
   ldflags = {ldflags}
 '''
 
-    deps    = tsort({ args.group }, group_dependencies)
-    libs    = ['-l' + dep for dep in deps]
-    lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
-    ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
+    lib  = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
+    deps = tsort({ args.group }, group_dependencies)[1:]
+    if deps:
+        libs    = ['-l' + dep for dep in deps]
+        ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
                                            libs = ' '.join(libs))
+    else:
+        ldflags = ''
     if args.ldflags:
         ldflags = args.ldflags + ' ' + ldflags
-
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
