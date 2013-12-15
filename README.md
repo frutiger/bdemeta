@@ -58,6 +58,10 @@ To build a static library named `bsl` in `out/lib` using `ninja`:
 
     $ ninja -f <(bde-meta ninja bsl)
 
+To build all tests in the `bsl` package group using `ninja`:
+
+    $ ninja -f <(bde-meta ninja bsl) tests
+
 To build `bsl` and all its dependencies as separate libraries in `out/lib`:
 
     $ bde-meta deps bsl | while read group
