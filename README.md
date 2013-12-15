@@ -1,4 +1,4 @@
-##bde-meta - a script to assist building 'BDE' style code on Unix
+##bde-meta - a utility to build 'BDE' style code
 
 ### SYNOPSIS
 
