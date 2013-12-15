@@ -52,7 +52,7 @@ across multiple BDE-style repositories, including your own.
 
 To build a static library named `bsl` in `out/lib` using `make`:
 
-    $ make -f <(bde-meta makefile bsl)
+    $ make -r -f <(bde-meta makefile bsl)
 
 To build a static library named `bsl` in `out/lib` using `ninja`:
 
