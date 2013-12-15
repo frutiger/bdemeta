@@ -118,7 +118,7 @@ def makefile(args):
 '''
     test_rule = '''\
 {test}: {drivers} {headers} | {testpath}
-	$(CXX) -c {includes} {drivers} -o {test}
+	$(CXX) {includes} {drivers} {ldflags} -o {test}
 '''
     out_dir_rules = '''\
 {libpath}:
@@ -134,7 +134,12 @@ def makefile(args):
     libpath  = os.path.join('out', 'libs')
     objpath  = os.path.join('out', 'objs')
     testpath = os.path.join('out', 'tests')
-    lib      = os.path.join(libpath, 'lib{}.a'.format(args.group))
+
+    deps    = tsort({ args.group }, group_dependencies)
+    libs    = ['-l' + dep for dep in deps]
+    lib     = os.path.join(libpath, 'lib{}.a'.format(args.group))
+    ldflags = '-L{libpath} {libs}'.format(libpath = libpath,
+                                          libs    = ' '.join(libs))
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
@@ -153,34 +158,37 @@ def makefile(args):
                                testpath = testpath,
                                drivers  = cs[c]['drivers'],
                                headers  = headers,
-                               includes = includes))
+                               includes = includes,
+                               ldflags  = ldflags))
     print(out_dir_rules.format(libpath  = libpath,
                                objpath  = objpath,
                                testpath = testpath))
 
 def ninja(args):
     rules = '''\
-rule cc
+rule cc-object
   deps    = gcc
   depfile = $out.d
   command = c++ $cflags -c $in -MMD -MF $out.d -o $out
 
+rule cc-test
+  deps    = gcc
+  depfile = $out.d
+  command = c++ $cflags $in $ldflags -MMD -MF $out.d -o $out
+
 rule ar
   command = ar -crs $out $in
-
-rule ld
-  command = ld $ldflags $in -o $out
 '''
     lib_template='''\
 build {lib}: ar {objects}
 default {lib}
 '''
     object_template='''\
-build {object}: cc {cpp}
+build {object}: cc-object {cpp}
   cflags = -Dunix {includes}
 '''
     test_template='''\
-build {test}: cc {drivers}
+build {test}: cc-test {drivers}
   cflags  = -Dunix {includes}
   ldflags = {ldflags}
 '''
