@@ -118,11 +118,11 @@ tests: {tests}
 '''
     object_rule = '''\
 {object}: {cpp} {headers} | {objpath}
-	$(CXX) -c {includes} {cpp} -o {object}
+	$(CXX) {cflags} -c {cpp} -o {object}
 '''
     test_rule = '''\
 {test}: {drivers} {headers} | {testpath}
-	$(CXX) {includes} {drivers} {ldflags} -o {test}
+	$(CXX) {cflags} {drivers} {ldflags} -o {test}
 '''
     out_dir_rules = '''\
 {libpath}:
@@ -144,6 +144,8 @@ tests: {tests}
     lib     = os.path.join(libpath, 'lib{}.a'.format(args.group))
     ldflags = '-L{libpath} {libs}'.format(libpath = libpath,
                                           libs    = ' '.join(libs))
+    if args.ldflags:
+        ldflags = args.ldflags + ' ' + ldflags
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
@@ -154,17 +156,19 @@ tests: {tests}
     for c in sorted(cs.keys()):
         incls    = cs[c]['includes']
         headers  = ' '.join([os.path.join(path, '*') for path in incls])
-        includes = ' '.join(['-I' + path             for path in incls])
+        cflags   = ' '.join(['-I' + path             for path in incls])
+        if args.cflags:
+            cflags = args.cflags + ' ' + cflags
         print(object_rule.format(object   = cs[c]['object'],
                                  objpath  = objpath,
                                  cpp      = cs[c]['cpp'],
                                  headers  = headers,
-                                 includes = includes))
+                                 cflags   = cflags))
         print(test_rule.format(test     = cs[c]['test'],
                                testpath = testpath,
                                drivers  = cs[c]['drivers'],
                                headers  = headers,
-                               includes = includes,
+                               cflags   = cflags,
                                ldflags  = ldflags))
     print(out_dir_rules.format(libpath  = libpath,
                                objpath  = objpath,
@@ -194,11 +198,11 @@ build tests: phony {tests}
 '''
     object_template='''\
 build {object}: cc-object {cpp}
-  cflags = -Dunix {includes}
+  cflags = {cflags}
 '''
     test_template='''\
 build {test}: cc-test {drivers}
-  cflags  = -Dunix {includes}
+  cflags  = {cflags}
   ldflags = {ldflags}
 '''
 
@@ -206,7 +210,10 @@ build {test}: cc-test {drivers}
     libs    = ['-l' + dep for dep in deps]
     lib     = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
     ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
-                                       libs = ' '.join(libs))
+                                           libs = ' '.join(libs))
+    if args.ldflags:
+        ldflags = args.ldflags + ' ' + ldflags
+
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
@@ -216,13 +223,15 @@ build {test}: cc-test {drivers}
     print(lib_template.format(lib = lib, objects = objects))
     print(tests_template.format(tests = tests))
     for c in sorted(cs.keys()):
-        includes = ' '.join(['-I' + path for path in cs[c]['includes']])
+        cflags = ' '.join(['-I' + path for path in cs[c]['includes']])
+        if args.cflags:
+            cflags = args.cflags + ' ' + cflags
         print(object_template.format(object   = cs[c]['object'],
                                      cpp      = cs[c]['cpp'],
-                                     includes = includes))
+                                     cflags   = cflags))
         print(test_template.format(test     = cs[c]['test'],
                                    drivers  = cs[c]['drivers'],
-                                   includes = includes,
+                                   cflags   = cflags,
                                    ldflags  = ldflags))
 
 def main():
@@ -250,12 +259,16 @@ def main():
     'makefile that will build a statically linked library for the specified '
     '`<group>`.')
     makefile_parser.add_argument('group', type=str)
+    makefile_parser.add_argument('--cflags', type=str)
+    makefile_parser.add_argument('--ldflags', type=str)
     makefile_parser.set_defaults(func=makefile)
 
     ninja_parser = subparser.add_parser('ninja', help=' Generate a ninja '
     'build file that will build a statically linked library for the specified '
     '`<group>`.')
     ninja_parser.add_argument('group', type=str)
+    ninja_parser.add_argument('--cflags', type=str)
+    ninja_parser.add_argument('--ldflags', type=str)
     ninja_parser.set_defaults(func=ninja)
 
     args = parser.parse_args()

@@ -5,8 +5,8 @@
 `bde-meta cflags <group>`<br/>
 `bde-meta deps <group> [<group> ...]`<br/>
 `bde-meta ldflags <group> [<group> ...]`<br/>
-`bde-meta makefile <group>`<br/>
-`bde-meta ninja <group>`
+`bde-meta makefile [--cflags <cflags>] [--ldflags <ldflags>] <group>`<br/>
+`bde-meta ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`
 
 ### DESCRIPTION
 
@@ -33,13 +33,17 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a set of `-L` and `-l` directives that allow a link of objects
     depending on the specified `<group>`s to link correctly.
 
-  * `makefile <group>`:
+  * `makefile [--cflags <cflags>] [--ldflags <ldflags>] <group>`:
     Generate a makefile that will build a statically linked library for the
-    specified `<group>`.
+    specified `<group>`, supplying the optionally specified <cflags> to the
+    compiler for both, object files and tests, and the optionally specified
+    <ldflags> to the linker for tests.
 
-  * `ninja <group>`:
+  * `ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`:
     Generate a ninja build file that will build a statically linked library for
-    the specified `<group>`.
+    the specified `<group>`, supplying the optionally specified <cflags> to the
+    compiler for both, object files and tests, and the optionally specified
+    <ldflags> to the linker for tests.
 
 ### ROOTS
 <a name="roots"></a>
