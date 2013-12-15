@@ -112,6 +112,10 @@ def makefile(args):
 {lib}: {objects} | {libpath}
 	ar -crs {lib} {objects}
 '''
+    tests_rule = '''\
+.PHONY: tests
+tests: {tests}
+'''
     object_rule = '''\
 {object}: {cpp} {headers} | {objpath}
 	$(CXX) -c {includes} {cpp} -o {object}
@@ -143,8 +147,10 @@ def makefile(args):
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
+    tests   = ' '.join(c['test']   for c in cs.values())
 
     print(lib_rule.format(lib = lib, libpath = libpath, objects = objects))
+    print(tests_rule.format(tests = tests))
     for c in sorted(cs.keys()):
         incls    = cs[c]['includes']
         headers  = ' '.join([os.path.join(path, '*') for path in incls])
@@ -183,6 +189,9 @@ rule ar
 build {lib}: ar {objects}
 default {lib}
 '''
+    tests_template='''\
+build tests: phony {tests}
+'''
     object_template='''\
 build {object}: cc-object {cpp}
   cflags = -Dunix {includes}
@@ -201,9 +210,11 @@ build {test}: cc-test {drivers}
 
     cs      = components(args.group)
     objects = ' '.join(c['object'] for c in cs.values())
+    tests   = ' '.join(c['test']   for c in cs.values())
 
     print(rules)
     print(lib_template.format(lib = lib, objects = objects))
+    print(tests_template.format(tests = tests))
     for c in sorted(cs.keys()):
         includes = ' '.join(['-I' + path for path in cs[c]['includes']])
         print(object_template.format(object   = cs[c]['object'],
