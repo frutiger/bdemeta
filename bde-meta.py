@@ -70,23 +70,25 @@ def tsort(top_nodes, dependencies):
     return tsorted
 
 def components(group):
+    group_includes = []
+    for g in tsort({group}, group_dependencies)[1:]:
+        for p in group_members(g):
+            group_includes.append(package_path(g, p))
+
     components = {}
     for package in group_members(group):
-        includes = []
-        for g in tsort({group}, group_dependencies)[1:]:
-            for p in group_members(g):
-                includes.append(package_path(g, p))
+        package_includes = group_includes[:]
         for p in tsort({package}, package_dependencies(group)):
-            includes.append(package_path(group, p))
+            package_includes.append(package_path(group, p))
 
         for c in package_members(group, package):
-            path = os.path.join(resolve_group(group), package)
+            path      = os.path.join(resolve_group(group), package)
             components[c] = {
-                'includes': includes,
-                'cpp':      os.path.join(path, c + '.cpp'),
-                'object':   os.path.join('out', 'objs', c + '.o'),
-                'drivers':  os.path.join(path, c + '.t.cpp'),
-                'test':     os.path.join('out', 'tests', c + '.t'),
+                'includes':     package_includes,
+                'cpp':          os.path.join(path, c + '.cpp'),
+                'object':       os.path.join('out', 'objs', c + '.o'),
+                'test_driver':  os.path.join(path, c + '.t.cpp'),
+                'test':         os.path.join('out', 'tests', c + '.t'),
             }
     return components
 
@@ -121,8 +123,8 @@ tests: {tests}
 	$(CXX) {cflags} -c {cpp} -o {object}
 '''
     test_rule = '''\
-{test}: {drivers} {headers} | {testpath}
-	$(CXX) {cflags} {drivers} {ldflags} -o {test}
+{test}: {test_driver} {headers} | {testpath}
+	$(CXX) {cflags} {test_driver} {ldflags} -o {test}
 '''
     out_dir_rules = '''\
 {libpath}:
@@ -140,7 +142,7 @@ tests: {tests}
     testpath = os.path.join('out', 'tests')
 
     lib  = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
-    deps = tsort({ args.group }, group_dependencies)[1:]
+    deps = tsort({ args.group }, group_dependencies)
     if deps:
         libs    = ['-l' + dep for dep in deps]
         ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
@@ -157,9 +159,9 @@ tests: {tests}
     print(lib_rule.format(lib = lib, libpath = libpath, objects = objects))
     print(tests_rule.format(tests = tests))
     for c in sorted(cs.keys()):
-        incls    = cs[c]['includes']
-        headers  = ' '.join([os.path.join(path, '*') for path in incls])
-        cflags   = ' '.join(['-I' + path             for path in incls])
+        incls   = cs[c]['includes']
+        headers = ' '.join([os.path.join(path, '*') for path in incls])
+        cflags  = ' '.join(['-I' + path             for path in incls])
         if args.cflags:
             cflags = args.cflags + ' ' + cflags
         print(object_rule.format(object   = cs[c]['object'],
@@ -167,12 +169,12 @@ tests: {tests}
                                  cpp      = cs[c]['cpp'],
                                  headers  = headers,
                                  cflags   = cflags))
-        print(test_rule.format(test     = cs[c]['test'],
-                               testpath = testpath,
-                               drivers  = cs[c]['drivers'],
-                               headers  = headers,
-                               cflags   = cflags,
-                               ldflags  = ldflags))
+        print(test_rule.format(test        = cs[c]['test'],
+                               test_driver = cs[c]['test_driver'],
+                               headers     = headers,
+                               testpath    = testpath,
+                               cflags      = cflags,
+                               ldflags     = ldflags))
     print(out_dir_rules.format(libpath  = libpath,
                                objpath  = objpath,
                                testpath = testpath))
@@ -204,13 +206,13 @@ build {object}: cc-object {cpp}
   cflags = {cflags}
 '''
     test_template='''\
-build {test}: cc-test {drivers}
+build {test}: cc-test {test_driver}
   cflags  = {cflags}
   ldflags = {ldflags}
 '''
 
     lib  = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
-    deps = tsort({ args.group }, group_dependencies)[1:]
+    deps = tsort({ args.group }, group_dependencies)
     if deps:
         libs    = ['-l' + dep for dep in deps]
         ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
@@ -228,16 +230,16 @@ build {test}: cc-test {drivers}
     print(lib_template.format(lib = lib, objects = objects))
     print(tests_template.format(tests = tests))
     for c in sorted(cs.keys()):
-        cflags = ' '.join(['-I' + path for path in cs[c]['includes']])
+        cflags    = ' '.join(['-I' + path for path in cs[c]['includes']])
         if args.cflags:
             cflags = args.cflags + ' ' + cflags
         print(object_template.format(object   = cs[c]['object'],
                                      cpp      = cs[c]['cpp'],
                                      cflags   = cflags))
-        print(test_template.format(test     = cs[c]['test'],
-                                   drivers  = cs[c]['drivers'],
-                                   cflags   = cflags,
-                                   ldflags  = ldflags))
+        print(test_template.format(test        = cs[c]['test'],
+                                   test_driver = cs[c]['test_driver'],
+                                   cflags      = cflags,
+                                   ldflags     = ldflags))
 
 def main():
     parser    = argparse.ArgumentParser();
