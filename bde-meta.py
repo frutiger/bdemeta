@@ -2,7 +2,11 @@
 
 from __future__ import print_function
 import argparse
+import glob
+import itertools
 import os
+import subprocess
+import sys
 
 def resolve_group(group):
     for root in os.getenv('ROOTS').split(':'):
@@ -241,6 +245,28 @@ build {test}: cc-test {test_driver}
                                    cflags      = cflags,
                                    ldflags     = ldflags))
 
+def runtest(test):
+    for testcase in itertools.count():
+        rc = subprocess.call([test, str(testcase)])
+        if rc == 0:
+            continue
+        elif rc == 255:
+            break
+        else:
+            return rc
+    return 0
+
+def runtests(args):
+    tests = args.tests
+    if len(tests) == 0:
+        tests = glob.glob(os.path.join('out', 'tests', '*'))
+    else:
+        tests = [os.path.join('out', 'tests', t + '.t') for t in tests]
+
+    for test in sorted(tests):
+        if runtest(test):
+            return -1
+
 def main():
     parser    = argparse.ArgumentParser();
     subparser = parser.add_subparsers(title='subcommands')
@@ -262,15 +288,7 @@ def main():
     ldflags_parser.add_argument('groups', type=str, nargs='+')
     ldflags_parser.set_defaults(func=ldflags)
 
-    makefile_parser = subparser.add_parser('makefile', help='Generate a '
-    'makefile that will build a statically linked library for the specified '
-    '`<group>`.')
-    makefile_parser.add_argument('group', type=str)
-    makefile_parser.add_argument('--cflags', type=str)
-    makefile_parser.add_argument('--ldflags', type=str)
-    makefile_parser.set_defaults(func=makefile)
-
-    ninja_parser = subparser.add_parser('ninja', help=' Generate a ninja '
+    ninja_parser = subparser.add_parser('ninja', help='Generate a ninja '
     'build file that will build a statically linked library for the specified '
     '`<group>`.')
     ninja_parser.add_argument('group', type=str)
@@ -278,9 +296,15 @@ def main():
     ninja_parser.add_argument('--ldflags', type=str)
     ninja_parser.set_defaults(func=ninja)
 
+    runtests_parser = subparser.add_parser('runtests', help='Run all of the '
+    'specified BDE-style `<test>` programs to be found in `out/tests` or all '
+    'of the tests in that subdirectory.')
+    runtests_parser.add_argument('tests', type=str, nargs='*')
+    runtests_parser.set_defaults(func=runtests)
+
     args = parser.parse_args()
-    args.func(args)
+    return args.func(args)
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
 

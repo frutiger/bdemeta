@@ -6,7 +6,8 @@
 `bde-meta deps <group> [<group> ...]`<br/>
 `bde-meta ldflags <group> [<group> ...]`<br/>
 `bde-meta makefile [--cflags <cflags>] [--ldflags <ldflags>] <group>`<br/>
-`bde-meta ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`
+`bde-meta ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`<br/>
+`bde-meta runtests [<test> ...]`
 
 ### DESCRIPTION
 
@@ -45,6 +46,10 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     compiler for both, object files and tests, and the optionally specified
     <ldflags> to the linker for tests.
 
+  * `runtests [<test> ...]`:
+    Run all of the specified BDE-style `<test>` programs to be found in
+    `out/tests` or all of the tests in that subdirectory.
+
 ### ROOTS
 <a name="roots"></a>
 
@@ -75,6 +80,10 @@ library (and all dependent libraries), then build the tests:
                             do ninja -f <(bde-meta ninja $group)
                           done
     $ ninja -f <(bde-meta ninja bsl) tests
+
+To run all of the previously built tests:
+
+    $ bde-meta runtests
 
 To build `m.cpp` with `bsl` as a dependency and link it with all its
 dependencies:
