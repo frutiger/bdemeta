@@ -5,7 +5,6 @@
 `bde-meta cflags <group>`<br/>
 `bde-meta deps <group> [<group> ...]`<br/>
 `bde-meta ldflags <group> [<group> ...]`<br/>
-`bde-meta makefile [--cflags <cflags>] [--ldflags <ldflags>] <group>`<br/>
 `bde-meta ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`<br/>
 `bde-meta runtests [<test> ...]`
 
@@ -34,12 +33,6 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
     Generate a set of `-L` and `-l` directives that allow a link of objects
     depending on the specified `<group>`s to link correctly.
 
-  * `makefile [--cflags <cflags>] [--ldflags <ldflags>] <group>`:
-    Generate a makefile that will build a statically linked library for the
-    specified `<group>`, supplying the optionally specified <cflags> to the
-    compiler for both, object files and tests, and the optionally specified
-    <ldflags> to the linker for tests.
-
   * `ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`:
     Generate a ninja build file that will build a statically linked library for
     the specified `<group>`, supplying the optionally specified <cflags> to the
@@ -59,11 +52,7 @@ across multiple BDE-style repositories, including your own.
 
 ### EXAMPLES
 
-To build a static library named `bsl` in `out/lib` using `make`:
-
-    $ make -r -f <(bde-meta makefile bsl)
-
-To build a static library named `bsl` in `out/lib` using `ninja`:
+To build a static library named `bsl` in `out/lib`:
 
     $ ninja -f <(bde-meta ninja bsl)
 
