@@ -152,7 +152,7 @@ tests: {tests}
     testpath = os.path.join('out', 'tests')
 
     lib  = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
-    deps = tsort({ args.group }, group_dependencies)
+    deps = tsort({args.group}, group_dependencies)
     if deps:
         libs    = ['-l' + dep for dep in deps]
         ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
@@ -222,7 +222,7 @@ build {test}: cc-test {test_driver}
 '''
 
     lib  = os.path.join('out', 'libs', 'lib{}.a'.format(args.group))
-    deps = tsort({ args.group }, group_dependencies)
+    deps = tsort({args.group}, group_dependencies)
     if deps:
         libs    = ['-l' + dep for dep in deps]
         ldflags = '-L{path} {libs}'.format(path = os.path.join('out', 'libs'),
