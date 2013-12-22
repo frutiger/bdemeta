@@ -11,13 +11,14 @@ import subprocess
 import sys
 
 def resolve_group(group):
-    for root in os.getenv('ROOTS').split(':'):
-        candidate = os.path.join(root, 'groups', group)
-        if os.path.isdir(candidate):
-            return candidate
-    raise RuntimeError('"' + group + '" not found in roots. Set the ROOTS ' +
-                       'environment variable to a colon-separated set of ' +
-                       'paths pointing to a set of BDE-style source roots.')
+    if os.getenv('ROOTS'):
+        for root in os.getenv('ROOTS').split(':'):
+            candidate = os.path.join(root, 'groups', group)
+            if os.path.isdir(candidate):
+                return candidate
+    raise RuntimeError('\'{}\' not found in roots. Set the ROOTS environment '
+                       'variable to a colon-separated set of paths pointing '
+                       'to a set of BDE-style source roots.'.format(group))
 
 def package_path(group, package):
     return os.path.join(resolve_group(group), package)
@@ -311,5 +312,9 @@ def main():
     return args.func(args)
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except RuntimeError as e:
+        print(e, file=sys.stderr)
+        sys.exit(-1)
 
