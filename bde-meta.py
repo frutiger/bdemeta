@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from functools  import reduce
+
 import argparse
 import glob
 import itertools
@@ -70,7 +72,9 @@ def tsort(top_nodes, dependencies):
         else:
             raise RuntimeError('cyclic graph')
 
-    map(visit, nodes.values())
+    for name, node in nodes.items():
+        visit(node)
+
     return tsorted
 
 def components(group):
@@ -104,7 +108,8 @@ def cflags(args):
     print(' '.join(['-I' + path for path in paths]))
 
 def deps(args):
-    map(print, tsort(set(args.groups), group_dependencies))
+    for dep in tsort(set(args.groups), group_dependencies):
+        print(dep)
 
 def ldflags(args):
     deps = tsort(set(args.groups), group_dependencies)
