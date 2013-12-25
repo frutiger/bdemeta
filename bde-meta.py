@@ -6,6 +6,7 @@ from functools  import reduce
 import argparse
 import glob
 import itertools
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -182,15 +183,15 @@ build {test}: cc-test {test_driver}
                                    ldflags     = ldflags))
 
 def runtest(test):
-    for testcase in itertools.count():
-        rc = subprocess.call([test, str(testcase)])
+    for case in itertools.count():
+        rc = subprocess.call([test, str(case)])
         if rc == 0:
             continue
         elif rc == 255:
             break
         else:
-            return rc
-    return 0
+            raise RuntimeError('{test} case {case} failed'.format(test = test,
+                                                                  case = case))
 
 def runtests(args):
     tests = args.tests
@@ -199,9 +200,7 @@ def runtests(args):
     else:
         tests = [os.path.join('out', 'tests', t + '.t') for t in tests]
 
-    for test in sorted(tests):
-        if runtest(test):
-            return -1
+    multiprocessing.Pool().map(runtest, sorted(tests))
 
 def main():
     parser    = argparse.ArgumentParser();
