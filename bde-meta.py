@@ -238,7 +238,10 @@ def main():
     runtests_parser.set_defaults(func=runtests)
 
     args = parser.parse_args()
-    return args.func(args)
+    if 'func' in args:
+        return args.func(args)
+    else:
+        parser.print_help()
 
 if __name__ == '__main__':
     try:
