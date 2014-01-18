@@ -2,7 +2,7 @@
 
 ### SYNOPSIS
 
-`bde-meta cflags <group>`<br/>
+`bde-meta cflags <group> [<group> ...]`<br/>
 `bde-meta deps <group> [<group> ...]`<br/>
 `bde-meta ldflags <group> [<group> ...]`<br/>
 `bde-meta ninja [--cflags <cflags>] [--ldflags <ldflags>] <group>`<br/>
@@ -21,9 +21,9 @@ directory structures, by means of the [ROOTS](#roots) environment variable.
 
 `bde-meta` runs in one of two modes as given by the first argument:
 
-  * `cflags <group>`:
+  * `cflags <group> [<group> ...]`:
     Generate a set of `-I` directives that will allow a compilation unit
-    depending on the specified `<group>` to compile correctly.
+    depending on the specified `<group>`s to compile correctly.
 
   * `deps <group> [<group> ...]`:
     Print the list of dependencies of the specified `<group>`s in topologically

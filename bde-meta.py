@@ -104,7 +104,7 @@ def components(group):
 
 def cflags(args):
     paths = []
-    for g in tsort({args.group}, group_dependencies):
+    for g in tsort(set(args.groups), group_dependencies):
         for p in group_members(g):
             paths.append(package_path(g, p))
     print(' '.join(['-I' + path for path in paths]))
@@ -208,8 +208,8 @@ def main():
 
     cflags_parser = subparser.add_parser('cflags', help='Generate a set of '
     '`-I` directives that will allow a compilation unit depending on the '
-    'specified `<group>` to compile correctly.')
-    cflags_parser.add_argument('group', type=str)
+    'specified `<group>`s to compile correctly.')
+    cflags_parser.add_argument('groups', type=str, nargs='+')
     cflags_parser.set_defaults(func=cflags)
 
     deps_parser = subparser.add_parser('deps', help='Print the list of '
