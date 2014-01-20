@@ -1,4 +1,4 @@
-##bde-meta - a utility to build 'BDE' style code
+##bde-meta - build and test BDE-style code
 
 ### SYNOPSIS
 
@@ -10,16 +10,19 @@
 
 ### DESCRIPTION
 
-`bde-meta` offers two related tools to assist in building [BDE-style source
-trees](https://github.com/bloomberg/bsl) on *nix platforms, and building
-software that uses such libraries.
+`bde-meta` is a set of basic tools to assist building and testing [BDE-style
+source trees](https://github.com/bloomberg/bde).  It can generate [ninja build
+files](https://github.com/martine/ninja) for a particular package group, and
+provide `cflags` and `ldflags` when building applications that depend on such
+package groups.  It can also run all the unit tests for a particular package
+group.
 
 Notably, `bde-meta` supports finding package groups across disconnected
 directory structures, by means of the [ROOTS](#roots) environment variable.
 
 ### OPTIONS
 
-`bde-meta` runs in one of two modes as given by the first argument:
+`bde-meta` runs in one of five modes as given by the first argument:
 
   * `cflags <group> [<group> ...]`:
     Generate a set of `-I` directives that will allow a compilation unit
@@ -56,28 +59,28 @@ To build a static library named `bsl` in `out/lib`:
 
     $ ninja -f <(bde-meta ninja bsl)
 
-To build `bsl` and all its dependencies as separate libraries in `out/lib`:
+To build `bdl` and all its dependencies as separate libraries in `out/lib`:
 
-    $ bde-meta deps bsl | while read group
+    $ bde-meta deps bdl | while read group
                             do ninja -f <(bde-meta ninja $group)
                           done
 
-To build all tests in the `bsl` package group using `ninja`, first build the
+To build all tests in the `bdl` package group using `ninja`, first build the
 library (and all dependent libraries), then build the tests:
 
-    $ bde-meta deps bsl | while read group
+    $ bde-meta deps bdl | while read group
                             do ninja -f <(bde-meta ninja $group)
                           done
-    $ ninja -f <(bde-meta ninja bsl) tests
+    $ ninja -f <(bde-meta ninja bdl) tests
 
 To run all of the previously built tests:
 
     $ bde-meta runtests
 
-To build `m.cpp` with `bsl` as a dependency and link it with all its
+To build `m.cpp` with `bdl` as a dependency and link it with all its
 dependencies:
 
-    $ c++ $(bde-meta cflags bsl) $(bde-meta ldflags bsl) m.cpp
+    $ c++ $(bde-meta cflags bdl) $(bde-meta ldflags bdl) m.cpp
 
 ### LICENSE
 
