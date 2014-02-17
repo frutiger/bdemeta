@@ -20,6 +20,13 @@ group.
 Notably, `bde-meta` supports finding package groups across disconnected
 directory structures, by means of the [ROOTS](#roots) environment variable.
 
+### INSTALLATION
+
+Place `bde-meta.py` in your `$PATH` somewhere. Personally, I symlink it to
+`~/bin/bde-meta` and have `~/bin` in my `$PATH`.
+
+This requires either of the latest versions of Python 2 or Python 3.
+
 ### OPTIONS
 
 `bde-meta` runs in one of five modes as given by the first argument:
