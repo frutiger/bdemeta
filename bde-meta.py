@@ -5,6 +5,7 @@ from functools  import reduce
 
 import argparse
 import collections
+import copy
 import glob
 import io
 import itertools
@@ -13,9 +14,24 @@ import os
 import subprocess
 import sys
 
-def traverse(ns):
-    return reduce(set.union, (traverse(n.dependencies()) for n in ns), ns)
+def memoize(function):
+    results = {}
+    def inner(*args):
+        if args in results:
+            result = results[args]
+        else:
+            result = function(*args)
+            results[args] = result
+        return copy.copy(result)
+    return inner
 
+@memoize
+def traverse(ns):
+    return reduce(frozenset.union,
+                  (traverse(n.dependencies()) for n in ns),
+                  ns)
+
+@memoize
 def tsort(nodes):
     tsorted = []
     marks   = {}
@@ -35,6 +51,7 @@ def tsort(nodes):
     map(visit, nodes)
     return tsorted
 
+@memoize
 def bde_items(*args):
     items_filename = os.path.join(*args)
     items = []
@@ -42,7 +59,7 @@ def bde_items(*args):
         for l in items_file:
             if len(l) > 1 and l[0] != '#':
                 items = items + l.split()
-    return set(items)
+    return frozenset(items)
 
 class Unit(object):
     def __init__(self, name, cflags, ldflags):
@@ -63,7 +80,7 @@ class Unit(object):
         return 'Unit(\'{}\')'.format(self.name)
 
     def dependencies(self):
-        return {}
+        return frozenset()
 
     def cflags(self):
         return self._cflags
@@ -98,11 +115,12 @@ class Group(Unit):
             def __repr__(self):
                 return 'Package(\'{}\')'.format(self.name)
 
+            @memoize
             def dependencies(self):
                 names = bde_items(self.path, 'package', self.name + '.dep')
-                return { Package(self.path,
-                                 os.path.pardir,
-                                 name) for name in names }
+                return frozenset(Package(self.path,
+                                         os.path.pardir,
+                                         name) for name in names)
 
             def cflags(self):
                 return '-I{}'.format(self.path)
@@ -112,13 +130,15 @@ class Group(Unit):
 
         if package is None:
             names = bde_items(self.path, 'group', self.name + '.mem')
-            return tsort({ Package(self.path, n) for n in names })
+            return tsort(frozenset(Package(self.path, n) for n in names))
         else:
-            return tsort(traverse({ Package(self.path, package.name) }))
+            return tsort(traverse(frozenset((Package(self.path,
+                                                     package.name),))))
 
+    @memoize
     def dependencies(self):
         names = bde_items(self.path, 'group', self.name + '.dep')
-        return { self.resolver(name) for name in names }
+        return frozenset(self.resolver(name) for name in names)
 
     def ldflags(self):
         return ['-l' + self.name] + self._ldflags
@@ -127,7 +147,7 @@ class Group(Unit):
         return [p.cflags() for p in self._packages()] + self._cflags
 
     def components(self):
-        deps = tsort(traverse({ self }))
+        deps = tsort(traverse(frozenset((self,))))
         deps.remove(self)
         deps_cflags = reduce(list.__add__, [d.cflags() for d in deps], [])
 
@@ -151,24 +171,21 @@ def get_resolver(roots, cflags, ldflags):
         return Unit(name, cflags[name], ldflags[name])
     return resolve
 
-def deps(resolver, units):
-    units = { resolver(unit) for unit in units }
-    return ' '.join([u.name for u in tsort(traverse(units))])
+def deps(units):
+    return ' '.join(u.name for u in tsort(traverse(units)))
 
-def cflags(resolver, units):
-    units    = { resolver(unit) for unit in units }
+def cflags(units):
     units    = tsort(traverse(units))
     cflags = reduce(list.__add__, [u.cflags() for u in units])
     return ' '.join(cflags)
 
-def ldflags(resolver, units):
-    units   = { resolver(unit) for unit in units }
+def ldflags(units):
     units   = tsort(traverse(units))
     ldflags = reduce(list.__add__, [u.ldflags() for u in units])
     path    = os.path.join('out', 'libs')
     return '-L{path} {libs}'.format(path=path, libs=' '.join(ldflags))
 
-def ninja(resolver, unit, file):
+def ninja(units, file):
     rules = u'''\
 rule cc-object
   deps    = gcc
@@ -184,7 +201,7 @@ rule ar
   command = ar -crs $out $in
 '''
     lib_template=u'''\
-build {lib}: ar {objects}
+build {lib}: ar {objects} | {libs}
 default {lib}
 '''
     tests_template=u'''\
@@ -200,35 +217,52 @@ build {test}: cc-test {driver}
   ldflags = {ldflags}
 '''
 
+    join  = lambda l: ' '.join(l)
     pjoin = os.path.join
     obj   = lambda c: pjoin('out', 'objs',  c + '.o')
     test  = lambda c: pjoin('out', 'tests', c + '.t')
-
-    lib = pjoin('out', 'libs', 'lib{}.a'.format(unit))
-
-    components = resolver(unit).components()
-    objects    = ' '.join([obj(c)  for c in components.keys()])
-    tests      = ' '.join([test(c) for c in components.keys()])
+    lib   = lambda l: pjoin('out', 'libs', 'lib{}.a'.format(l.name))
 
     file.write(rules)
-    file.write(lib_template.format(lib = lib, objects = objects))
-    file.write(tests_template.format(tests = tests))
-    for name in sorted(components.keys()):
-        c      = components[name]
-        cflags = ' '.join(c['cflags'])
-        file.write(obj_template.format(
+
+    units = tsort(traverse(units))
+
+    all_tests = []
+    for unit in units:
+        if not isinstance(unit, Group):
+            continue
+
+        components = unit.components()
+        objects    = join((obj(c)  for c in components.keys()))
+        tests      = join((test(c) for c in components.keys()))
+        all_tests.append(tests)
+
+        dep_units = filter(lambda x: isinstance(x, Group),
+                           tsort(traverse(frozenset((unit,)))))
+        dep_units.remove(unit)
+
+        file.write(lib_template.format(lib     = lib(unit),
+                                       objects = objects,
+                                       libs    = join(map(lib, dep_units))))
+
+        for name in sorted(components.keys()):
+            c      = components[name]
+            cflags = ' '.join(c['cflags'])
+            file.write(obj_template.format(
                                     object   = obj(name),
                                     cpp      = pjoin(c['path'], name + '.cpp'),
                                     cflags   = cflags))
-        file.write(test_template.format(
+            file.write(test_template.format(
                                    test    = test(name),
                                    driver  = pjoin(c['path'], name + '.t.cpp'),
                                    cflags  = cflags,
-                                   ldflags = ldflags(resolver, { unit })))
+                                   ldflags = ldflags(frozenset((unit,)))))
+
+    file.write(tests_template.format(tests = join(all_tests)))
 
 def runtest(test):
     for case in itertools.count():
-        rc = subprocess.call([test, str(case)])
+        rc = subprocess.call((test, str(case)))
         if rc == 0:
             continue
         elif rc == 255:
@@ -245,38 +279,38 @@ def runtests(tests):
 
     multiprocessing.Pool().map(runtest, sorted(tests))
 
-def main(args):
+def parse_args(args):
     parser = argparse.ArgumentParser();
     parser.add_argument('--root', action='append', dest='roots')
 
     subparser = parser.add_subparsers(title='subcommands')
 
-    cflags_parser = subparser.add_parser('cflags', help='Generate a set of '
-    '`-I` directives that will allow a compilation unit depending on the '
-    'specified `<unit>`s to compile correctly.')
-    cflags_parser.add_argument('units', nargs='+')
-    cflags_parser.set_defaults(mode='cflags')
-
     deps_parser = subparser.add_parser('deps', help='Print the list of '
-    'dependencies of the specified `<unit>`s in topologically sorted order.')
-    deps_parser.add_argument('units', nargs='+')
+    'dependencies of the specified GROUPS in topologically sorted order.')
+    deps_parser.add_argument('groups', nargs='+')
     deps_parser.set_defaults(mode='deps')
 
+    cflags_parser = subparser.add_parser('cflags', help='Generate a set of '
+            '\'-I\' directives that will allow a compilation unit depending '
+            'on the specified GROUPS to compile correctly.')
+    cflags_parser.add_argument('groups', nargs='+')
+    cflags_parser.set_defaults(mode='cflags')
+
     ldflags_parser = subparser.add_parser('ldflags', help='Generate a set of '
-    '`-L` and `-l` directives that allow a link of objects depending on the '
-    'specified `<unit>`s to link correctly.')
-    ldflags_parser.add_argument('units', nargs='+')
+            '\'-L\' and \'-l\' directives that allow a link of objects '
+            'depending on the specified GROUPS to link correctly.')
+    ldflags_parser.add_argument('groups', nargs='+')
     ldflags_parser.set_defaults(mode='ldflags')
 
-    ninja_parser = subparser.add_parser('ninja', help='Generate a ninja '
-    'build file that will build a statically linked library for the specified '
-    '`<unit>`.')
-    ninja_parser.add_argument('unit')
+    ninja_parser = subparser.add_parser('ninja', help='Generate a ninja build '
+            'file that will build a statically linked library for the '
+            'specified GROUPS and all dependent groups.')
+    ninja_parser.add_argument('groups', nargs='+')
     ninja_parser.set_defaults(mode='ninja')
 
     runtests_parser = subparser.add_parser('runtests', help='Run all of the '
-    'specified BDE-style `<test>` programs to be found in `out/tests` or all '
-    'of the tests in that subdirectory.')
+            'specified BDE-style GROUPS programs to be found in '
+            '\'out/tests\' or all of the tests in that subdirectory.')
     runtests_parser.add_argument('tests', nargs='*')
     runtests_parser.set_defaults(mode='runtests')
 
@@ -286,8 +320,8 @@ def main(args):
 
     args, unmatched = parser.parse_known_args(args=args)
 
-    user_cflags  = collections.defaultdict(list)
-    user_ldflags = collections.defaultdict(list)
+    args.user_cflags  = collections.defaultdict(list)
+    args.user_ldflags = collections.defaultdict(list)
 
     index = 0
     while index < len(unmatched):
@@ -308,24 +342,30 @@ def main(args):
             raise RuntimeError('flag should be <unit>.cflag or <unit>.ldflag')
 
         if   key[1] == 'cflag':
-            user_cflags[key[0][2:]].append(value)
+            args.user_cflags[key[0][2:]].append(value)
         elif key[1] == 'ldflag':
-            user_ldflags[key[0][2:]].append(value)
+            args.user_ldflags[key[0][2:]].append(value)
         else:
             raise RuntimeError(('flag should be {0}.cflag or ' +
                                 '{0}.ldflag').format(key[0]))
 
-    resolver = get_resolver(args.roots, user_cflags, user_ldflags)
+    return args
+
+def main(args):
+    args = parse_args(args)
+    resolver = get_resolver(args.roots, args.user_cflags, args.user_ldflags)
+    if hasattr(args, 'groups'):
+        groups = frozenset(resolver(unit) for unit in args.groups)
     if   args.mode == 'deps':
-        return deps(   resolver, args.units)
+        print(deps(groups))
     elif args.mode == 'cflags':
-        return cflags( resolver, args.units)
+        print(cflags(groups))
     elif args.mode == 'ldflags':
-        return ldflags(resolver, args.units)
+        print(ldflags(groups))
     elif args.mode == 'ninja':
-        return ninja( resolver,  args.unit, sys.stdout)
+        ninja(groups, sys.stdout)
     elif args.mode == 'runtests':
-        return runtests(args.tests)
+        runtests(args.tests)
     else:
         parser.print_help()
         return -1

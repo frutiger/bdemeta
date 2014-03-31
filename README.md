@@ -48,9 +48,9 @@ This requires either of the latest versions of Python 2 or Python 3.
     Generate a set of `-L` and `-l` directives that allow a link of objects
     depending on the specified `<group>`s to link correctly.
 
-  * `ninja [--root ROOT] [--<name>.cflag CFLAG] [--<name>.ldflag LDFLAG] <group>`:
+  * `ninja [--root ROOT] [--<name>.cflag CFLAG] [--<name>.ldflag LDFLAG] <group> [<group> ...]`:
     Generate a ninja build file that will build a statically linked library for
-    the specified `<group>`.
+    the specified `<group>`s and all dependent groups.
 
   * `runtests [<test> ...]`:
     Run all of the specified BDE-style `<test>` programs to be found in
@@ -76,10 +76,11 @@ every dependent of `bsl`.
 ### UNITS
 <a name="units"></a>
 
-`bde-meta` supports dependencies that are not package groups.  This can be
-useful when depending on headers and libraries provided by the system.  By
-default, such dependencies introduce no new cflags or ldflags, unless such a
-flag has been specified with a `--<name>.cflag` or `--<name>.ldflag`.
+`bde-meta` supports dependencies that are not package groups (i.e. 'units').
+This can be useful when depending on headers and libraries provided by the
+system.  By default, such dependencies introduce no new cflags or ldflags,
+unless such a flag has been specified with a `--<name>.cflag` or
+`--<name>.ldflag`.
 
 ### EXAMPLES
 
@@ -89,16 +90,11 @@ To build a static library named `bsl` in `out/lib`:
 
 To build `bdl` and all its dependencies as separate libraries in `out/lib`:
 
-    $ bde-meta deps bdl | while read group
-                            do ninja -f <(bde-meta ninja $group)
-                          done
+    $ ninja -f <(bde-meta ninja bdl)
 
 To build all tests in the `bdl` package group using `ninja`, first build the
 library (and all dependent libraries), then build the tests:
 
-    $ bde-meta deps bdl | while read group
-                            do ninja -f <(bde-meta ninja $group)
-                          done
     $ ninja -f <(bde-meta ninja bdl) tests
 
 To run all of the previously built tests:
