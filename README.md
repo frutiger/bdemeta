@@ -2,20 +2,24 @@
 
 ### SYNOPSIS
 
-`bde-meta deps [--root ROOT] <group> [<group> ...]`<br/>
-`bde-meta cflags [--root ROOT] [--<name>.cflag CFLAG] <group> [<group> ...]`<br/>
-`bde-meta ldflags [--root ROOT] [--<name>.ldflag LDFLAG] <group> [<group> ...]`<br/>
-`bde-meta ninja [--root ROOT] [--<name>.cflag CFLAG] [--<name>.ldflag LDFLAG] <group>`<br/>
-`bde-meta runtests [<test> ...]`:
+`bde-meta [--root ROOT] [--<name>.cflag CFLAG] [--<name>.ldflag LDFLAG] MODE`<br/>
+
+Where `MODE` is one of:
+
+`bde-meta deps GROUP [GROUP ...]`<br/>
+`bde-meta cflags GROUP [GROUP ...]`<br/>
+`bde-meta ldflags GROUP [GROUP ...]`<br/>
+`bde-meta ninja GROUP [GROUP ...]`<br/>
+`bde-meta runtests [TEST ...]`:
 
 ### DESCRIPTION
 
 `bde-meta` is a set of basic tools to assist building and testing [BDE-style
 source trees](https://github.com/bloomberg/bde).  It can generate [ninja build
 files](https://github.com/martine/ninja) for a particular package group, and
-provide `cflags` and `ldflags` when building applications that depend on such
-package groups.  It can also run all the unit tests for a particular package
-group.
+provide `cflags` and `ldflags` (`-I` and `-L/-l` rules by default, along with
+any user-supplied ones) when building applications that depend on such package
+groups.  It can also run all the unit tests for a particular package group.
 
 `bde-meta` supports finding package groups across [disconnected
 directory structures](#roots), [arbitrary cflags and ldflags](#flags) for any
@@ -34,27 +38,35 @@ This requires either of the latest versions of Python 2 or Python 3.
 
 ### OPTIONS
 
-`bde-meta` runs in one of five modes as given by the first argument:
+`bde-meta` takes any number of the following options:
 
-  * `deps [--root ROOT] <group> [<group> ...]`:
-    Print the list of dependencies of the specified `<group>`s in topologically
-    sorted order.
+  * `--root ROOT`
+    Add the specified `ROOT` to the package group search path
 
-  * `cflags [--root ROOT] [--<name>.cflag CFLAG] <group> [<group> ...]`:
-    Generate a set of `-I` directives that will allow a compilation unit
-    depending on the specified `<group>`s to compile correctly.
+  * `--<name>.cflag CFLAG`
+    Append the specified `CFLAG` when generating cflags for the dependency
+    with the specified `<name>`.
 
-  * `ldflags [--root ROOT] [--<name>.ldflag LDFLAG] <group> [<group> ...]`:
-    Generate a set of `-L` and `-l` directives that allow a link of objects
-    depending on the specified `<group>`s to link correctly.
+  * `--<name>.ldflag LDFLAG`
+    Append the specified `LDFLAG` when generating ldflags for the dependency
+    with the specified `<name>`.
 
-  * `ninja [--root ROOT] [--<name>.cflag CFLAG] [--<name>.ldflag LDFLAG] <group> [<group> ...]`:
-    Generate a ninja build file that will build a statically linked library for
-    the specified `<group>`s and all dependent groups.
+`bde-meta` runs in one of five modes as given by the first positional argument:
 
-  * `runtests [<test> ...]`:
-    Run all of the specified BDE-style `<test>` programs to be found in
-    `out/tests` or all of the tests in that subdirectory.
+  * `deps GROUP [GROUP ...]`:
+    Print topologically sorted dependencies
+
+  * `cflags GROUP [GROUP ...]`:
+    Produce flags for the compiler
+
+  * `ldflags GROUP [GROUP ...]`:
+    Produce flags for the linker
+
+  * `ninja GROUP [GROUP ...]`:
+    Generate a ninja build file
+
+  * `runtests [TEST ...]`:
+    Run BDE-style unit tests
 
 ### ROOTS
 <a name="roots"></a>

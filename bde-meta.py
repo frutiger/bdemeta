@@ -280,38 +280,75 @@ def runtests(tests):
     multiprocessing.Pool().map(runtest, sorted(tests))
 
 def parse_args(args):
-    parser = argparse.ArgumentParser();
-    parser.add_argument('--root', action='append', dest='roots')
+    parser = argparse.ArgumentParser(description='build and test BDE-style '
+                                                 'code');
+    parser.add_argument('--root',
+                         action='append',
+                         metavar='ROOT',
+                         dest='roots',
+                         help='Add the specified ROOT to the package '
+                              'group search path')
 
-    subparser = parser.add_subparsers(title='subcommands')
+    subparser = parser.add_subparsers(metavar='MODE')
 
-    deps_parser = subparser.add_parser('deps', help='Print the list of '
-    'dependencies of the specified GROUPS in topologically sorted order.')
-    deps_parser.add_argument('groups', nargs='+')
+    deps_parser = subparser.add_parser('deps',
+                                        help='Print topologically sorted '
+                                             'dependencies',
+                                        description='Print the list of '
+                                                    'dependencies of the '
+                                                    'specified GROUPs in '
+                                                    'topologically sorted '
+                                                    'order')
+    deps_parser.add_argument('groups', nargs='+', metavar='GROUP')
     deps_parser.set_defaults(mode='deps')
 
-    cflags_parser = subparser.add_parser('cflags', help='Generate a set of '
-            '\'-I\' directives that will allow a compilation unit depending '
-            'on the specified GROUPS to compile correctly.')
-    cflags_parser.add_argument('groups', nargs='+')
+    cflags_parser = subparser.add_parser('cflags',
+                                          help='Produce flags for the '
+                                               'compiler',
+                                          description='Produce cflags that '
+                                                      'will allow a '
+                                                      'compilation unit '
+                                                      'depending on the '
+                                                      'specified GROUPs to '
+                                                      'compile correctly')
+    cflags_parser.add_argument('groups', nargs='+', metavar='GROUP')
     cflags_parser.set_defaults(mode='cflags')
 
-    ldflags_parser = subparser.add_parser('ldflags', help='Generate a set of '
-            '\'-L\' and \'-l\' directives that allow a link of objects '
-            'depending on the specified GROUPS to link correctly.')
-    ldflags_parser.add_argument('groups', nargs='+')
+    ldflags_parser = subparser.add_parser('ldflags',
+                                           help='Produce flags for the '
+                                                'linker',
+                                           description='Produce ldflags that '
+                                                       'will a set of '
+                                                       'objects depending on '
+                                                       'the specified GROUPs '
+                                                       'to link correctly')
+    ldflags_parser.add_argument('groups', nargs='+', metavar='GROUP')
     ldflags_parser.set_defaults(mode='ldflags')
 
-    ninja_parser = subparser.add_parser('ninja', help='Generate a ninja build '
-            'file that will build a statically linked library for the '
-            'specified GROUPS and all dependent groups.')
-    ninja_parser.add_argument('groups', nargs='+')
+    ninja_parser = subparser.add_parser('ninja',
+                                         help='Generate a ninja build file',
+                                         description='Generate a ninja build '
+                                                     'file that will build '
+                                                     'statically linked '
+                                                     'libraries and tests for '
+                                                     'the specified GROUPs '
+                                                     'and all dependent '
+                                                     'groups')
+    ninja_parser.add_argument('groups', nargs='+', metavar='GROUP')
     ninja_parser.set_defaults(mode='ninja')
 
-    runtests_parser = subparser.add_parser('runtests', help='Run all of the '
-            'specified BDE-style GROUPS programs to be found in '
-            '\'out/tests\' or all of the tests in that subdirectory.')
-    runtests_parser.add_argument('tests', nargs='*')
+    runtests_parser = subparser.add_parser('runtests',
+                                            help='Run BDE-style unit tests',
+                                            description='Run all of the '
+                                                        'optionally specified '
+                                                        'BDE-style TESTs '
+                                                        'found in '
+                                                        '\'out/tests\'; if '
+                                                        'none are specified, '
+                                                        'then run all the '
+                                                        'tests in that '
+                                                        'directory')
+    runtests_parser.add_argument('tests', nargs='*', metavar='TEST')
     runtests_parser.set_defaults(mode='runtests')
 
     if os.path.isfile(os.path.expanduser('~/.bdemetarc')):
@@ -352,10 +389,12 @@ def parse_args(args):
     return args
 
 def main(args):
-    args = parse_args(args)
+    args     = parse_args(args)
     resolver = get_resolver(args.roots, args.user_cflags, args.user_ldflags)
+
     if hasattr(args, 'groups'):
         groups = frozenset(resolver(unit) for unit in args.groups)
+
     if   args.mode == 'deps':
         print(deps(groups))
     elif args.mode == 'cflags':
@@ -367,7 +406,6 @@ def main(args):
     elif args.mode == 'runtests':
         runtests(args.tests)
     else:
-        parser.print_help()
         return -1
 
 if __name__ == '__main__':
