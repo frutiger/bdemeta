@@ -275,6 +275,10 @@ def runtests(tests):
     multiprocessing.Pool().map(runtest, sorted(tests))
 
 def parse_args(args):
+    class NullAction(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string):
+            pass
+
     parser = argparse.ArgumentParser(description='build and test BDE-style '
                                                  'code');
     parser.add_argument('--root',
@@ -283,6 +287,14 @@ def parse_args(args):
                          dest='roots',
                          help='Add the specified ROOT to the package '
                               'group search path')
+
+    # This is added purely for help display purposes.  Hence, we use the
+    # 'NullAction' to drop any arguments that might match this
+    parser.add_argument('--<name>.def',
+                         action=NullAction,
+                         metavar='DEF',
+                         help='Append the specified DEF when generating flags '
+                              'for the dependency with the specified <name>.')
 
     subparser = parser.add_subparsers(metavar='MODE')
 
