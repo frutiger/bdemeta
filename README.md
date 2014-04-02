@@ -2,7 +2,7 @@
 
 ### SYNOPSIS
 
-`bde-meta [--root ROOT] [--<name>.cflag CFLAG] [--<name>.ldflag LDFLAG] MODE`<br/>
+`bde-meta [--root ROOT] [--<name>.def DEF] MODE`<br/>
 
 Where `MODE` is one of:
 
