@@ -117,7 +117,12 @@ class Group(Unit):
                 return '-I{}'.format(self.path)
 
             def components(self):
-                return bde_items(self.path, 'package', self.name + '.mem')
+                if '+' in self.name:
+                    # A '+' in a package name means all of its contents should
+                    # be put into the archive
+                    return filter(os.path.isfile, os.listdir(self.path))
+                else:
+                    return bde_items(self.path, 'package', self.name + '.mem')
 
         if package is None:
             names = bde_items(self.path, 'group', self.name + '.mem')
