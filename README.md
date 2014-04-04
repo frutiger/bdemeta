@@ -2,7 +2,7 @@
 
 ### SYNOPSIS
 
-`bde-meta [--root ROOT] [--flag NAME:FLAG] MODE ...`<br/>
+`bde-meta [--root ROOT] [--flag NAME:FLAG] [--dependency NAME:DEPENDENCY] MODE ...`<br/>
 
 Where `MODE` is one of:
 
@@ -45,6 +45,9 @@ This requires either of the latest versions of Python 2 or Python 3.
     Append the specified `FLAG` when generating flags for the dependency
     with the specified `NAME`.
 
+  * `--dependency NAME:DEPENDENCY`
+    Consider the specified `NAME` to have the specified `DEPENDENCY`.
+
 `bde-meta` runs in one of five modes as given by the first positional argument:
 
   * `walk GROUP [GROUP ...]`:
@@ -81,7 +84,10 @@ as a flag for `bsl` and every dependent of `bsl`.
 `bde-meta` supports dependencies that are not package groups (i.e. 'units').
 This can be useful when depending on headers and libraries provided by the
 system.  By default, such dependencies introduce no new flags unless such a
-flag has been specified with a `--flag NAME:FLAG`.
+flag has been specified with a `--flag NAME:FLAG`.  In order to ensure that
+link lines are correctly topologically sorted, `bde-meta` will require
+dependency information that can be specified with `--dependency
+NAME:DEPENDENCY`.
 
 ### EXAMPLES
 

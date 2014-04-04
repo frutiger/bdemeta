@@ -62,9 +62,10 @@ def bde_items(*args):
     return frozenset(items)
 
 class Unit(object):
-    def __init__(self, name, flags):
-        self.name   = name
-        self._flags  = flags
+    def __init__(self, resolver, name, flags, dependencies):
+        self.name          = name
+        self._flags        = flags
+        self._dependencies = frozenset(resolver(name) for name in dependencies)
 
     def __eq__(self, other):
         return self.name == other.name
@@ -76,7 +77,7 @@ class Unit(object):
         return hash(self.name)
 
     def dependencies(self):
-        return frozenset()
+        return self._dependencies
 
     def flags(self, linker_flags=True):
         if linker_flags:
@@ -86,10 +87,11 @@ class Unit(object):
                                     x[:2] != '-l', self._flags)
 
 class Group(Unit):
-    def __init__(self, path, flags, resolver):
-        super(Group, self).__init__(os.path.basename(path), flags)
-        self.path     = path
-        self.resolver = resolver
+    def __init__(self, resolver, path, flags):
+        self.name    = os.path.basename(path)
+        self.path    = path
+        dependencies = bde_items(self.path, 'group', self.name + '.dep')
+        super(Group, self).__init__(resolver, self.name, flags, dependencies)
 
     def _packages(self, package=None):
         class Package(object):
@@ -131,11 +133,6 @@ class Group(Unit):
             return tsort(traverse(frozenset((Package(self.path,
                                                      package.name),))))
 
-    @memoize
-    def dependencies(self):
-        names = bde_items(self.path, 'group', self.name + '.dep')
-        return frozenset(self.resolver(name) for name in names)
-
     def flags(self, linker_flags=True):
         result = [p.flags() for p in self._packages()]
         if linker_flags:
@@ -163,13 +160,13 @@ class Group(Unit):
                 }
         return result
 
-def get_resolver(roots, flags):
+def get_resolver(roots, flags, dependencies):
     def resolve(name):
         for root in roots:
             candidate = os.path.join(root.strip(), 'groups', name)
             if os.path.isdir(candidate):
-                return Group(candidate, flags[name], resolve)
-        return Unit(name, flags[name])
+                return Group(resolve, candidate, flags[name])
+        return Unit(resolve, name, flags[name], dependencies[name])
     return resolve
 
 def walk(units):
@@ -300,6 +297,14 @@ def get_parser():
                               'flags for the dependency with the specified '
                               'NAME.')
 
+    parser.add_argument('--dependency',
+                         action='append',
+                         metavar='NAME:DEPENDENCY',
+                         dest='dependencies',
+                         default=[],
+                         help='Consider the specified NAME to have the '
+                              'specified DEPENDENCY.')
+
     subparser = parser.add_subparsers(metavar='MODE')
 
     walk_parser = subparser.add_parser('walk',
@@ -361,19 +366,30 @@ def parse_args(args):
     args = get_parser().parse_args(args=args)
 
     args.user_flags = collections.defaultdict(list)
-    for flag in args.flags:
-        if len(flag.split(':')) < 2:
+    for value in args.flags:
+        if len(value.split(':')) < 2:
             raise RuntimeError('flag value should be NAME:FLAG')
 
-        name, flag = flag.split(':')
+        name, flag = value.split(':')
         args.user_flags[name].append(flag)
     delattr(args, 'flags')
+
+    args.user_dependencies = collections.defaultdict(list)
+    for value in args.dependencies:
+        if len(value.split(':')) < 2:
+            raise RuntimeError('dependency value should be NAME:DEPENDENCY')
+
+        name, dependency = value.split(':')
+        args.user_dependencies[name].append(dependency)
+    delattr(args, 'dependencies')
 
     return args
 
 def main(args):
     args     = parse_args(args)
-    resolver = get_resolver(args.roots, args.user_flags)
+    resolver = get_resolver(args.roots,
+                            args.user_flags,
+                            args.user_dependencies)
 
     if hasattr(args, 'groups'):
         groups = frozenset(resolver(unit) for unit in args.groups)
