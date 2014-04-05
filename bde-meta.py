@@ -212,7 +212,7 @@ build {object}: cc-object {cpp}
 
 '''
     test_template=u'''\
-build {test}: cc-test {driver}
+build {test}: cc-test {driver} | {libs}
   flags = {flags}
 
 '''
@@ -237,9 +237,9 @@ build {test}: cc-test {driver}
         tests      = join((test(c) for c in components.keys()))
         all_tests.append(tests)
 
-        dep_units = filter(lambda x: isinstance(x, Group),
+        units     = filter(lambda x: isinstance(x, Group),
                            tsort(traverse(frozenset((unit,)))))
-        dep_units.remove(unit)
+        dep_units = filter(lambda x: x != unit, units)
 
         file.write(lib_template.format(lib     = lib(unit),
                                        objects = objects,
@@ -256,7 +256,8 @@ build {test}: cc-test {driver}
             file.write(test_template.format(
                                    test   = test(name),
                                    driver = pjoin(c['path'], name + '.t.cpp'),
-                                   flags  = test_flags))
+                                   flags  = test_flags,
+                                   libs   = join(map(lib, units))))
 
     file.write(tests_template.format(tests = join(all_tests)))
 
