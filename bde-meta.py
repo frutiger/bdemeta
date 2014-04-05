@@ -48,7 +48,7 @@ def tsort(nodes):
         else:
             raise RuntimeError('cyclic graph')
 
-    map(visit, nodes)
+    [visit(n) for n in nodes]
     return tsorted
 
 @memoize
@@ -234,9 +234,9 @@ build {test}: cc-test {driver} | {libs}
         tests      = join((test(c) for c in components.keys()))
         all_tests.append(tests)
 
-        units     = filter(lambda x: isinstance(x, Group),
-                           tsort(traverse(frozenset((unit,)))))
-        dep_units = filter(lambda x: x != unit, units)
+        units     = list(filter(lambda x: isinstance(x, Group),
+                                tsort(traverse(frozenset((unit,))))))
+        dep_units = list(filter(lambda x: x != unit, units))
 
         file.write(lib_template.format(lib     = lib(unit),
                                        objects = objects,
