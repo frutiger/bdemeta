@@ -62,9 +62,9 @@ def bde_items(*args):
     return frozenset(items)
 
 class Unit(object):
-    def __init__(self, name, defs):
+    def __init__(self, name, flags):
         self.name   = name
-        self._defs  = defs
+        self._flags  = flags
 
     def __eq__(self, other):
         return self.name == other.name
@@ -78,16 +78,16 @@ class Unit(object):
     def dependencies(self):
         return frozenset()
 
-    def defs(self, linker_flags=True):
+    def flags(self, linker_flags=True):
         if linker_flags:
-            return self._defs
+            return self._flags
         else:
             return filter(lambda x: x[:2] != '-L' and \
-                                    x[:2] != '-l', self._defs)
+                                    x[:2] != '-l', self._flags)
 
 class Group(Unit):
-    def __init__(self, path, defs, resolver):
-        super(Group, self).__init__(os.path.basename(path), defs)
+    def __init__(self, path, flags, resolver):
+        super(Group, self).__init__(os.path.basename(path), flags)
         self.path     = path
         self.resolver = resolver
 
@@ -113,7 +113,7 @@ class Group(Unit):
                                          os.path.pardir,
                                          name) for name in names)
 
-            def defs(self):
+            def flags(self):
                 return '-I{}'.format(self.path)
 
             def components(self):
@@ -136,25 +136,25 @@ class Group(Unit):
         names = bde_items(self.path, 'group', self.name + '.dep')
         return frozenset(self.resolver(name) for name in names)
 
-    def defs(self, linker_flags=True):
-        result = [p.defs() for p in self._packages()]
+    def flags(self, linker_flags=True):
+        result = [p.flags() for p in self._packages()]
         if linker_flags:
             result.append('-Lout/libs')
             result.append('-l' + self.name)
-        result.extend(self._defs)
+        result.extend(self._flags)
         return result
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
         deps.remove(self)
-        deps_cflags  = reduce(list.__add__, [d.defs(False) for d in deps], [])
-        deps_ldflags = reduce(list.__add__, [d.defs()      for d in deps], [])
+        deps_cflags  = reduce(list.__add__, [d.flags(False) for d in deps], [])
+        deps_ldflags = reduce(list.__add__, [d.flags()      for d in deps], [])
 
         result = {}
         for package in self._packages():
-            package_defs = [p.defs() for p in self._packages(package)]
-            cflags       = deps_cflags  + package_defs + self.defs(False)
-            ldflags      = deps_ldflags                + self.defs()
+            package_flags = [p.flags() for p in self._packages(package)]
+            cflags       = deps_cflags  + package_flags + self.flags(False)
+            ldflags      = deps_ldflags                + self.flags()
             for c in package.components():
                 result[c] = {
                     'cflags':  cflags,
@@ -163,13 +163,13 @@ class Group(Unit):
                 }
         return result
 
-def get_resolver(roots, defs):
+def get_resolver(roots, flags):
     def resolve(name):
         for root in roots:
             candidate = os.path.join(root.strip(), 'groups', name)
             if os.path.isdir(candidate):
-                return Group(candidate, defs[name], resolve)
-        return Unit(name, defs[name])
+                return Group(candidate, flags[name], resolve)
+        return Unit(name, flags[name])
     return resolve
 
 def walk(units):
@@ -177,7 +177,7 @@ def walk(units):
 
 def flags(units):
     units  = tsort(traverse(units))
-    flags  = reduce(list.__add__, [u.defs() for u in units])
+    flags  = reduce(list.__add__, [u.flags() for u in units])
     return ' '.join(flags)
 
 def ninja(units, file):
@@ -280,11 +280,7 @@ def runtests(tests):
 
     multiprocessing.Pool().map(runtest, sorted(tests))
 
-def parse_args(args):
-    class NullAction(argparse.Action):
-        def __call__(self, parser, namespace, values, option_string):
-            pass
-
+def get_parser():
     parser = argparse.ArgumentParser(description='build and test BDE-style '
                                                  'code');
     parser.add_argument('--root',
@@ -295,13 +291,14 @@ def parse_args(args):
                          help='Add the specified ROOT to the package '
                               'group search path')
 
-    # This is added purely for help display purposes.  Hence, we use the
-    # 'NullAction' to drop any arguments that might match this
-    parser.add_argument('--<name>.def',
-                         action=NullAction,
-                         metavar='DEF',
-                         help='Append the specified DEF when generating flags '
-                              'for the dependency with the specified <name>.')
+    parser.add_argument('--flag',
+                         action='append',
+                         metavar='NAME:FLAG',
+                         dest='flags',
+                         default=[],
+                         help='Append the specified FLAG when generating '
+                              'flags for the dependency with the specified '
+                              'NAME.')
 
     subparser = parser.add_subparsers(metavar='MODE')
 
@@ -354,42 +351,29 @@ def parse_args(args):
     runtests_parser.add_argument('tests', nargs='*', metavar='TEST')
     runtests_parser.set_defaults(mode='runtests')
 
+    return parser
+
+def parse_args(args):
     if os.path.isfile(os.path.expanduser('~/.bdemetarc')):
         with open(os.path.expanduser('~/.bdemetarc')) as f:
             args = f.read().split() + args
 
-    args, unmatched = parser.parse_known_args(args=args)
+    args = get_parser().parse_args(args=args)
 
-    args.user_defs = collections.defaultdict(list)
+    args.user_flags = collections.defaultdict(list)
+    for flag in args.flags:
+        if len(flag.split(':')) < 2:
+            raise RuntimeError('flag value should be NAME:FLAG')
 
-    index = 0
-    while index < len(unmatched):
-        item = unmatched[index]
-        if '=' in item:
-            key   = item[:item.find('=')]
-            value = item[item.find('=') + 1:]
-        else:
-            key = item
-            if index + 1 == len(unmatched):
-                raise RuntimeError('no matching value for {}'.format(key))
-            index = index + 1
-            value = unmatched[index]
-        index = index + 1
-
-        key = key.split('.')
-        if len(key) != 2:
-            raise RuntimeError('flag should be <unit>.def')
-
-        if key[1] != 'def':
-            raise RuntimeError(('flag should be {0}.def').format(key[0]))
-
-        args.user_defs[key[0][2:]].append(value)
+        name, flag = flag.split(':')
+        args.user_flags[name].append(flag)
+    delattr(args, 'flags')
 
     return args
 
 def main(args):
     args     = parse_args(args)
-    resolver = get_resolver(args.roots, args.user_defs)
+    resolver = get_resolver(args.roots, args.user_flags)
 
     if hasattr(args, 'groups'):
         groups = frozenset(resolver(unit) for unit in args.groups)
