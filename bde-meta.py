@@ -291,6 +291,7 @@ def parse_args(args):
                          action='append',
                          metavar='ROOT',
                          dest='roots',
+                         default=[],
                          help='Add the specified ROOT to the package '
                               'group search path')
 
