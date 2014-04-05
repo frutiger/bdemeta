@@ -187,7 +187,7 @@ rule cc-object
 rule cc-test
   deps    = gcc
   depfile = $out.d
-  command = c++ $flags $in -MMD -MF $out.d -o $out
+  command = c++ $in $flags -MMD -MF $out.d -o $out
 
 rule ar
   command = ar -crs $out $in
