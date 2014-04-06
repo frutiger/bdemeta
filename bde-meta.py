@@ -37,13 +37,13 @@ def tsort(nodes):
     marks   = {}
 
     def visit(node):
-        if node.name not in marks:
-            marks[node.name] = 'working'
+        if node.name() not in marks:
+            marks[node.name()] = 'working'
             for child in node.dependencies():
                 visit(child)
-            marks[node.name] = 'done'
+            marks[node.name()] = 'done'
             tsorted.insert(0, node)
-        elif marks[node.name] == 'done':
+        elif marks[node.name()] == 'done':
             return
         else:
             raise RuntimeError('cyclic graph')
@@ -63,21 +63,26 @@ def bde_items(*args):
 
 class Unit(object):
     def __init__(self, resolver, name, flags, dependencies):
-        self.name          = name
+        self._resolver     = resolver
+        self._name         = name
         self._flags        = flags
-        self._dependencies = frozenset(resolver(name) for name in dependencies)
+        self._dependencies = dependencies
 
     def __eq__(self, other):
-        return self.name == other.name
+        return self._name == other._name
 
     def __cmp__(self, other):
-        return cmp(self.name, other.name)
+        return cmp(self._name, other._name)
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self._name)
 
+    def name(self):
+        return self._name
+
+    @memoize
     def dependencies(self):
-        return self._dependencies
+        return frozenset(self._resolver(name) for name in self._dependencies)
 
     def flags(self, linker_flags=True):
         if linker_flags:
@@ -88,56 +93,66 @@ class Unit(object):
 
 class Group(Unit):
     def __init__(self, resolver, path, flags):
-        self.name    = os.path.basename(path)
-        self.path    = path
-        dependencies = bde_items(self.path, 'group', self.name + '.dep')
-        super(Group, self).__init__(resolver, self.name, flags, dependencies)
+        self._path   = path
+        name         = os.path.basename(path)
+        super(Group, self).__init__(resolver,
+                                    name,
+                                    flags,
+                                    bde_items(path, 'group', name + '.dep'))
 
     def _packages(self, package=None):
         class Package(object):
             def __init__(self, *args):
-                self.path = os.path.realpath(os.path.join(*args))
-                self.name = os.path.basename(self.path)
+                self._path = os.path.realpath(os.path.join(*args))
+                self._name = os.path.basename(self._path)
 
             def __eq__(self, other):
-                return self.name == other.name
+                return self._name == other._name
 
             def __cmp__(self, other):
-                return cmp(self.name, other.name)
+                return cmp(self._name, other._name)
 
             def __hash__(self):
-                return hash(self.name)
+                return hash(self._name)
+
+            def path(self):
+                return self._path
+
+            def name(self):
+                return self._name
 
             @memoize
             def dependencies(self):
-                names = bde_items(self.path, 'package', self.name + '.dep')
-                return frozenset(Package(self.path,
+                names = bde_items(self._path, 'package', self._name + '.dep')
+                return frozenset(Package(self._path,
                                          os.path.pardir,
                                          name) for name in names)
 
             def flags(self):
-                return '-I{}'.format(self.path)
+                return '-I{}'.format(self._path)
 
             def components(self):
-                if '+' in self.name:
+                if '+' in self._name:
                     # A '+' in a package name means all of its contents should
                     # be put into the archive
-                    return filter(os.path.isfile, os.listdir(self.path))
+                    return filter(os.path.isfile, os.listdir(self._path))
                 else:
-                    return bde_items(self.path, 'package', self.name + '.mem')
+                    return bde_items(self._path,
+                                    'package',
+                                     self._name + '.mem')
 
         if package is None:
-            names = bde_items(self.path, 'group', self.name + '.mem')
-            return tsort(frozenset(Package(self.path, n) for n in names))
+            names = bde_items(self._path, 'group', self._name + '.mem')
+            return tsort(frozenset(Package(self._path, n) for n in names))
         else:
-            return tsort(traverse(frozenset((Package(self.path,
-                                                     package.name),))))
+            return tsort(traverse(frozenset((Package(self._path,
+                                                     package._name),))))
 
     def flags(self, linker_flags=True):
         result = [p.flags() for p in self._packages()]
         if linker_flags:
             result.append('-Lout/libs')
-            result.append('-l' + self.name)
+            result.append('-l' + self._name)
         result.extend(self._flags)
         return result
 
@@ -151,12 +166,12 @@ class Group(Unit):
         for package in self._packages():
             package_flags = [p.flags() for p in self._packages(package)]
             cflags       = deps_cflags  + package_flags + self.flags(False)
-            ldflags      = deps_ldflags                + self.flags()
+            ldflags      = deps_ldflags                 + self.flags()
             for c in package.components():
                 result[c] = {
                     'cflags':  cflags,
                     'ldflags': ldflags,
-                    'path':    package.path,
+                    'path':    package.path(),
                 }
         return result
 
@@ -170,7 +185,7 @@ def get_resolver(roots, flags, dependencies):
     return resolve
 
 def walk(units):
-    return ' '.join(u.name for u in tsort(traverse(units)))
+    return ' '.join(u.name() for u in tsort(traverse(units)))
 
 def flags(units):
     units  = tsort(traverse(units))
@@ -218,7 +233,7 @@ build {test}: cc-test {driver} | {libs}
     pjoin = os.path.join
     obj   = lambda c: pjoin('out', 'objs',  c + '.o')
     test  = lambda c: pjoin('out', 'tests', c + '.t')
-    lib   = lambda l: pjoin('out', 'libs', 'lib{}.a'.format(l.name))
+    lib   = lambda l: pjoin('out', 'libs', 'lib{}.a'.format(l.name()))
 
     file.write(rules)
 
