@@ -62,11 +62,11 @@ def bde_items(*args):
     return frozenset(items)
 
 class Unit(object):
-    def __init__(self, resolver, name, flags, dependencies):
+    def __init__(self, resolver, name, dependencies, flags):
         self._resolver     = resolver
         self._name         = name
-        self._flags        = flags
         self._dependencies = dependencies
+        self._flags        = flags
 
     def __eq__(self, other):
         return self._name == other._name
@@ -92,13 +92,15 @@ class Unit(object):
                                     x[:2] != '-l', self._flags)
 
 class Group(Unit):
-    def __init__(self, resolver, path, flags):
+    def __init__(self, resolver, path, dependencies, flags):
         self._path   = path
         name         = os.path.basename(path)
-        super(Group, self).__init__(resolver,
-                                    name,
-                                    flags,
-                                    bde_items(path, 'group', name + '.dep'))
+        dependencies = frozenset(dependencies)
+        super(Group, self).__init__(
+                        resolver,
+                        name,
+                        dependencies | bde_items(path, 'group', name + '.dep'),
+                        flags)
 
     def _packages(self, package=None):
         class Package(object):
@@ -175,13 +177,16 @@ class Group(Unit):
                 }
         return result
 
-def get_resolver(roots, flags, dependencies):
+def get_resolver(roots, dependencies, flags):
     def resolve(name):
         for root in roots:
             candidate = os.path.join(root.strip(), 'groups', name)
             if os.path.isdir(candidate):
-                return Group(resolve, candidate, flags[name])
-        return Unit(resolve, name, flags[name], dependencies[name])
+                return Group(resolve,
+                             candidate,
+                             dependencies[name],
+                             flags[name])
+        return Unit(resolve, name, dependencies[name], flags[name])
     return resolve
 
 def walk(units):
@@ -303,6 +308,14 @@ def get_parser():
                          help='Add the specified ROOT to the package '
                               'group search path')
 
+    parser.add_argument('--dependency',
+                         action='append',
+                         metavar='NAME:DEPENDENCY',
+                         dest='dependencies',
+                         default=[],
+                         help='Consider the specified NAME to have the '
+                              'specified DEPENDENCY.')
+
     parser.add_argument('--flag',
                          action='append',
                          metavar='NAME:FLAG',
@@ -311,14 +324,6 @@ def get_parser():
                          help='Append the specified FLAG when generating '
                               'flags for the dependency with the specified '
                               'NAME.')
-
-    parser.add_argument('--dependency',
-                         action='append',
-                         metavar='NAME:DEPENDENCY',
-                         dest='dependencies',
-                         default=[],
-                         help='Consider the specified NAME to have the '
-                              'specified DEPENDENCY.')
 
     subparser = parser.add_subparsers(metavar='MODE')
 
@@ -380,15 +385,6 @@ def parse_args(args):
 
     args = get_parser().parse_args(args=args)
 
-    args.user_flags = collections.defaultdict(list)
-    for value in args.flags:
-        if len(value.split(':')) < 2:
-            raise RuntimeError('flag value should be NAME:FLAG')
-
-        name, flag = value.split(':')
-        args.user_flags[name].append(flag)
-    delattr(args, 'flags')
-
     args.user_dependencies = collections.defaultdict(list)
     for value in args.dependencies:
         if len(value.split(':')) < 2:
@@ -398,13 +394,22 @@ def parse_args(args):
         args.user_dependencies[name].append(dependency)
     delattr(args, 'dependencies')
 
+    args.user_flags = collections.defaultdict(list)
+    for value in args.flags:
+        if len(value.split(':')) < 2:
+            raise RuntimeError('flag value should be NAME:FLAG')
+
+        name, flag = value.split(':')
+        args.user_flags[name].append(flag)
+    delattr(args, 'flags')
+
     return args
 
 def main(args):
     args     = parse_args(args)
     resolver = get_resolver(args.roots,
-                            args.user_flags,
-                            args.user_dependencies)
+                            args.user_dependencies,
+                            args.user_flags)
 
     if hasattr(args, 'groups'):
         groups = frozenset(resolver(unit) for unit in args.groups)
