@@ -137,7 +137,9 @@ class Group(Unit):
                 if '+' in self._name:
                     # A '+' in a package name means all of its contents should
                     # be put into the archive
-                    return filter(os.path.isfile, os.listdir(self._path))
+                    return filter(os.path.isfile,
+                                  map(lambda x: os.path.join(self.path(), x),
+                                      os.listdir(self.path())))
                 else:
                     return bde_items(self._path,
                                     'package',
@@ -169,12 +171,26 @@ class Group(Unit):
             package_flags = [p.flags() for p in self._packages(package)]
             cflags       = deps_cflags  + package_flags + self.flags(False)
             ldflags      = deps_ldflags                 + self.flags()
-            for c in package.components():
-                result[c] = {
-                    'cflags':  cflags,
-                    'ldflags': ldflags,
-                    'path':    package.path(),
-                }
+
+            if '+' in package.name():
+                for c in package.components():
+                    name, ext = os.path.splitext(c)
+                    if ext == '.c' or ext == '.cpp':
+                        result[c] = {
+                            'cflags': cflags,
+                            'source': os.path.join(package.path(), c),
+                            'object': name + '.o',
+                        }
+            else:
+                for c in package.components():
+                    result[c] = {
+                        'cflags':  cflags,
+                        'ldflags': ldflags,
+                        'source':  os.path.join(package.path(), c + '.cpp'),
+                        'object':  c + '.o',
+                        'driver':  os.path.join(package.path(), c + '.t.cpp'),
+                        'test':    c + '.t',
+                    }
         return result
 
 def get_resolver(roots, dependencies, flags):
@@ -224,7 +240,7 @@ build tests: phony {tests}
 
 '''
     obj_template=u'''\
-build {object}: cc-object {cpp}
+build {object}: cc-object {source}
   flags = {flags}
 
 '''
@@ -236,8 +252,8 @@ build {test}: cc-test {driver} | {libs}
 
     join  = lambda l: ' '.join(l)
     pjoin = os.path.join
-    obj   = lambda c: pjoin('out', 'objs',  c + '.o')
-    test  = lambda c: pjoin('out', 'tests', c + '.t')
+    obj   = lambda c: pjoin('out', 'objs',  c)
+    test  = lambda c: pjoin('out', 'tests', c)
     lib   = lambda l: pjoin('out', 'libs', 'lib{}.a'.format(l.name()))
 
     file.write(rules)
@@ -250,8 +266,9 @@ build {test}: cc-test {driver} | {libs}
             continue
 
         components = unit.components()
-        objects    = join((obj(c)  for c in components.keys()))
-        tests      = join((test(c) for c in components.keys()))
+        objects    = join((obj(c['object']) for c in components.values()))
+        tests      = join((test(c['test'])  for c in components.values() \
+                                                               if 'test' in c))
         all_tests.append(tests)
 
         units     = list(filter(lambda x: isinstance(x, Group),
@@ -263,18 +280,19 @@ build {test}: cc-test {driver} | {libs}
                                        libs    = join(map(lib, dep_units))))
 
         for name in sorted(components.keys()):
-            c          = components[name]
-            obj_flags  = ' '.join(c['cflags'])
-            test_flags = ' '.join(c['cflags'] + c['ldflags'])
+            c      = components[name]
+            flags  = ' '.join(c['cflags'])
             file.write(obj_template.format(
-                                   object = obj(name),
-                                   cpp    = pjoin(c['path'], name + '.cpp'),
-                                   flags  = obj_flags))
-            file.write(test_template.format(
-                                   test   = test(name),
-                                   driver = pjoin(c['path'], name + '.t.cpp'),
-                                   flags  = test_flags,
-                                   libs   = join(map(lib, units))))
+                                   object = obj(c['object']),
+                                   source = c['source'],
+                                   flags  = flags))
+            if 'driver' in c:
+                flags = ' '.join(c['cflags'] + c['ldflags'])
+                file.write(test_template.format(
+                                               test   = test(c['test']),
+                                               driver = c['driver'],
+                                               flags  = flags,
+                                               libs   = join(map(lib, units))))
 
     file.write(tests_template.format(tests = join(all_tests)))
 
@@ -385,23 +403,20 @@ def parse_args(args):
 
     args = get_parser().parse_args(args=args)
 
-    args.user_dependencies = collections.defaultdict(list)
-    for value in args.dependencies:
-        if len(value.split(':')) < 2:
-            raise RuntimeError('dependency value should be NAME:DEPENDENCY')
+    def set_user_options(args, kind):
+        result = collections.defaultdict(list)
+        for value in getattr(args, kind):
+            if len(value.split(':')) < 2:
+                raise RuntimeError('flag value should be NAME:{}'.format(
+                                                                 kind.upper()))
 
-        name, dependency = value.split(':')
-        args.user_dependencies[name].append(dependency)
-    delattr(args, 'dependencies')
+            name, option = value.split(':')
+            result[name].append(option)
+        delattr(args,  kind)
+        setattr(args, 'user_' + kind, result)
 
-    args.user_flags = collections.defaultdict(list)
-    for value in args.flags:
-        if len(value.split(':')) < 2:
-            raise RuntimeError('flag value should be NAME:FLAG')
-
-        name, flag = value.split(':')
-        args.user_flags[name].append(flag)
-    delattr(args, 'flags')
+    set_user_options(args, 'dependencies')
+    set_user_options(args, 'flags')
 
     return args
 
