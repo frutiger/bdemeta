@@ -111,7 +111,7 @@ To run all of the previously built tests:
 To build `m.cpp` with `bdl` as a dependency and link it with all its
 dependencies:
 
-    $ c++ $(bde-meta flags bdl) m.cpp
+    $ c++ m.cpp $(bde-meta flags bdl)
 
 ### LICENSE
 
