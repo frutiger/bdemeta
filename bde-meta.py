@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-from functools  import reduce
+from __future__  import print_function
+from functools   import reduce
+from collections import defaultdict
 
 import argparse
-import collections
 import copy
 import glob
 import io
@@ -84,12 +84,8 @@ class Unit(object):
     def dependencies(self):
         return frozenset(self._resolver(name) for name in self._dependencies)
 
-    def flags(self, linker_flags=True):
-        if linker_flags:
-            return self._flags
-        else:
-            return filter(lambda x: x[:2] != '-L' and \
-                                    x[:2] != '-l', self._flags)
+    def flags(self, type):
+        return self._flags[type]
 
 class Group(Unit):
     def __init__(self, resolver, path, dependencies, flags):
@@ -152,25 +148,25 @@ class Group(Unit):
             return tsort(traverse(frozenset((Package(self._path,
                                                      package._name),))))
 
-    def flags(self, linker_flags=True):
-        result = [p.flags() for p in self._packages()]
-        if linker_flags:
-            result.append('-Lout/libs')
-            result.append('-l' + self._name)
-        result.extend(self._flags)
-        return result
+    def flags(self, type):
+        if type == 'c':
+            return [p.flags() for p in self._packages()] + self._flags['c']
+        elif type == 'ld':
+            return ['-Lout/libs', '-l' + self._name]     + self._flags['ld']
+        else:
+            raise RuntimeError('Unknown flag type: ' + type)
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
         deps.remove(self)
-        deps_cflags  = reduce(list.__add__, [d.flags(False) for d in deps], [])
-        deps_ldflags = reduce(list.__add__, [d.flags()      for d in deps], [])
+        deps_cflags  = reduce(list.__add__, [d.flags('c')  for d in deps], [])
+        deps_ldflags = reduce(list.__add__, [d.flags('ld') for d in deps], [])
 
         result = {}
         for package in self._packages():
             package_flags = [p.flags() for p in self._packages(package)]
-            cflags       = deps_cflags  + package_flags + self.flags(False)
-            ldflags      = deps_ldflags                 + self.flags()
+            cflags       = deps_cflags  + package_flags + self.flags('c')
+            ldflags      = deps_ldflags                 + self.flags('ld')
 
             if '+' in package.name():
                 for c in package.components():
@@ -208,9 +204,9 @@ def get_resolver(roots, dependencies, flags):
 def walk(units):
     return ' '.join(u.name() for u in tsort(traverse(units)))
 
-def flags(units):
+def flags(units, type):
     units  = tsort(traverse(units))
-    flags  = reduce(list.__add__, [u.flags() for u in units])
+    flags  = reduce(list.__add__, [u.flags(type) for u in units])
     return ' '.join(flags)
 
 def ninja(units, file):
@@ -334,13 +330,22 @@ def get_parser():
                          help='Consider the specified NAME to have the '
                               'specified DEPENDENCY.')
 
-    parser.add_argument('--flag',
+    parser.add_argument('--cflag',
                          action='append',
                          metavar='NAME:FLAG',
-                         dest='flags',
+                         dest='cflags',
                          default=[],
                          help='Append the specified FLAG when generating '
-                              'flags for the dependency with the specified '
+                              'cflags for the dependency with the specified '
+                              'NAME.')
+
+    parser.add_argument('--ldflag',
+                         action='append',
+                         metavar='NAME:FLAG',
+                         dest='ldflags',
+                         default=[],
+                         help='Append the specified FLAG when generating '
+                              'ldflags for the dependency with the specified '
                               'NAME.')
 
     subparser = parser.add_subparsers(metavar='MODE')
@@ -356,17 +361,29 @@ def get_parser():
     walk_parser.add_argument('groups', nargs='+', metavar='GROUP')
     walk_parser.set_defaults(mode='walk')
 
-    flags_parser = subparser.add_parser('flags',
-                                         help='Produce flags for building '
-                                              'dependents',
-                                         description='Produce flags that '
-                                                     'will allow a '
-                                                     'compilation unit '
-                                                     'depending on the '
-                                                     'specified GROUPs to '
-                                                     'compile correctly')
-    flags_parser.add_argument('groups', nargs='+', metavar='GROUP')
-    flags_parser.set_defaults(mode='flags')
+    cflags_parser = subparser.add_parser('cflags',
+                                          help='Produce cflags for compiling '
+                                               'dependents',
+                                          description='Produce flags that '
+                                                      'will allow a '
+                                                      'compilation unit '
+                                                      'depending on the '
+                                                      'specified GROUPs to '
+                                                      'compile correctly')
+    cflags_parser.add_argument('groups', nargs='+', metavar='GROUP')
+    cflags_parser.set_defaults(mode='cflags')
+
+    ldflags_parser = subparser.add_parser('ldflags',
+                                           help='Produce flags for linking '
+                                                'dependents',
+                                           description='Produce flags that '
+                                                       'will allow a '
+                                                       'compilation unit '
+                                                       'depending on the '
+                                                       'specified GROUPs to '
+                                                       'link correctly')
+    ldflags_parser.add_argument('groups', nargs='+', metavar='GROUP')
+    ldflags_parser.set_defaults(mode='ldflags')
 
     ninja_parser = subparser.add_parser('ninja',
                                          help='Generate a ninja build file',
@@ -404,7 +421,7 @@ def parse_args(args):
     args = get_parser().parse_args(args=args)
 
     def set_user_options(args, kind):
-        result = collections.defaultdict(list)
+        result = defaultdict(list)
         for value in getattr(args, kind):
             if len(value.split(':')) < 2:
                 raise RuntimeError('flag value should be NAME:{}'.format(
@@ -416,7 +433,16 @@ def parse_args(args):
         setattr(args, 'user_' + kind, result)
 
     set_user_options(args, 'dependencies')
-    set_user_options(args, 'flags')
+    set_user_options(args, 'cflags')
+    set_user_options(args, 'ldflags')
+
+    setattr(args, 'user_flags', defaultdict(lambda: {'c': [], 'ld': []}))
+    for unit in args.user_cflags:
+        args.user_flags[unit]['c']  = args.user_cflags[unit]
+    for unit in args.user_ldflags:
+        args.user_flags[unit]['ld'] = args.user_ldflags[unit]
+    delattr(args, 'user_cflags')
+    delattr(args, 'user_ldflags')
 
     return args
 
@@ -431,8 +457,10 @@ def main(args):
 
     if   args.mode == 'walk':
         print(walk(groups))
-    elif args.mode == 'flags':
-        print(flags(groups))
+    elif args.mode == 'cflags':
+        print(flags(groups, 'c'))
+    elif args.mode == 'ldflags':
+        print(flags(groups, 'ld'))
     elif args.mode == 'ninja':
         ninja(groups, sys.stdout)
     elif args.mode == 'runtests':
