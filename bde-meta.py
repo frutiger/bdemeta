@@ -209,22 +209,22 @@ def flags(units, type):
     flags  = reduce(list.__add__, [u.flags(type) for u in units])
     return ' '.join(flags)
 
-def ninja(units, file):
+def ninja(units, cxx, ar, file):
     rules = u'''\
 rule cc-object
   deps    = gcc
   depfile = $out.d
-  command = c++ -c $flags $in -MMD -MF $out.d -o $out
+  command = {cxx} -c $flags $in -MMD -MF $out.d -o $out
 
 rule cc-test
   deps    = gcc
   depfile = $out.d
-  command = c++ $in $flags -MMD -MF $out.d -o $out
+  command = {cxx} $in $flags -MMD -MF $out.d -o $out
 
 rule ar
-  command = ar -crs $out $in
+  command = {ar} -crs $out $in
 
-'''
+'''.format(cxx=cxx, ar=ar)
     lib_template=u'''\
 build {lib}: ar {objects} | {libs}
 
@@ -395,6 +395,15 @@ def get_parser():
                                                      'and all dependent '
                                                      'groups')
     ninja_parser.add_argument('groups', nargs='+', metavar='GROUP')
+    ninja_parser.add_argument('--cxx',
+                               default='c++',
+                               help='Use the specified CXX as the compiler '
+                                    'to build objects and linker to build '
+                                    'tests')
+    ninja_parser.add_argument('--ar',
+                               default='ar',
+                               help='Use the specified AR as the archiver '
+                                    'to build static libraries')
     ninja_parser.set_defaults(mode='ninja')
 
     runtests_parser = subparser.add_parser('runtests',
@@ -462,7 +471,7 @@ def main(args):
     elif args.mode == 'ldflags':
         print(flags(groups, 'ld'))
     elif args.mode == 'ninja':
-        ninja(groups, sys.stdout)
+        ninja(groups, args.cxx, args.ar, sys.stdout)
     elif args.mode == 'runtests':
         runtests(args.tests)
     else:
