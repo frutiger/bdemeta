@@ -101,18 +101,26 @@ NAME:DEPENDENCY`.
 
 ### EXAMPLES
 
-To build a static library named `bsl` in `out/lib`:
+To generate the ninja build file for `bdl` and all its transitive dependencies
+(i.e. `bsl`) into `build.ninja`:
 
-    $ ninja -f <(bde-meta ninja bsl)
+    $ bde-meta ninja bdl > build.ninja
 
-To build `bdl` and all its dependencies as separate libraries in `out/lib`:
+To build a static library for just `bsl` into `out/libs`:
 
-    $ ninja -f <(bde-meta ninja bdl)
+    $ ninja bsl
 
-To build all tests in the `bdl` package group using `ninja`, first build the
-library (and all dependent libraries), then build the tests:
+To build a static library for `bdl` and each of its transitive dependencies:
 
-    $ ninja -f <(bde-meta ninja bdl) tests
+    $ ninja bdl
+
+To build tests for `bdl` and the tests for all its transitive dependencies:
+
+    $ ninja tests
+
+To build a specific test driver:
+
+    $ ninja bsls_platform.t
 
 To run all of the previously built tests:
 

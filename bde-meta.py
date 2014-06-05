@@ -230,6 +230,8 @@ rule ar
     lib_template=u'''\
 build {lib}: ar {objects} | {libs}
 
+build {libname}: phony {lib}
+
 default {lib}
 
 '''
@@ -245,6 +247,8 @@ build {object}: cc-object {source}
     test_template=u'''\
 build {test}: cc-test {driver} | {libs}
   flags = {flags}
+
+build {testname}: phony {test}
 
 '''
 
@@ -274,6 +278,7 @@ build {test}: cc-test {driver} | {libs}
         dep_units = list(filter(lambda x: x != unit, units))
 
         file.write(lib_template.format(lib     = lib(unit),
+                                       libname = unit.name(),
                                        objects = objects,
                                        libs    = join(map(lib, dep_units))))
 
@@ -287,10 +292,11 @@ build {test}: cc-test {driver} | {libs}
             if 'driver' in c:
                 flags = ' '.join(c['cflags'] + c['ldflags'])
                 file.write(test_template.format(
-                                               test   = test(c['test']),
-                                               driver = c['driver'],
-                                               flags  = flags,
-                                               libs   = join(map(lib, units))))
+                                             test     = test(c['test']),
+                                             testname = c['test'],
+                                             driver   = c['driver'],
+                                             flags    = flags,
+                                             libs     = join(map(lib, units))))
 
     file.write(tests_template.format(tests = join(all_tests)))
 
