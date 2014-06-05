@@ -133,9 +133,11 @@ class Group(Unit):
                 if '+' in self._name:
                     # A '+' in a package name means all of its contents should
                     # be put into the archive
-                    return filter(os.path.isfile,
-                                  map(lambda x: os.path.join(self.path(), x),
-                                      os.listdir(self.path())))
+                    return map(os.path.basename,
+                               filter(os.path.isfile,
+                                      map(lambda x: os.path.join(self.path(),
+                                                                 x),
+                                          os.listdir(self.path()))))
                 else:
                     return bde_items(self._path,
                                     'package',
