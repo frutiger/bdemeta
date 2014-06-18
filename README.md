@@ -9,7 +9,7 @@ Where `MODE` is one of:
 `bde-meta walk GROUP [GROUP ...]`<br/>
 `bde-meta cflags GROUP [GROUP ...]`<br/>
 `bde-meta ldflags GROUP [GROUP ...]`<br/>
-`bde-meta ninja [--cxx CXX] [--ar AR] GROUP [GROUP ...]`<br/>
+`bde-meta ninja [-cc CC] [--cxx CXX] [--ar AR] GROUP [GROUP ...]`<br/>
 `bde-meta runtests [TEST ...]`:
 
 ### DESCRIPTION
@@ -65,7 +65,7 @@ This requires either of the latest versions of Python 2 or Python 3.
   * `ldflags GROUP [GROUP ...]`:
     Produce ldflags for linking dependents
 
-  * `ninja [--cxx CXX] [--ar AR] GROUP [GROUP ...]`:
+  * `ninja [--cc CC] [--cxx CXX] [--ar AR] GROUP [GROUP ...]`:
     Generate a ninja build file
 
   * `runtests [TEST ...]`:

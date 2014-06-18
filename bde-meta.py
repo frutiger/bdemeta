@@ -211,14 +211,19 @@ def flags(units, type):
     flags  = reduce(list.__add__, [u.flags(type) for u in units])
     return ' '.join(flags)
 
-def ninja(units, cxx, ar, file):
+def ninja(units, cc, cxx, ar, file):
     rules = u'''\
 rule cc-object
   deps    = gcc
   depfile = $out.d
+  command = {cc} -c $flags $in -MMD -MF $out.d -o $out
+
+rule cxx-object
+  deps    = gcc
+  depfile = $out.d
   command = {cxx} -c $flags $in -MMD -MF $out.d -o $out
 
-rule cc-test
+rule cxx-test
   deps    = gcc
   depfile = $out.d
   command = {cxx} $in $flags -MMD -MF $out.d -o $out
@@ -226,7 +231,7 @@ rule cc-test
 rule ar
   command = {ar} -crs $out $in
 
-'''.format(cxx=cxx, ar=ar)
+'''.format(cc=cc, cxx=cxx, ar=ar)
     lib_template=u'''\
 build {lib}: ar {objects} | {libs}
 
@@ -240,12 +245,12 @@ build tests: phony {tests}
 
 '''
     obj_template=u'''\
-build {object}: cc-object {source}
+build {object}: {compiler}-object {source}
   flags = {flags}
 
 '''
     test_template=u'''\
-build {test}: cc-test {driver} | {libs}
+build {test}: cxx-test {driver} | {libs}
   flags = {flags}
 
 build {testname}: phony {test}
@@ -286,9 +291,10 @@ build {testname}: phony {test}
             c      = components[name]
             flags  = ' '.join(c['cflags'])
             file.write(obj_template.format(
-                                   object = obj(c['object']),
-                                   source = c['source'],
-                                   flags  = flags))
+                      object   = obj(c['object']),
+                      compiler = 'cxx' if c['source'][-4:] == '.cpp' else 'cc',
+                      source   = c['source'],
+                      flags    = flags))
             if 'driver' in c:
                 flags = ' '.join(c['cflags'] + c['ldflags'])
                 file.write(test_template.format(
@@ -403,11 +409,16 @@ def get_parser():
                                                      'and all dependent '
                                                      'groups')
     ninja_parser.add_argument('groups', nargs='+', metavar='GROUP')
-    ninja_parser.add_argument('--cxx',
-                               default='c++',
-                               help='Use the specified CXX as the compiler '
+    ninja_parser.add_argument('--cc',
+                               default='cc',
+                               help='Use the specified CC as the C compiler '
                                     'to build objects and linker to build '
                                     'tests')
+    ninja_parser.add_argument('--cxx',
+                               default='c++',
+                               help='Use the specified CXX as the C++ '
+                                    'compiler to build objects and linker to '
+                                    'build tests')
     ninja_parser.add_argument('--ar',
                                default='ar',
                                help='Use the specified AR as the archiver '
@@ -479,7 +490,7 @@ def main(args):
     elif args.mode == 'ldflags':
         print(flags(groups, 'ld'))
     elif args.mode == 'ninja':
-        ninja(groups, args.cxx, args.ar, sys.stdout)
+        ninja(groups, args.cc, args.cxx, args.ar, sys.stdout)
     elif args.mode == 'runtests':
         runtests(args.tests)
     else:
