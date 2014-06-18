@@ -87,6 +87,41 @@ class Unit(object):
     def flags(self, type):
         return self._flags[type]
 
+class Package(Unit):
+    def __init__(self, resolver, path, dependencies, flags):
+        self._path   = path
+        name         = os.path.basename(path)
+        dependencies = frozenset(dependencies)
+        super(Package, self).__init__(
+                      resolver,
+                      name,
+                      dependencies | bde_items(path, 'package', name + '.dep'),
+                      flags)
+
+    def path(self):
+        return self._path
+
+    def flags(self, type):
+        flags = self._flags[type]
+        if type == 'c':
+            flags.append('-I{}'.format(self._path))
+        return ' '.join(flags)
+
+    def components(self):
+        if '+' in self._name:
+            # A '+' in a package name means all of its contents should
+            # be put into the archive
+            result = os.listdir(self._path)
+            result = filter(lambda x: x[-4:] == '.cpp' or x[-2:] == '.c',
+                            result)
+            result = (os.path.join(self._path, f) for f in result)
+            result = map(lambda f: os.path.relpath(f, self._path), result)
+            return result
+        else:
+            return bde_items(self._path,
+                            'package',
+                             self._name + '.mem')
+
 class Group(Unit):
     def __init__(self, resolver, path, dependencies, flags):
         self._path   = path
@@ -98,61 +133,17 @@ class Group(Unit):
                         dependencies | bde_items(path, 'group', name + '.dep'),
                         flags)
 
-    def _packages(self, package=None):
-        class Package(object):
-            def __init__(self, *args):
-                self._path = os.path.realpath(os.path.join(*args))
-                self._name = os.path.basename(self._path)
-
-            def __eq__(self, other):
-                return self._name == other._name
-
-            def __cmp__(self, other):
-                return cmp(self._name, other._name)
-
-            def __hash__(self):
-                return hash(self._name)
-
-            def path(self):
-                return self._path
-
-            def name(self):
-                return self._name
-
-            @memoize
-            def dependencies(self):
-                names = bde_items(self._path, 'package', self._name + '.dep')
-                return frozenset(Package(self._path,
-                                         os.path.pardir,
-                                         name) for name in names)
-
-            def flags(self):
-                return '-I{}'.format(self._path)
-
-            def components(self):
-                if '+' in self._name:
-                    # A '+' in a package name means all of its contents should
-                    # be put into the archive
-                    return map(os.path.basename,
-                               filter(os.path.isfile,
-                                      map(lambda x: os.path.join(self.path(),
-                                                                 x),
-                                          os.listdir(self.path()))))
-                else:
-                    return bde_items(self._path,
-                                    'package',
-                                     self._name + '.mem')
-
+    def _packages(self):
         names = bde_items(self._path, 'group', self._name + '.mem')
-        return tsort(frozenset(Package(self._path, n) for n in names))
+        return tsort(self._resolver(name) for name in names)
 
     def flags(self, type):
-        if type == 'c':
-            return [p.flags() for p in self._packages()] + self._flags['c']
-        elif type == 'ld':
-            return ['-Lout/libs', '-l' + self._name]     + self._flags['ld']
-        else:
-            raise RuntimeError('Unknown flag type: ' + type)
+        flags = []
+        if type == 'ld':
+            flags = flags + ['-Lout/libs', '-l' + self._name]
+        flags = flags + [p.flags(type) for p in self._packages()]
+        flags = flags + self._flags[type]
+        return list(filter(lambda x: x != '', flags))
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
@@ -162,10 +153,15 @@ class Group(Unit):
 
         result = {}
         for package in self._packages():
-            package_deps  = tsort(traverse(frozenset((package,))))
-            package_flags = [p.flags() for p in package_deps]
-            cflags        = package_flags    + self._flags['c']  + deps_cflags
-            ldflags       = self.flags('ld') + self._flags['ld'] + deps_ldflags
+            package_deps    = tsort(traverse(frozenset((package,))))
+            package_cflags  = [p.flags('c')  for p in package_deps]
+            package_ldflags = [p.flags('ld') for p in package_deps]
+
+            group_cflags  =                    self._flags['c']
+            group_ldflags = self.flags('ld') + self._flags['ld']
+
+            cflags  = package_cflags  + group_cflags  + deps_cflags
+            ldflags = package_ldflags + group_ldflags + deps_ldflags
 
             if '+' in package.name():
                 for c in package.components():
@@ -190,13 +186,23 @@ class Group(Unit):
 
 def get_resolver(roots, dependencies, flags):
     def resolve(name):
-        for root in roots:
-            candidate = os.path.join(root.strip(), 'groups', name)
-            if os.path.isdir(candidate):
-                return Group(resolve,
-                             candidate,
-                             dependencies[name],
-                             flags[name])
+        if len(name) == 3:
+            for root in roots:
+                candidate = os.path.join(root.strip(), 'groups', name)
+                if os.path.isdir(candidate):
+                    return Group(resolve,
+                                 candidate,
+                                 dependencies[name],
+                                 flags[name])
+        else:
+            group = name[:3]
+            for root in roots:
+                candidate = os.path.join(root.strip(), 'groups', group, name)
+                if os.path.isdir(candidate):
+                    return Package(resolve,
+                                   candidate,
+                                   dependencies[name],
+                                   flags[name])
         return Unit(resolve, name, dependencies[name], flags[name])
     return resolve
 
