@@ -447,7 +447,8 @@ def get_parser():
 def parse_args(args):
     if os.path.isfile(os.path.expanduser('~/.bdemetarc')):
         with open(os.path.expanduser('~/.bdemetarc')) as f:
-            args = f.read().split() + args
+            options = [l[:-1] for l in f.readlines() if l[0] != '#']
+            args = ' '.join(options).split() + args
 
     args = get_parser().parse_args(args=args)
 
