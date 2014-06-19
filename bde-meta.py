@@ -143,12 +143,8 @@ class Group(Unit):
                                     'package',
                                      self._name + '.mem')
 
-        if package is None:
-            names = bde_items(self._path, 'group', self._name + '.mem')
-            return tsort(frozenset(Package(self._path, n) for n in names))
-        else:
-            return tsort(traverse(frozenset((Package(self._path,
-                                                     package._name),))))
+        names = bde_items(self._path, 'group', self._name + '.mem')
+        return tsort(frozenset(Package(self._path, n) for n in names))
 
     def flags(self, type):
         if type == 'c':
@@ -166,9 +162,10 @@ class Group(Unit):
 
         result = {}
         for package in self._packages():
-            package_flags = [p.flags() for p in self._packages(package)]
-            cflags       = deps_cflags  + package_flags + self.flags('c')
-            ldflags      = deps_ldflags                 + self.flags('ld')
+            package_deps  = tsort(traverse(frozenset((package,))))
+            package_flags = [p.flags() for p in package_deps]
+            cflags        = package_flags    + self._flags['c']  + deps_cflags
+            ldflags       = self.flags('ld') + self._flags['ld'] + deps_ldflags
 
             if '+' in package.name():
                 for c in package.components():
