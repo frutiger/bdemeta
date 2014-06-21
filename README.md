@@ -26,8 +26,8 @@ group.
 directory structures](#roots), [arbitrary flags](#flags) for any given
 dependency, and [dependencies that are not actually package groups](#units).
 
-`bde-meta` will insert the contents of `~/.bdemetarc` as if they were command
-line flags before any flags specified on the command line.
+The contents of `~/.bdemetarc` and `.bdemetarc` will be considered as
+command line flags in addition to those specified at invocation.
 
 ### INSTALLATION
 

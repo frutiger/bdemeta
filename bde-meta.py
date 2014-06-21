@@ -445,11 +445,15 @@ def get_parser():
     return parser
 
 def parse_args(args):
-    if os.path.isfile(os.path.expanduser('~/.bdemetarc')):
-        with open(os.path.expanduser('~/.bdemetarc')) as f:
-            options = [l[:-1] for l in f.readlines() if l[0] != '#']
-            args = ' '.join(options).split() + args
+    def args_from_file(filename):
+        if os.path.isfile(filename):
+            with open(filename) as f:
+                options = [l[:-1] for l in f.readlines() if l[0] != '#']
+                return ' '.join(options).split()
+        return []
 
+    args = args_from_file(os.path.expanduser('~/.bdemetarc')) + \
+                                            args_from_file('.bdemetarc') + args
     args = get_parser().parse_args(args=args)
 
     def set_user_options(args, kind):
