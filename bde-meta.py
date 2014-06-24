@@ -102,7 +102,7 @@ class Package(Unit):
         return self._path
 
     def flags(self, type):
-        flags = self._flags[type]
+        flags = self._flags[type][:]
         if type == 'c':
             flags.append('-I{}'.format(self._path))
         return ' '.join(flags)
