@@ -1,20 +1,20 @@
-##bde-meta - build and test BDE-style code
+##bdemeta - build and test BDE-style code
 
 ### SYNOPSIS
 
-`bde-meta [--root ROOT] [--cflag NAME:FLAG] [--ldflag NAME:FLAG] [--dependency NAME:DEPENDENCY] MODE ...`<br/>
+`bdemeta [--root ROOT] [--cflag NAME:FLAG] [--ldflag NAME:FLAG] [--dependency NAME:DEPENDENCY] MODE ...`<br/>
 
 Where `MODE` is one of:
 
-`bde-meta walk GROUP [GROUP ...]`<br/>
-`bde-meta cflags GROUP [GROUP ...]`<br/>
-`bde-meta ldflags GROUP [GROUP ...]`<br/>
-`bde-meta ninja [-cc CC] [--cxx CXX] [--ar AR] GROUP [GROUP ...]`<br/>
-`bde-meta runtests [TEST ...]`:
+`bdemeta walk GROUP [GROUP ...]`<br/>
+`bdemeta cflags GROUP [GROUP ...]`<br/>
+`bdemeta ldflags GROUP [GROUP ...]`<br/>
+`bdemeta ninja [-cc CC] [--cxx CXX] [--ar AR] GROUP [GROUP ...]`<br/>
+`bdemeta runtests [TEST ...]`:
 
 ### DESCRIPTION
 
-`bde-meta` is a set of basic tools to assist building and testing [BDE-style
+`bdemeta` is a set of basic tools to assist building and testing [BDE-style
 source trees](https://github.com/bloomberg/bde).  It can generate [ninja build
 files](https://github.com/martine/ninja) for a particular package group,
 provide `cflags`/`ldflags` (`-I`/`-L/-l` rules respectively by default, along
@@ -22,7 +22,7 @@ with any user-supplied ones) when building applications that depend on such
 package groups.  It can also run all the unit tests for a particular package
 group.
 
-`bde-meta` supports finding package groups across [disconnected
+`bdemeta` supports finding package groups across [disconnected
 directory structures](#roots), [arbitrary flags](#flags) for any given
 dependency, and [dependencies that are not actually package groups](#units).
 
@@ -33,13 +33,13 @@ command line flags in addition to those specified at invocation.
 
 Install using `pip`:
 
-    $ pip install git+https://github.com/frutiger/bde-meta
+    $ pip install git+https://github.com/frutiger/bdemeta
 
 **Note**: the script name has changed from `bde-meta` to `bdemeta`.
 
 ### OPTIONS
 
-`bde-meta` takes any number of the following options:
+`bdemeta` takes any number of the following options:
 
   * `--root ROOT`
     Add the specified `ROOT` to the package group search path
@@ -55,7 +55,7 @@ Install using `pip`:
   * `--dependency NAME:DEPENDENCY`
     Consider the specified `NAME` to have the specified `DEPENDENCY`.
 
-`bde-meta` runs in one of five modes as given by the first positional argument:
+`bdemeta` runs in one of five modes as given by the first positional argument:
 
   * `walk GROUP [GROUP ...]`:
     Walk and topologically sort dependencies
@@ -75,7 +75,7 @@ Install using `pip`:
 ### ROOTS
 <a name="roots"></a>
 
-`bde-meta` will look for package groups in directories specified by (possibly
+`bdemeta` will look for package groups in directories specified by (possibly
 multiple) `--root` arguments.  This makes it easy to build code across multiple
 BDE-style repositories, including your own.
 
@@ -92,11 +92,11 @@ specifying `--cflag BSL:-DBDE_BUILT_TARGET_EXC` will provide that as a flag for
 ### UNITS
 <a name="units"></a>
 
-`bde-meta` supports dependencies that are not package groups (i.e. 'units').
+`bdemeta` supports dependencies that are not package groups (i.e. 'units').
 This can be useful when depending on headers and libraries provided by the
 system.  By default, such dependencies introduce no new flags unless such a
 flag has been specified with a `--cflag NAME:FLAG` or `--ldflag NAME:FLAG`.  In
-order to ensure that link lines are correctly topologically sorted, `bde-meta`
+order to ensure that link lines are correctly topologically sorted, `bdemeta`
 will require dependency information that can be specified with `--dependency
 NAME:DEPENDENCY`.
 
@@ -105,7 +105,7 @@ NAME:DEPENDENCY`.
 To generate the ninja build file for `bdl` and all its transitive dependencies
 (i.e. `bsl`) into `build.ninja`:
 
-    $ bde-meta ninja bdl > build.ninja
+    $ bdemeta ninja bdl > build.ninja
 
 To build a static library for just `bsl` into `out/libs`:
 
@@ -125,16 +125,16 @@ To build a specific test driver:
 
 To run all of the previously built tests:
 
-    $ bde-meta runtests
+    $ bdemeta runtests
 
 To build `m.cpp` with `bdl` as a dependency and link it with all its
 dependencies:
 
-    $ c++ $(bde-meta cflags bdl) m.cpp $(bde-meta ldflags bdl)
+    $ c++ $(bdemeta cflags bdl) m.cpp $(bdemeta ldflags bdl)
 
 To produce a set of cflags for third-party tools such as 'YouCompleteMe':
 
-    $ bde-meta cflags bdl
+    $ bdemeta cflags bdl
 
 ### LICENSE
 
