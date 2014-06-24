@@ -31,10 +31,11 @@ command line flags in addition to those specified at invocation.
 
 ### INSTALLATION
 
-Place `bde-meta.py` in your `$PATH` somewhere. Personally, I symlink it to
-`~/bin/bde-meta` and have `~/bin` in my `$PATH`.
+Install using `pip`:
 
-This requires either of the latest versions of Python 2 or Python 3.
+    $ pip install git+https://github.com/frutiger/bde-meta
+
+**Note**: the script name has changed from `bde-meta` to `bdemeta`.
 
 ### OPTIONS
 
