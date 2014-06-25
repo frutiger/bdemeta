@@ -2,7 +2,10 @@ from bdemeta.functional import memoize
 
 @memoize
 def traverse(ns):
-    return frozenset.union(ns, *(traverse(n.dependencies()) for n in ns))
+    result = frozenset(ns)
+    for n in ns:
+        result = result.union(traverse(n.dependencies()))
+    return result
 
 @memoize
 def tsort(nodes):
