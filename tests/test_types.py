@@ -28,28 +28,6 @@ class TestUnit(TestCase):
         assert(b2 != a2)
         assert(b2 == b1)
 
-    def test_cmp(self):
-        a1 = Unit(None, 'a', None, None)
-        a2 = Unit(None, 'a', None, None)
-        b1 = Unit(None, 'b', None, None)
-        b2 = Unit(None, 'b', None, None)
-
-        assert(0 == cmp(a1, a2))
-        assert(0 != cmp(a1, b1))
-        assert(0 != cmp(a1, b2))
-
-        assert(0 != cmp(a2, b1))
-        assert(0 != cmp(a2, b2))
-        assert(0 == cmp(a2, a1))
-
-        assert(0 == cmp(b1, b2))
-        assert(0 != cmp(b1, a1))
-        assert(0 != cmp(b1, a2))
-
-        assert(0 != cmp(b2, a1))
-        assert(0 != cmp(b2, a2))
-        assert(0 == cmp(b2, b1))
-
     def test_hash(self):
         a1 = Unit(None, 'a', None, None)
         a2 = Unit(None, 'a', None, None)
