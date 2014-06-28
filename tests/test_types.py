@@ -67,7 +67,7 @@ class TestUnit(TestCase):
         assert(len(dependencies) == 1)
         assert(5 in dependencies)
 
-class TestPath(TestCase):
+class TestPackage(TestCase):
     def test_name(self):
         p = Package(None, os.path.join('foo', 'bar'), None, None, None)
         assert(p.name() == 'bar')
