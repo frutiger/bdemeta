@@ -1,4 +1,6 @@
-from unittest import TestCase
+from collections import defaultdict
+from unittest    import TestCase
+import os
 
 from bdemeta.types import Unit, Package, Group
 
@@ -64,3 +66,41 @@ class TestUnit(TestCase):
         dependencies = u.dependencies()
         assert(len(dependencies) == 1)
         assert(5 in dependencies)
+
+class TestPath(TestCase):
+    def test_name(self):
+        p = Package(None, os.path.join('foo', 'bar'), None, None, None)
+        assert(p.name() == 'bar')
+
+    def test_path(self):
+        p = Package(None, os.path.join('foo', 'bar'), None, None, None)
+        assert(p.path() == os.path.join('foo', 'bar'))
+
+    def test_default_cflag(self):
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, defaultdict(list))
+        assert(p.flags('c') == '-I{}'.format(path))
+
+    def test_user_cflag(self):
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, { 'a': ['foo'] })
+        assert(p.flags('a') == 'foo')
+
+    def test_default_and_user_cflag(self):
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, { 'c': ['foo'] })
+        # note that user flags come before the default flags
+        assert(p.flags('c') == 'foo -I{}'.format(path))
+
+    def test_normal_package_members(self):
+        path    = os.path.join('foo', 'bar')
+        members = ['a', 'b']
+        p = Package(None, path, members, None, None)
+        assert(p.components() == members)
+
+    def test_special_package_members(self):
+        path    = os.path.join('foo', 'b+ar')
+        members = ['a.c', 'b.cpp', 'c.txt']
+        p = Package(None, path, members, None, None)
+        assert(p.components() == members[:2])
+

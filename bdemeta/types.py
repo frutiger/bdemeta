@@ -29,7 +29,6 @@ class Package(Unit):
     def __init__(self, resolver, path, members, dependencies, flags):
         self._path    = path
         self._members = members
-        dependencies  = frozenset(dependencies)
         name          = os.path.basename(path)
         super(Package, self).__init__(resolver, name, dependencies, flags)
 
@@ -50,7 +49,7 @@ class Package(Unit):
                             self._members)
             result = (os.path.join(self._path, f) for f in result)
             result = map(lambda f: os.path.relpath(f, self._path), result)
-            return result
+            return list(result)
         else:
             return self._members
 
@@ -58,7 +57,6 @@ class Group(Unit):
     def __init__(self, resolver, path, members, dependencies, flags):
         self._path    = path
         self._members = members
-        dependencies  = frozenset(dependencies)
         name          = os.path.basename(path)
         super(Group, self).__init__(resolver, name, dependencies, flags)
 
