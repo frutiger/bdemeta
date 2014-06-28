@@ -6,6 +6,15 @@ from collections import defaultdict
 from bdemeta.commands import flags, ninja, runtests, walk
 from bdemeta.types    import Group, Package, Unit
 
+def bde_items(*args):
+    items_filename = path.join(*args)
+    items = []
+    with open(items_filename) as items_file:
+        for l in items_file:
+            if len(l) > 1 and l[0] != '#':
+                items = items + l.split()
+    return frozenset(items)
+
 def get_resolver(roots, dependencies, flags):
     def resolve(name):
         if len(name) == 3:
@@ -14,7 +23,12 @@ def get_resolver(roots, dependencies, flags):
                 if path.isdir(candidate):
                     return Group(resolve,
                                  candidate,
-                                 dependencies[name],
+                                 bde_items(candidate,
+                                          'group',
+                                           name + '.mem'),
+                                 dependencies[name] | bde_items(candidate,
+                                                               'group',
+                                                                name + '.dep'),
                                  flags[name])
         else:
             group = name[:3]
@@ -23,7 +37,13 @@ def get_resolver(roots, dependencies, flags):
                 if path.isdir(candidate):
                     return Package(resolve,
                                    candidate,
-                                   dependencies[name],
+                                   bde_items(candidate,
+                                            'package',
+                                             name + '.mem'),
+                                   dependencies[name] |
+                                                      bde_items(candidate,
+                                                               'package',
+                                                                name + '.dep'),
                                    flags[name])
         return Unit(resolve, name, dependencies[name], flags[name])
     return resolve
@@ -156,8 +176,8 @@ def parse_args(args):
                                            args_from_file('.bdemetarc') + args
     args = get_parser().parse_args(args=args)
 
-    def set_user_options(args, kind):
-        result = defaultdict(list)
+    def set_user_options(args, kind, type):
+        result = defaultdict(type)
         for value in getattr(args, kind):
             if len(value.split(':')) < 2:
                 raise RuntimeError('flag value should be NAME:{}'.format(
@@ -168,9 +188,9 @@ def parse_args(args):
         delattr(args,  kind)
         setattr(args, 'user_' + kind, result)
 
-    set_user_options(args, 'dependencies')
-    set_user_options(args, 'cflags')
-    set_user_options(args, 'ldflags')
+    set_user_options(args, 'dependencies', frozenset)
+    set_user_options(args, 'cflags',       list)
+    set_user_options(args, 'ldflags',      list)
 
     setattr(args, 'user_flags', defaultdict(lambda: {'c': [], 'ld': []}))
     for unit in args.user_cflags:
