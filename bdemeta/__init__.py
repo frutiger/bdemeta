@@ -1,5 +1,5 @@
 import argparse
-import os.path as path
+import os
 import sys
 from collections import defaultdict
 
@@ -7,7 +7,7 @@ from bdemeta.commands import flags, ninja, runtests, walk
 from bdemeta.types    import Group, Package, Unit
 
 def bde_items(*args):
-    items_filename = path.join(*args)
+    items_filename = os.path.join(*args)
     items = []
     with open(items_filename) as items_file:
         for l in items_file:
@@ -19,31 +19,35 @@ def get_resolver(roots, dependencies, flags):
     def resolve(name):
         if len(name) == 3:
             for root in roots:
-                candidate = path.join(root.strip(), 'groups', name)
-                if path.isdir(candidate):
+                candidate = os.path.join(root.strip(), 'groups', name)
+                if os.path.isdir(candidate):
+                    members = bde_items(candidate, 'group', name + '.mem')
+                    deps    = dependencies[name] | bde_items(candidate,
+                                                            'group',
+                                                             name + '.dep')
                     return Group(resolve,
                                  candidate,
-                                 bde_items(candidate,
-                                          'group',
-                                           name + '.mem'),
-                                 dependencies[name] | bde_items(candidate,
-                                                               'group',
-                                                                name + '.dep'),
+                                 members,
+                                 deps,
                                  flags[name])
         else:
             group = name[:3]
             for root in roots:
-                candidate = path.join(root.strip(), 'groups', group, name)
-                if path.isdir(candidate):
+                candidate = os.path.join(root.strip(), 'groups', group, name)
+                if os.path.isdir(candidate):
+                    if '+' in name:
+                        members = os.listdir(candidate)
+                    else:
+                        members = bde_items(candidate,
+                                           'package',
+                                            name + '.mem')
+                    deps = dependencies[name] | bde_items(candidate,
+                                                         'package',
+                                                          name + '.dep')
                     return Package(resolve,
                                    candidate,
-                                   bde_items(candidate,
-                                            'package',
-                                             name + '.mem'),
-                                   dependencies[name] |
-                                                      bde_items(candidate,
-                                                               'package',
-                                                                name + '.dep'),
+                                   members,
+                                   deps,
                                    flags[name])
         return Unit(resolve, name, dependencies[name], flags[name])
     return resolve
@@ -166,13 +170,13 @@ def get_parser():
 
 def parse_args(args):
     def args_from_file(filename):
-        if path.isfile(filename):
+        if os.path.isfile(filename):
             with open(filename) as f:
                 options = [l[:-1] for l in f.readlines() if l[0] != '#']
                 return ' '.join(options).split()
         return []
 
-    args = args_from_file(path.expanduser('~/.bdemetarc')) + \
+    args = args_from_file(os.path.expanduser('~/.bdemetarc')) + \
                                            args_from_file('.bdemetarc') + args
     args = get_parser().parse_args(args=args)
 

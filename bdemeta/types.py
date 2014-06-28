@@ -29,8 +29,8 @@ class Package(Unit):
     def __init__(self, resolver, path, members, dependencies, flags):
         self._path    = path
         self._members = members
-        name          = os.path.basename(path)
         dependencies  = frozenset(dependencies)
+        name          = os.path.basename(path)
         super(Package, self).__init__(resolver, name, dependencies, flags)
 
     def path(self):
@@ -46,9 +46,8 @@ class Package(Unit):
         if '+' in self._name:
             # A '+' in a package name means all of its contents should
             # be put into the archive
-            result = os.listdir(self._path)
             result = filter(lambda x: x[-4:] == '.cpp' or x[-2:] == '.c',
-                            result)
+                            self._members)
             result = (os.path.join(self._path, f) for f in result)
             result = map(lambda f: os.path.relpath(f, self._path), result)
             return result
@@ -59,8 +58,8 @@ class Group(Unit):
     def __init__(self, resolver, path, members, dependencies, flags):
         self._path    = path
         self._members = members
-        name          = os.path.basename(path)
         dependencies  = frozenset(dependencies)
+        name          = os.path.basename(path)
         super(Group, self).__init__(resolver, name, dependencies, flags)
 
     def _packages(self):
