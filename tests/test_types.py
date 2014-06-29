@@ -15,20 +15,24 @@ class TestUnit(TestCase):
         b2 = Unit(None, 'b', None, None)
 
         assert(a1 == a2)
+        assert(not a1 != a2)
         assert(a1 != b1)
         assert(a1 != b2)
 
         assert(a2 != b1)
         assert(a2 != b2)
         assert(a2 == a1)
+        assert(not a2 != a1)
 
         assert(b1 == b2)
+        assert(not b1 != b2)
         assert(b1 != a1)
         assert(b1 != a2)
 
         assert(b2 != a1)
         assert(b2 != a2)
         assert(b2 == b1)
+        assert(not b2 != b1)
 
     def test_hash(self):
         a1 = Unit(None, 'a', None, None)

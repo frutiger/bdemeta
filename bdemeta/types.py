@@ -13,6 +13,11 @@ class Unit(object):
     def __eq__(self, other):
         return self._name == other._name
 
+    def __ne__(self, other):
+        # Note: in Python 2, != is not defined as not ==, so we must implement
+        # this method
+        return not self == other
+
     def __hash__(self):
         return hash(self._name)
 
