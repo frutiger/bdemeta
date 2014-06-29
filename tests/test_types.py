@@ -110,3 +110,28 @@ class TestPackage(TestCase):
         p = Package(None, path, members, None, None)
         assert(p.components() == members[:2])
 
+class TestGroup(TestCase):
+    def test_name(self):
+        path = os.path.join('foo', 'bar')
+        g = Group(None, path, None, None, None)
+        assert(g.name() == 'bar')
+
+    def test_default_cflags(self):
+        path = os.path.join('gr1', 'pkg1')
+        pkg1 = Package(None, path, [], [], defaultdict(list))
+
+        resolver = dict_resolver({ 'grppkg1': pkg1 })
+
+        path = os.path.join('gr1')
+        g = Group(resolver,
+                  path,
+                  frozenset(['grppkg1']),
+                  None,
+                  defaultdict(list))
+        assert(g.flags('c') == ['-Igr1/pkg1'])
+
+    def test_default_ldflags(self):
+        path = os.path.join('gr1')
+        g = Group(None, path, frozenset(), None, defaultdict(list))
+        assert(g.flags('ld') == ['-Lout/libs', '-lgr1'])
+
