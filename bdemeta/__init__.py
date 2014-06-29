@@ -3,9 +3,11 @@ import os
 import sys
 from collections import defaultdict
 
-from bdemeta.commands import flags, ninja, runtests, walk
-from bdemeta.types    import Group, Package, Unit
+from bdemeta.commands   import flags, ninja, runtests, walk
+from bdemeta.functional import memoize
+from bdemeta.types      import Group, Package, Unit
 
+@memoize
 def bde_items(*args):
     items_filename = os.path.join(*args)
     items = []
@@ -16,6 +18,7 @@ def bde_items(*args):
     return frozenset(items)
 
 def get_resolver(roots, dependencies, flags):
+    @memoize
     def resolve(name):
         if len(name) == 3:
             for root in roots:
