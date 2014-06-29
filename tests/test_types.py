@@ -73,19 +73,21 @@ class TestUnit(TestCase):
 
 class TestPackage(TestCase):
     def test_name(self):
-        p = Package(None, os.path.join('foo', 'bar'), None, None, None)
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, None)
         assert(p.name() == 'bar')
 
     def test_path(self):
-        p = Package(None, os.path.join('foo', 'bar'), None, None, None)
-        assert(p.path() == os.path.join('foo', 'bar'))
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, None)
+        assert(p.path() == path)
 
     def test_default_cflag(self):
         path = os.path.join('foo', 'bar')
         p = Package(None, path, None, None, defaultdict(list))
         assert(p.flags('c') == '-I{}'.format(path))
 
-    def test_user_cflag(self):
+    def test_user_flag(self):
         path = os.path.join('foo', 'bar')
         p = Package(None, path, None, None, { 'a': ['foo'] })
         assert(p.flags('a') == 'foo')
