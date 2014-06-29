@@ -178,7 +178,14 @@ def parse_args(args):
 
     args = args_from_file(os.path.expanduser('~/.bdemetarc')) + \
                                            args_from_file('.bdemetarc') + args
-    args = get_parser().parse_args(args=args)
+
+    parser = get_parser()
+    args   = parser.parse_args(args=args)
+
+    if not hasattr(args, 'mode'):
+        parser.print_usage()
+        print('{}: error: too few arguments'.format(sys.argv[0]))
+        sys.exit(-1)
 
     def set_user_options(args, kind, type):
         result = defaultdict(type)
