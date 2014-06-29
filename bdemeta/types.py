@@ -70,10 +70,10 @@ class Group(Unit):
 
     def flags(self, type):
         flags = []
+        flags = flags + self._flags[type]
+        flags = flags + [p.flags(type) for p in self._packages()]
         if type == 'ld':
             flags = flags + ['-Lout/libs', '-l' + self._name]
-        flags = flags + [p.flags(type) for p in self._packages()]
-        flags = flags + self._flags[type]
         return list(filter(lambda x: x != '', flags))
 
     def components(self):

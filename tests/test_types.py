@@ -82,15 +82,15 @@ class TestPackage(TestCase):
         p = Package(None, path, None, None, None)
         assert(p.path() == path)
 
-    def test_default_cflag(self):
-        path = os.path.join('foo', 'bar')
-        p = Package(None, path, None, None, defaultdict(list))
-        assert(p.flags('c') == '-I{}'.format(path))
-
     def test_user_flag(self):
         path = os.path.join('foo', 'bar')
         p = Package(None, path, None, None, { 'a': ['foo'] })
         assert(p.flags('a') == 'foo')
+
+    def test_default_cflag(self):
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, defaultdict(list))
+        assert(p.flags('c') == '-I{}'.format(path))
 
     def test_default_and_user_cflag(self):
         path = os.path.join('foo', 'bar')
@@ -116,6 +116,10 @@ class TestGroup(TestCase):
         g = Group(None, path, None, None, None)
         assert(g.name() == 'bar')
 
+    def test_user_flags(self):
+        g = Group(None, 'gr1', [], [], { 'a': ['5'] })
+        assert(g.flags('a') == ['5'])
+
     def test_default_cflags(self):
         path = os.path.join('gr1', 'pkg1')
         pkg1 = Package(None, path, [], [], defaultdict(list))
@@ -130,8 +134,38 @@ class TestGroup(TestCase):
                   defaultdict(list))
         assert(g.flags('c') == ['-Igr1/pkg1'])
 
+    def test_default_and_user_cflags(self):
+        path = os.path.join('gr1', 'pkg1')
+        pkg1 = Package(None, path, [], [], defaultdict(list))
+
+        resolver = dict_resolver({ 'grppkg1': pkg1 })
+
+        path = os.path.join('gr1')
+        g = Group(resolver,
+                  path,
+                  frozenset(['grppkg1']),
+                  None,
+                  { 'c': ['foo'] })
+        # note that user flags come before the default flags
+        assert(g.flags('c') == ['foo', '-Igr1/pkg1'])
+
     def test_default_ldflags(self):
         path = os.path.join('gr1')
         g = Group(None, path, frozenset(), None, defaultdict(list))
         assert(g.flags('ld') == ['-Lout/libs', '-lgr1'])
+
+    def test_default_and_user_ldflags(self):
+        path = os.path.join('gr1', 'pkg1')
+        pkg1 = Package(None, path, [], [], defaultdict(list))
+
+        resolver = dict_resolver({ 'grppkg1': pkg1 })
+
+        path = os.path.join('gr1')
+        g = Group(resolver,
+                  path,
+                  frozenset(['grppkg1']),
+                  None,
+                  { 'ld': ['foo'] })
+        # note that user flags come before the default flags
+        assert(g.flags('ld') == ['foo', '-Lout/libs', '-lgr1'])
 
