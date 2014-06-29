@@ -34,7 +34,7 @@ command line flags in addition to those specified at invocation.
 
 ### INSTALLATION
 
-Install using `pip`:
+Platforms running Python 2.7, 3.3 or 3.4 are supported.  Install using `pip`:
 
     $ pip install git+https://github.com/frutiger/bdemeta
 
