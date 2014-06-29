@@ -121,33 +121,33 @@ class TestGroup(TestCase):
         assert(g.flags('a') == ['5'])
 
     def test_default_cflags(self):
-        path = os.path.join('gr1', 'pkg1')
+        path = os.path.join('gr1', 'gr1pkg1')
         pkg1 = Package(None, path, [], [], defaultdict(list))
 
-        resolver = dict_resolver({ 'grppkg1': pkg1 })
+        resolver = dict_resolver({ 'gr1pkg1': pkg1 })
 
         path = os.path.join('gr1')
         g = Group(resolver,
                   path,
-                  frozenset(['grppkg1']),
+                  frozenset(['gr1pkg1']),
                   None,
                   defaultdict(list))
-        assert(g.flags('c') == ['-Igr1/pkg1'])
+        assert(g.flags('c') == ['-Igr1/gr1pkg1'])
 
     def test_default_and_user_cflags(self):
-        path = os.path.join('gr1', 'pkg1')
+        path = os.path.join('gr1', 'gr1pkg1')
         pkg1 = Package(None, path, [], [], defaultdict(list))
 
-        resolver = dict_resolver({ 'grppkg1': pkg1 })
+        resolver = dict_resolver({ 'gr1pkg1': pkg1 })
 
         path = os.path.join('gr1')
         g = Group(resolver,
                   path,
-                  frozenset(['grppkg1']),
+                  frozenset(['gr1pkg1']),
                   None,
                   { 'c': ['foo'] })
         # note that user flags come before the default flags
-        assert(g.flags('c') == ['foo', '-Igr1/pkg1'])
+        assert(g.flags('c') == ['foo', '-Igr1/gr1pkg1'])
 
     def test_default_ldflags(self):
         path = os.path.join('gr1')
@@ -155,17 +155,66 @@ class TestGroup(TestCase):
         assert(g.flags('ld') == ['-Lout/libs', '-lgr1'])
 
     def test_default_and_user_ldflags(self):
-        path = os.path.join('gr1', 'pkg1')
+        path = os.path.join('gr1', 'gr1pkg1')
         pkg1 = Package(None, path, [], [], defaultdict(list))
 
-        resolver = dict_resolver({ 'grppkg1': pkg1 })
+        resolver = dict_resolver({ 'gr1pkg1': pkg1 })
 
         path = os.path.join('gr1')
         g = Group(resolver,
                   path,
-                  frozenset(['grppkg1']),
+                  frozenset(['gr1pkg1']),
                   None,
                   { 'ld': ['foo'] })
         # note that user flags come before the default flags
         assert(g.flags('ld') == ['foo', '-Lout/libs', '-lgr1'])
+
+    def test_normal_components(self):
+        path = os.path.join('gr1', 'gr1pkg1')
+        pkg1 = Package(None, path, ['gr1pkg1_c1'], [], defaultdict(list))
+
+        resolver = dict_resolver({ 'gr1pkg1': pkg1 })
+
+        path = os.path.join('gr1')
+        g = Group(resolver,
+                  path,
+                  frozenset(['gr1pkg1']),
+                  [],
+                  defaultdict(list))
+        assert(g.components() == {
+            'gr1pkg1_c1': {
+                'cflags':  ['-Igr1/gr1pkg1'],
+                'ldflags': ['-Lout/libs', '-lgr1'],
+                'source':  'gr1/gr1pkg1/gr1pkg1_c1.cpp',
+                'object':  'gr1pkg1_c1.o',
+                'driver':  'gr1/gr1pkg1/gr1pkg1_c1.t.cpp',
+                'test':    'gr1pkg1_c1.t'
+            },
+        })
+
+    def test_special_components(self):
+        path    = os.path.join('gr1', 'gr1pkg+1')
+        members = ['a.c', 'b.cpp', 'c.txt']
+        pkg1    = Package(None, path, members, [], defaultdict(list))
+
+        resolver = dict_resolver({ 'gr1pkg+1': pkg1 })
+
+        path = os.path.join('gr1')
+        g = Group(resolver,
+                  path,
+                  frozenset(['gr1pkg+1']),
+                  [],
+                  defaultdict(list))
+        assert(g.components() == {
+            'gr1_gr1pkg+1_a': {
+                'cflags':  ['-Igr1/gr1pkg+1'],
+                'source':  'gr1/gr1pkg+1/a.c',
+                'object':  'gr1_gr1pkg+1_a.o',
+            },
+            'gr1_gr1pkg+1_b': {
+                'cflags':  ['-Igr1/gr1pkg+1'],
+                'source':  'gr1/gr1pkg+1/b.cpp',
+                'object':  'gr1_gr1pkg+1_b.o',
+            },
+        })
 

@@ -85,8 +85,10 @@ class Group(Unit):
         result = {}
         for package in self._packages():
             package_deps    = tsort(traverse(frozenset((package,))))
-            package_cflags  = [p.flags('c')  for p in package_deps]
-            package_ldflags = [p.flags('ld') for p in package_deps]
+            package_cflags  = [p.flags('c')  for p in package_deps \
+                                                        if p.flags('c')  != '']
+            package_ldflags = [p.flags('ld') for p in package_deps \
+                                                        if p.flags('ld') != '']
 
             group_cflags  =                    self._flags['c']
             group_ldflags = self.flags('ld') + self._flags['ld']
@@ -97,8 +99,10 @@ class Group(Unit):
             if '+' in package.name():
                 for c in package.components():
                     name, ext = os.path.splitext(c)
+                    name = os.path.join(package.path(),
+                                        name).replace(os.path.sep, '_')
                     if ext == '.c' or ext == '.cpp':
-                        result[c] = {
+                        result[name] = {
                             'cflags': cflags,
                             'source': os.path.join(package.path(), c),
                             'object': name + '.o',
