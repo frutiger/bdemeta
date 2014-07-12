@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 import os
 import sys
@@ -216,8 +218,8 @@ def parse_args(args):
 
     return args
 
-def main():
-    args     = parse_args(sys.argv[1:])
+def run(output, args):
+    args     = parse_args(args)
     resolver = get_resolver(args.roots,
                             args.user_dependencies,
                             args.user_flags)
@@ -226,15 +228,18 @@ def main():
         groups = frozenset(resolver(unit) for unit in args.groups)
 
     if   args.mode == 'walk':
-        print(walk(groups))
+        print(walk(groups), file=output)
     elif args.mode == 'cflags':
-        print(flags(groups, 'c'))
+        print(flags(groups, 'c'), file=output)
     elif args.mode == 'ldflags':
-        print(flags(groups, 'ld'))
+        print(flags(groups, 'ld'), file=output)
     elif args.mode == 'ninja':
-        ninja(groups, args.cc, args.cxx, args.ar, sys.stdout)
+        ninja(groups, args.cc, args.cxx, args.ar, output)
     elif args.mode == 'runtests':
         runtests(args.tests)
     else:
         raise RuntimeError('Unknown mode')
+
+def main():
+    run(sys.stdout, sys.argv[1:])
 
