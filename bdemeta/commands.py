@@ -2,6 +2,7 @@ import glob
 import multiprocessing
 import os.path as path
 import subprocess
+import signal
 from itertools import chain, count
 
 from bdemeta.graph import traverse, tsort
@@ -122,6 +123,8 @@ def runtest(test):
                                                                   case = case))
 
 def runtests(tests):
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     if len(tests) == 0:
         tests = glob.glob(path.join('out', 'tests', '*'))
     else:
