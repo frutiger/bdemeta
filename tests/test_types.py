@@ -71,6 +71,14 @@ class TestUnit(TestCase):
         assert(len(dependencies) == 1)
         assert(5 in dependencies)
 
+    def test_components(self):
+        u = Unit(None, None, None, { 'a': 5 })
+        assert(u.components() == {})
+
+    def test_result_type(self):
+        u = Unit(None, None, None, { 'a': 5 })
+        assert(u.result_type() == None)
+
 class TestPackage(TestCase):
     def test_name(self):
         path = os.path.join('foo', 'bar')
@@ -81,6 +89,16 @@ class TestPackage(TestCase):
         path = os.path.join('foo', 'bar')
         p = Package(None, path, None, None, None)
         assert(p.path() == path)
+
+    def test_components(self):
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, None)
+        assert(p.components() == {})
+
+    def test_result_type(self):
+        path = os.path.join('foo', 'bar')
+        p = Package(None, path, None, None, None)
+        assert(p.result_type() == None)
 
     def test_user_flag(self):
         path = os.path.join('foo', 'bar')
@@ -102,19 +120,24 @@ class TestPackage(TestCase):
         path    = os.path.join('foo', 'bar')
         members = ['a', 'b']
         p = Package(None, path, members, None, None)
-        assert(p.components() == members)
+        assert(p.members() == members)
 
     def test_special_package_members(self):
         path    = os.path.join('foo', 'b+ar')
         members = ['a.c', 'b.cpp', 'c.txt']
         p = Package(None, path, members, None, None)
-        assert(p.components() == members[:2])
+        assert(p.members() == members[:2])
 
 class TestGroup(TestCase):
     def test_name(self):
         path = os.path.join('foo', 'bar')
         g = Group(None, path, None, None, None)
         assert(g.name() == 'bar')
+
+    def test_result_type(self):
+        path = os.path.join('foo', 'bar')
+        g = Group(None, path, None, None, None)
+        assert(g.result_type() == 'library')
 
     def test_user_flags(self):
         g = Group(None, 'gr1', [], [], { 'a': ['5'] })

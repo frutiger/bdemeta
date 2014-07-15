@@ -30,6 +30,12 @@ class Unit(object):
     def flags(self, type):
         return self._flags[type]
 
+    def components(self):
+        return {}
+
+    def result_type(self):
+        return None
+
 class Package(Unit):
     def __init__(self, resolver, path, members, dependencies, flags):
         self._path    = path
@@ -46,7 +52,7 @@ class Package(Unit):
             flags.append('-I{}'.format(self._path))
         return ' '.join(flags)
 
-    def components(self):
+    def members(self):
         if '+' in self._name:
             # A '+' in a package name means all of its contents should
             # be put into the archive
@@ -97,7 +103,7 @@ class Group(Unit):
             ldflags = list(chain(package_ldflags, group_ldflags, deps_ldflags))
 
             if '+' in package.name():
-                for c in package.components():
+                for c in package.members():
                     name, ext = os.path.splitext(c)
                     name = os.path.join(package.path(),
                                         name).replace(os.path.sep, '_')
@@ -108,7 +114,7 @@ class Group(Unit):
                             'object': name + '.o',
                         }
             else:
-                for c in package.components():
+                for c in package.members():
                     result[c] = {
                         'cflags':  cflags,
                         'ldflags': ldflags,
@@ -118,4 +124,7 @@ class Group(Unit):
                         'test':    c + '.t',
                     }
         return result
+
+    def result_type(self):
+        return 'library'
 
