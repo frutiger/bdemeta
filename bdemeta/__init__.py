@@ -5,57 +5,8 @@ import os
 import sys
 from collections import defaultdict
 
-from bdemeta.commands   import flags, ninja, runtests, walk
-from bdemeta.functional import memoize
-from bdemeta.types      import Group, Package, Unit
-
-@memoize
-def bde_items(*args):
-    items_filename = os.path.join(*args)
-    items = []
-    with open(items_filename) as items_file:
-        for l in items_file:
-            if len(l) > 1 and l[0] != '#':
-                items = items + l.split()
-    return frozenset(items)
-
-def get_resolver(roots, dependencies, flags):
-    @memoize
-    def resolve(name):
-        if len(name) == 3:
-            for root in roots:
-                candidate = os.path.join(root.strip(), 'groups', name)
-                if os.path.isdir(candidate):
-                    members = bde_items(candidate, 'group', name + '.mem')
-                    deps    = dependencies[name] | bde_items(candidate,
-                                                            'group',
-                                                             name + '.dep')
-                    return Group(resolve,
-                                 candidate,
-                                 members,
-                                 deps,
-                                 flags[name])
-        else:
-            group = name[:3]
-            for root in roots:
-                candidate = os.path.join(root.strip(), 'groups', group, name)
-                if os.path.isdir(candidate):
-                    if '+' in name:
-                        members = os.listdir(candidate)
-                    else:
-                        members = bde_items(candidate,
-                                           'package',
-                                            name + '.mem')
-                    deps = dependencies[name] | bde_items(candidate,
-                                                         'package',
-                                                          name + '.dep')
-                    return Package(resolve,
-                                   candidate,
-                                   members,
-                                   deps,
-                                   flags[name])
-        return Unit(resolve, name, dependencies[name], flags[name])
-    return resolve
+import bdemeta.resolver
+import bdemeta.commands
 
 def get_parser():
     parser = argparse.ArgumentParser(description='build and test BDE-style '
@@ -220,23 +171,23 @@ def parse_args(args):
 
 def run(output, args):
     args     = parse_args(args)
-    resolver = get_resolver(args.roots,
-                            args.user_dependencies,
-                            args.user_flags)
+    resolver = bdemeta.resolver.Resolver(args.roots,
+                        args.user_dependencies,
+                        args.user_flags)
 
     if hasattr(args, 'groups'):
         groups = frozenset(resolver(unit) for unit in args.groups)
 
     if   args.mode == 'walk':
-        print(walk(groups), file=output)
+        print(bdemeta.commands.walk(groups), file=output)
     elif args.mode == 'cflags':
-        print(flags(groups, 'c'), file=output)
+        print(bdemeta.commands.flags(groups, 'c'), file=output)
     elif args.mode == 'ldflags':
-        print(flags(groups, 'ld'), file=output)
+        print(bdemeta.commands.flags(groups, 'ld'), file=output)
     elif args.mode == 'ninja':
-        ninja(groups, args.cc, args.cxx, args.ar, output)
+        bdemeta.commands.ninja(groups, args.cc, args.cxx, args.ar, output)
     elif args.mode == 'runtests':
-        runtests(args.tests)
+        bdemeta.commands.runtests(args.tests)
     else:
         raise RuntimeError('Unknown mode')
 
