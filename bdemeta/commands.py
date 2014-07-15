@@ -6,7 +6,6 @@ import signal
 from itertools import chain, count
 
 from bdemeta.graph import traverse, tsort
-from bdemeta.types import Group
 
 def walk(units):
     return ' '.join(u.name() for u in tsort(traverse(units)))
