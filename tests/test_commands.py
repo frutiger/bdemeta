@@ -15,10 +15,10 @@ rule cxx-object
   depfile = $out.d
   command = 2 -c $flags $in -MMD -MF $out.d -o $out
 
-rule cxx-test
+rule cxx-executable
   deps    = gcc
   depfile = $out.d
-  command = 2 $in $flags -MMD -MF $out.d -o $out
+  command = 2 $cflags $in $ldflags -MMD -MF $out.d -o $out
 
 rule ar
   command = 3 -crs $out $in
@@ -50,90 +50,74 @@ class TestNinja(TestCase):
         assert(result.getvalue() == boilerplate)
 
     def test_component(self):
-        u = MockUnit('foo', (), {
-            'a': {
-                'source': 'a.cpp',
-                'object': 'a.o',
-                'cflags': ['-Ia'],
-            },
-        })
+        u = MockUnit('foo', (), ({
+            'type':   'object',
+            'input':  'a.cpp',
+            'cflags': ' -Ia',
+            'output': 'a.o',
+        },))
         result = io.StringIO()
         ninja((u,), '1', '2', '3', result)
         assert(result.getvalue() == boilerplate + u'''\
+build out/objs/a.o: cxx-object a.cpp
+  flags = -Ia
+
 build out/libs/libfoo.a: ar out/objs/a.o
 
 build foo: phony out/libs/libfoo.a
 
 default out/libs/libfoo.a
 
-build out/objs/a.o: cxx-object a.cpp
-  flags = -Ia
-
 ''')
 
     def test_component_with_dep(self):
-        bar = MockUnit('bar', (), {
-            'bar_1': {
-                'source': 'bar_1.cpp',
-                'object': 'bar_1.o',
-                'cflags': [],
-            },
-        });
-        foo = MockUnit('foo', (bar,), {
-            'foo_1': {
-                'source': 'foo_1.cpp',
-                'object': 'foo_1.o',
-                'cflags': [],
-            },
-        })
+        bar = MockUnit('bar', (), ({
+            'type':   'object',
+            'input':  'bar_1.cpp',
+            'cflags': '',
+            'output': 'bar_1.o',
+        },))
+        foo = MockUnit('foo', (bar,), ({
+            'type':   'object',
+            'input':  'foo_1.cpp',
+            'cflags': '',
+            'output': 'foo_1.o',
+        },))
         result = io.StringIO()
         ninja((foo,), '1', '2', '3', result)
         assert(result.getvalue() == boilerplate + u'''\
+build out/objs/foo_1.o: cxx-object foo_1.cpp
+  flags =
+
 build out/libs/libfoo.a: ar out/objs/foo_1.o | out/libs/libbar.a
 
 build foo: phony out/libs/libfoo.a
 
-default out/libs/libfoo.a
-
-build out/objs/foo_1.o: cxx-object foo_1.cpp
+build out/objs/bar_1.o: cxx-object bar_1.cpp
   flags =
 
 build out/libs/libbar.a: ar out/objs/bar_1.o
 
 build bar: phony out/libs/libbar.a
 
-default out/libs/libbar.a
-
-build out/objs/bar_1.o: cxx-object bar_1.cpp
-  flags =
+default out/libs/libfoo.a out/libs/libbar.a
 
 ''')
 
     def test_driver(self):
-        u = MockUnit('foo', (), {
-            'a': {
-                'source':   'a.cpp',
-                'object':   'a.o',
-                'cflags':  ['-Ia'],
-                'driver':   'a.t.cpp',
-                'test':     'a.t',
-                'ldflags': ['-lbar'],
-            },
-        })
+        u = MockUnit('foo', (), ({
+            'type':    'test',
+            'input':   'a.t.cpp',
+            'cflags':  ' -Ia',
+            'ldflags': ' -lbar',
+            'output':  'a.t',
+        },))
         result = io.StringIO()
         ninja((u,), '1', '2', '3', result)
         assert(result.getvalue() == boilerplate + u'''\
-build out/libs/libfoo.a: ar out/objs/a.o
-
-build foo: phony out/libs/libfoo.a
-
-default out/libs/libfoo.a
-
-build out/objs/a.o: cxx-object a.cpp
-  flags = -Ia
-
-build out/tests/a.t: cxx-test a.t.cpp | out/libs/libfoo.a
-  flags = -Ia -lbar
+build out/tests/a.t: cxx-executable a.t.cpp | out/libs/libfoo.a
+  cflags = -Ia
+  ldflags = -lbar
 
 build a.t: phony out/tests/a.t
 

@@ -27,37 +27,40 @@ rule cxx-object
   depfile = $out.d
   command = {cxx} -c $flags $in -MMD -MF $out.d -o $out
 
-rule cxx-test
+rule cxx-executable
   deps    = gcc
   depfile = $out.d
-  command = {cxx} $in $flags -MMD -MF $out.d -o $out
+  command = {cxx} $cflags $in $ldflags -MMD -MF $out.d -o $out
 
 rule ar
   command = {ar} -crs $out $in
 
 '''.format(cc=cc, cxx=cxx, ar=ar)
     lib_template=u'''\
-build {lib}: ar {objects}{deps}
+build {output}: ar {input}{deps}
 
-build {libname}: phony {lib}
+build {name}: phony {output}
 
-default {lib}
+'''
+    defaults_template = u'''\
+default {}
 
 '''
     tests_template=u'''\
-build tests: phony {tests}
+build tests: phony {}
 
 '''
     obj_template=u'''\
-build {object}: {compiler}-object {source}
+build {output}: {compiler}-object {input}
   flags ={flags}
 
 '''
-    test_template=u'''\
-build {test}: cxx-test {driver}{deps}
-  flags ={flags}
+    executable_template=u'''\
+build {output}: cxx-executable {input}{deps}
+  cflags ={cflags}
+  ldflags ={ldflags}
 
-build {testname}: phony {test}
+build {name}: phony {output}
 
 '''
 
@@ -68,51 +71,71 @@ build {testname}: phony {test}
     def output(unit):
         if unit.result_type() == 'library':
             return pjoin('out', 'libs', 'lib{}.a'.format(unit.name()))
+        elif unit.result_type() == 'executable':
+            return pjoin('out', 'apps', unit.name())
         else:
             return None
 
     file.write(rules)
 
+    defaults  = []
     all_tests = []
     for unit in tsort(traverse(units)):
-        components  = unit.components()
-        objects     = join((obj(c['object']) for c in components.values()))
-        all_tests  += (test(c['test'])  for c in components.values() \
-                                                                if 'test' in c)
+        if unit.result_type() == 'library':
+            objects = []
 
-        if unit.result_type() == 'library' and len(objects):
-            deps = join([output(u) for u in tsort(traverse((unit,))) if \
+            obj_deps = join([output(u) for u in tsort(traverse((unit,))) if \
                                                       u != unit and output(u)])
-            if deps:
-                deps = ' | ' + deps
-            file.write(lib_template.format(lib     = output(unit),
-                                           libname = unit.name(),
-                                           objects = objects,
-                                           deps    = deps))
+            obj_deps = ' | ' + obj_deps if obj_deps else ''
 
-        for name in sorted(components.keys()):
-            c      = components[name]
-            flags  = ' ' + ' '.join(c['cflags']) if c['cflags'] else ''
-            file.write(obj_template.format(
-                      object   = obj(c['object']),
-                      compiler = 'cxx' if c['source'][-4:] == '.cpp' else 'cc',
-                      source   = c['source'],
-                      flags    = flags))
-            if 'driver' in c:
-                flags = chain(c['cflags'], c['ldflags'])
-                flags = ' ' + ' '.join(flags) if flags else ''
-                deps = join([output(u) for u in tsort(traverse((unit,))) if \
+            test_deps = join([output(u) for u in tsort(traverse((unit,))) if \
                                                                     output(u)])
-                if deps:
-                    deps = ' | ' + deps
-                file.write(test_template.format(test     = test(c['test']),
-                                                testname = c['test'],
-                                                driver   = c['driver'],
-                                                flags    = flags,
-                                                deps     = deps))
+            test_deps = ' | ' + test_deps if test_deps else ''
 
-    if len(all_tests):
-        file.write(tests_template.format(tests = join(all_tests)))
+            for c in unit.components():
+                if c['type'] == 'object':
+                    file.write(obj_template.format(
+                      output   = obj(c['output']),
+                      compiler = 'cxx' if c['input'][-4:] == '.cpp' else 'cc',
+                      input    = c['input'],
+                      flags    = c['cflags']))
+                    objects.append(obj(c['output']))
+                elif c['type'] == 'test':
+                    file.write(executable_template.format(
+                                                  output   = test(c['output']),
+                                                  input    = c['input'],
+                                                  deps     = test_deps,
+                                                  cflags   = c['cflags'],
+                                                  ldflags  = c['ldflags'],
+                                                  name     = c['output']))
+                    all_tests.append(test(c['output']))
+
+            if objects:
+                file.write(lib_template.format(output  = output(unit),
+                                               name    = unit.name(),
+                                               input   = join(objects),
+                                               deps    = obj_deps))
+                defaults.append(output(unit))
+
+        elif unit.result_type() == 'executable':
+            exec_deps = join([output(u) for u in tsort(traverse((unit,))) if \
+                                                      u != unit and output(u)])
+            exec_deps = ' | ' + exec_deps if exec_deps else ''
+
+            c = unit.components()[0]
+            file.write(executable_template.format(output  = output(unit),
+                                                  input   = c['input'],
+                                                  deps    = exec_deps,
+                                                  cflags  = c['cflags'],
+                                                  ldflags = c['ldflags'],
+                                                  name    = unit.name()))
+            defaults.append(output(unit))
+
+    if defaults:
+        file.write(defaults_template.format(join(defaults)))
+
+    if all_tests:
+        file.write(tests_template.format(join(all_tests)))
 
 def runtest(test):
     for case in count():

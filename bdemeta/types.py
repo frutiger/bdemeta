@@ -53,16 +53,7 @@ class Package(Unit):
         return ' '.join(flags)
 
     def members(self):
-        if '+' in self._name:
-            # A '+' in a package name means all of its contents should
-            # be put into the archive
-            result = filter(lambda x: x[-4:] == '.cpp' or x[-2:] == '.c',
-                            self._members)
-            result = (os.path.join(self._path, f) for f in result)
-            result = map(lambda f: os.path.relpath(f, self._path), result)
-            return list(result)
-        else:
-            return self._members
+        return self._members
 
 class Group(Unit):
     def __init__(self, resolver, path, members, dependencies, flags):
@@ -88,7 +79,7 @@ class Group(Unit):
         deps_cflags  = list(chain(*[d.flags('c')  for d in deps]))
         deps_ldflags = list(chain(*[d.flags('ld') for d in deps]))
 
-        result = {}
+        result = []
         for package in self._packages():
             package_deps    = tsort(traverse(frozenset((package,))))
             package_cflags  = [p.flags('c')  for p in package_deps \
@@ -102,29 +93,48 @@ class Group(Unit):
             cflags  = list(chain(package_cflags,  group_cflags,  deps_cflags))
             ldflags = list(chain(package_ldflags, group_ldflags, deps_ldflags))
 
-            if '+' in package.name():
-                for c in package.members():
-                    name, ext = os.path.splitext(c)
-                    name = os.path.join(package.path(),
-                                        name).replace(os.path.sep, '_')
-                    if ext == '.c' or ext == '.cpp':
-                        result[name] = {
-                            'cflags': cflags,
-                            'source': os.path.join(package.path(), c),
-                            'object': name + '.o',
-                        }
-            else:
-                for c in package.members():
-                    result[c] = {
-                        'cflags':  cflags,
-                        'ldflags': ldflags,
-                        'source':  os.path.join(package.path(), c + '.cpp'),
-                        'object':  c + '.o',
-                        'driver':  os.path.join(package.path(), c + '.t.cpp'),
-                        'test':    c + '.t',
-                    }
-        return result
+            for m in package.members():
+                result.append({
+                    'type':   'object',
+                    'input':   m['path'],
+                    'cflags': ' ' + ' '.join(cflags) if cflags else '',
+                    'output':  m['name'] + '.o',
+                })
+                if m['driver']:
+                    result.append({
+                        'type':    'test',
+                        'input':    m['driver'],
+                        'cflags':  ' ' + ' '.join(cflags)  if cflags else '',
+                        'ldflags': ' ' + ' '.join(ldflags) if ldflags else '',
+                        'output':   m['name'] + '.t',
+                    })
+        return tuple(result)
 
     def result_type(self):
         return 'library'
+
+class Application(Unit):
+    def __init__(self, resolver, path, members, dependencies, flags):
+        self._path    = path
+        self._members = members
+        name          = os.path.basename(path)
+        super(Application, self).__init__(resolver, name, dependencies, flags)
+
+    def flags(self, type):
+        return self._flags[type]
+
+    def components(self):
+        deps = tsort(traverse(frozenset((self,))))
+        cflags  = self._flags['c']  + list(chain(*[d.flags('c')  for d in deps]))
+        ldflags = self._flags['ld'] + list(chain(*[d.flags('ld') for d in deps]))
+
+        inputs = ' '.join((os.path.join(self._path, m + '.cpp') for m in self._members))
+        return ({
+            'cflags':  ' ' + ' '.join(cflags) if cflags else '',
+            'input':   inputs,
+            'ldflags': ' ' + ' '.join(ldflags) if ldflags else '',
+        },)
+
+    def result_type(self):
+        return 'executable'
 
