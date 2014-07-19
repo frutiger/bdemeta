@@ -162,7 +162,7 @@ def runtests(tests):
     if len(tests) == 0:
         tests = glob.glob(path.join('out', 'tests', '*'))
     else:
-        tests = [path.join('out', 'tests', t + '.t') for t in tests]
+        tests = [path.join('out', 'tests', t) for t in tests]
 
     multiprocessing.Pool().map(runtest, sorted(tests))
 
