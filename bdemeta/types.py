@@ -125,10 +125,13 @@ class Application(Unit):
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
-        cflags  = self._flags['c']  + list(chain(*[d.flags('c')  for d in deps]))
-        ldflags = self._flags['ld'] + list(chain(*[d.flags('ld') for d in deps]))
+        cflags  = self._flags['c']  + list(chain(*[d.flags('c')  \
+                                                               for d in deps]))
+        ldflags = self._flags['ld'] + list(chain(*[d.flags('ld') \
+                                                               for d in deps]))
 
-        inputs = ' '.join((os.path.join(self._path, m + '.cpp') for m in self._members))
+        inputs = ' '.join((os.path.join(self._path, m + '.cpp') \
+                                                       for m in self._members))
         return ({
             'cflags':  ' ' + ' '.join(cflags) if cflags else '',
             'input':   inputs,
