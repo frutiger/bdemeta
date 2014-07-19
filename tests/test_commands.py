@@ -26,10 +26,11 @@ rule ar
 '''
 
 class MockUnit(object):
-    def __init__(self, name, dependencies, components):
+    def __init__(self, name, dependencies, components, result_type):
         self._name         = name
         self._dependencies = dependencies
         self._components   = components
+        self._result_type  = result_type
 
     def name(self):
         return self._name
@@ -41,7 +42,7 @@ class MockUnit(object):
         return self._components
 
     def result_type(self):
-        return 'library'
+        return self._result_type
 
 class TestNinja(TestCase):
     def test_boilerplate(self):
@@ -55,7 +56,7 @@ class TestNinja(TestCase):
             'input':  'a.cpp',
             'cflags': ' -Ia',
             'output': 'a.o',
-        },))
+        },), 'library')
         result = io.StringIO()
         ninja((u,), '1', '2', '3', result)
         assert(result.getvalue() == boilerplate + u'''\
@@ -76,13 +77,13 @@ default out/libs/libfoo.a
             'input':  'bar_1.cpp',
             'cflags': '',
             'output': 'bar_1.o',
-        },))
+        },), 'library')
         foo = MockUnit('foo', (bar,), ({
             'type':   'object',
             'input':  'foo_1.cpp',
             'cflags': '',
             'output': 'foo_1.o',
-        },))
+        },), 'library')
         result = io.StringIO()
         ninja((foo,), '1', '2', '3', result)
         assert(result.getvalue() == boilerplate + u'''\
@@ -111,7 +112,7 @@ default out/libs/libfoo.a out/libs/libbar.a
             'cflags':  ' -Ia',
             'ldflags': ' -lbar',
             'output':  'a.t',
-        },))
+        },), 'library')
         result = io.StringIO()
         ninja((u,), '1', '2', '3', result)
         assert(result.getvalue() == boilerplate + u'''\
@@ -122,5 +123,26 @@ build out/tests/a.t: cxx-executable a.t.cpp | out/libs/libfoo.a
 build a.t: phony out/tests/a.t
 
 build tests: phony out/tests/a.t
+
+''')
+
+    def test_executable(self):
+        u = MockUnit('a', (), ({
+            'type':    'executable',
+            'input':   'a.m.cpp b.cpp',
+            'cflags':  ' -Ia',
+            'ldflags': ' -lbar',
+            'output':  'a',
+        },), 'executable')
+        result = io.StringIO()
+        ninja((u,), '1', '2', '3', result)
+        assert(result.getvalue() == boilerplate + u'''\
+build out/apps/a: cxx-executable a.m.cpp b.cpp
+  cflags = -Ia
+  ldflags = -lbar
+
+build a: phony out/apps/a
+
+default out/apps/a
 
 ''')
