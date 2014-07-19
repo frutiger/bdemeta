@@ -47,7 +47,7 @@ default {}
 
 '''
     tests_template=u'''\
-build tests: phony {}
+build {alias}: phony {targets}
 
 '''
     obj_template=u'''\
@@ -82,7 +82,8 @@ build {name}: phony {output}
     all_tests = []
     for unit in tsort(traverse(units)):
         if unit.result_type() == 'library':
-            objects = []
+            objects    = []
+            unit_tests = []
 
             obj_deps = join([output(u) for u in tsort(traverse((unit,))) if \
                                                       u != unit and output(u)])
@@ -108,6 +109,7 @@ build {name}: phony {output}
                                                   cflags   = c['cflags'],
                                                   ldflags  = c['ldflags'],
                                                   name     = c['output']))
+                    unit_tests.append(test(c['output']))
                     all_tests.append(test(c['output']))
 
             if objects:
@@ -116,6 +118,11 @@ build {name}: phony {output}
                                                input   = join(objects),
                                                deps    = obj_deps))
                 defaults.append(output(unit))
+
+            if unit_tests:
+                file.write(tests_template.format(alias   = unit.name() + '.t',
+                                                 targets = join(unit_tests)))
+
 
         elif unit.result_type() == 'executable':
             exec_deps = join([output(u) for u in tsort(traverse((unit,))) if \
@@ -135,7 +142,8 @@ build {name}: phony {output}
         file.write(defaults_template.format(join(defaults)))
 
     if all_tests:
-        file.write(tests_template.format(join(all_tests)))
+        file.write(tests_template.format(alias   = 'tests',
+                                         targets =  join(all_tests)))
 
 def runtest(test):
     for case in count():

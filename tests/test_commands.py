@@ -122,6 +122,8 @@ build out/tests/a.t: cxx-executable a.t.cpp | out/libs/libfoo.a
 
 build a.t: phony out/tests/a.t
 
+build foo.t: phony out/tests/a.t
+
 build tests: phony out/tests/a.t
 
 ''')
