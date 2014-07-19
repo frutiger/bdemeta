@@ -105,37 +105,116 @@ NAME:DEPENDENCY`.
 
 ### EXAMPLES
 
-To generate the ninja build file for `bdl` and all its transitive dependencies
-(i.e. `bsl`) into `build.ninja`:
+The following examples demonstrate working with the ['BDE' source
+code](https://github.com/bloomberg/bde).
+
+First, clone the 'BDE' repository:
+
+    $ git clone https://github.com/bloomberg/bde
+
+Next, go into your build directory and craft the following `.bdemetarc` file in
+that directory:
+
+    $ cd /path/to/build/directory
+    $ cat .bdemetarc
+    --root /path/to/bde/clone
+    --cflag bsl:-DBDE_BUILD_TARGET_EXC
+    --cflag bsl:-DBDE_BUILD_TARGET_MT
+    --cflag bsl:-DBDE_OMIT_INTERNAL_DEPRECATED
+    --cflag bsl:-D__CLANG_GNUC__=4
+    --cflag bsl:-D__CLANG_GNUC_MINOR__=8
+    --cflag bsl:-D__CLANG_GNUC_PATCHLEVEL__=0
+    --cflag bdl+decnumber:-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common
+
+Note that the special 'bdl+decnumber' cflag is needed as that package has
+special build rules.
+
+#### Example 1: Building a testing package groups
+
+First, test that the dependencies can be traversed correctly:
+
+    $ bdemeta walk bdl
+    bdl bsl
+
+Next, generate generate the ninja build file for `bdl` and all its transitive
+dependencies (i.e. `bsl`) into `build.ninja`:
 
     $ bdemeta ninja bdl > build.ninja
 
-To build a static library for just `bsl` into `out/libs`:
+Then, build a static library for just `bsl` into `out/libs`:
 
     $ ninja bsl
 
-To build a static library for `bdl` and each of its transitive dependencies:
+Next, build a static library for `bdl` and each of its transitive dependencies:
 
     $ ninja bdl
 
-To build tests for `bdl` and the tests for all its transitive dependencies:
-
-    $ ninja tests
-
-To build a specific test driver:
+Then, build a specific test driver:
 
     $ ninja bsls_platform.t
 
-To run all of the previously built tests:
+Next, build test drivers for a specific package group:
+
+    $ ninja bsl.t
+
+Then, build test drivers for all package groups:
+
+    $ ninja tests
+
+Next, run a specific test driver:
+
+    $ bdemeta runtests bsls_platform.t
+
+Finally, run all previously built test drivers:
 
     $ bdemeta runtests
 
-To build `m.cpp` with `bdl` as a dependency and link it with all its
-dependencies:
+#### Example 2: Building an application package
 
-    $ c++ $(bdemeta cflags bdl) m.cpp $(bdemeta ldflags bdl)
+First, create a root for your application code:
 
-To produce a set of cflags for third-party tools such as 'YouCompleteMe':
+    $ mkdir -p /my/root
+
+Then, create an 'applications' directory inside it.  This will contain all the
+application standalone packages.
+
+    $ mkdir /my/root/applications
+
+Next, create a standalone package for your application, called 'myapp':
+
+    $ mkdir /my/root/applications/m_myapp
+
+Then, create the metadata for this application:
+
+    $ mkdir /my/root/applications/m_myapp/application
+    $ echo 'bsl' > /my/root/applications/m_myapp/application/m_myapp.dep
+    $ echo 'myapp.m.cpp' > /my/root/applications/m_myapp/application/m_myapp.mem
+
+Next, go to your build directory:
+
+    $ cd /path/to/build/directory
+
+Then, add your new root to your `.bdemetarc` file:
+
+    $ echo '--root /my/root' >> .bdemetarc
+
+Next, test that the dependencies can be traversed correctly:
+
+    $ bdemeta walk m_myapp
+    m_myapp bsl
+
+Then, generate the ninja build file into `build.ninja`:
+
+    $ bdemeta ninja m_myapp > build.ninja
+
+Finally, build your application into `out/apps`:
+
+    $ ninja m_myapp
+
+#### Example 3: generating cflags for external tools
+
+Some external tools, e.g. 'YouCompleteMe' require a list of cflags.  To
+generate valid cflags, simply run the following command:
 
     $ bdemeta cflags bdl
 
