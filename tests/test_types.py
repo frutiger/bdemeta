@@ -2,7 +2,7 @@ from collections import defaultdict
 from unittest    import TestCase
 import os
 
-from bdemeta.types import Unit, Package, Group
+from bdemeta.types import Unit, Package, Group, Application
 
 def dict_resolver(resolutions):
     return lambda name: resolutions[name]
@@ -237,4 +237,44 @@ class TestGroup(TestCase):
             'ldflags': ' -Lout/libs -lgr1',
             'output':  'gr1pkg1_c1.t',
         }))
+
+class TestApplication(TestCase):
+    def test_name(self):
+        path = os.path.join('foo', 'bar')
+        a = Application(None, path, None, None, None)
+        assert(a.name() == 'bar')
+
+    def test_result_type(self):
+        path = os.path.join('foo', 'bar')
+        a = Application(None, path, None, None, None)
+        assert(a.result_type() == 'executable')
+
+    def test_user_flags(self):
+        a = Application(None, 'gr1', [], [], { 'a': ['5'] })
+        assert(a.flags('a') == ['5'])
+
+    def test_no_dependency_components(self):
+        path = os.path.join('foo', 'bar')
+        a = Application(None, path, ['a', 'b'], [], defaultdict(list))
+        assert(a.components() == ({
+            'input':   'foo/bar/a.cpp foo/bar/b.cpp',
+            'cflags':  '',
+            'ldflags': '',
+        },))
+
+    def test_dependency_components(self):
+        gr1 = Group(None,
+                   'gr1',
+                    [],
+                    [],
+                    defaultdict(list))
+
+        resolver = dict_resolver({ 'gr1': gr1 })
+
+        a = Application(resolver, 'baz', ['a'], ['gr1'], defaultdict(list))
+        assert(a.components() == ({
+            'input':   'baz/a.cpp',
+            'cflags':  '',
+            'ldflags': ' -Lout/libs -lgr1',
+        },))
 
