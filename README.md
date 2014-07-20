@@ -106,7 +106,8 @@ NAME:DEPENDENCY`.
 ### EXAMPLES
 
 The following examples demonstrate working with the ['BDE' source
-code](https://github.com/bloomberg/bde).
+code](https://github.com/bloomberg/bde) on a Mac OS X with the Xcode
+Commandline Tools installed.
 
 First, clone the 'BDE' repository:
 
@@ -120,16 +121,12 @@ that directory:
     --root /path/to/bde/clone
     --cflag bsl:-DBDE_BUILD_TARGET_EXC
     --cflag bsl:-DBDE_BUILD_TARGET_MT
-    --cflag bsl:-DBDE_OMIT_INTERNAL_DEPRECATED
-    --cflag bsl:-D__CLANG_GNUC__=4
-    --cflag bsl:-D__CLANG_GNUC_MINOR__=8
-    --cflag bsl:-D__CLANG_GNUC_PATCHLEVEL__=0
     --cflag bdl+decnumber:-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common
 
 Note that the special 'bdl+decnumber' cflag is needed as that package has
 special build rules.
 
-#### Example 1: Building a testing package groups
+#### Example 1: Building and testing package groups
 
 First, test that the dependencies can be traversed correctly:
 
@@ -180,7 +177,7 @@ application standalone packages.
 
     $ mkdir /my/root/applications
 
-Next, create a standalone package for your application, called 'myapp':
+Next, create a standalone package for your application, called `m_myapp`:
 
     $ mkdir /my/root/applications/m_myapp
 
@@ -211,7 +208,7 @@ Finally, build your application into `out/apps`:
 
     $ ninja m_myapp
 
-#### Example 3: generating cflags for external tools
+#### Example 3: Generating cflags for external tools
 
 Some external tools, e.g. 'YouCompleteMe' require a list of cflags.  To
 generate valid cflags, simply run the following command:
