@@ -177,8 +177,8 @@ def parse_args(args):
 def run(output, args):
     args     = parse_args(args)
     resolver = bdemeta.resolver.Resolver(args.roots,
-                        args.user_dependencies,
-                        args.user_flags)
+                                         args.user_dependencies,
+                                         args.user_flags)
 
     if hasattr(args, 'groups'):
         groups = frozenset(resolver(unit) for unit in args.groups)
