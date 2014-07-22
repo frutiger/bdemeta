@@ -167,6 +167,11 @@ def parse_args(args):
     delattr(args, 'user_cflags')
     delattr(args, 'user_ldflags')
 
+    user_dependencies = defaultdict(frozenset)
+    for unit in args.user_dependencies:
+        user_dependencies[unit] = frozenset(args.user_dependencies[unit])
+    setattr(args, 'user_dependencies', user_dependencies)
+
     return args
 
 def run(output, args):
