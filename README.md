@@ -12,7 +12,7 @@ Where `MODE` is one of:
 `bdemeta walk GROUP [GROUP ...]`<br/>
 `bdemeta cflags GROUP [GROUP ...]`<br/>
 `bdemeta ldflags GROUP [GROUP ...]`<br/>
-`bdemeta ninja [-cc CC] [--cxx CXX] [--ar AR] GROUP [GROUP ...]`<br/>
+`bdemeta ninja [--cc CC] [--cxx CXX] [--ar AR] GROUP [GROUP ...]`<br/>
 `bdemeta runtests [TEST ...]`:
 
 ### DESCRIPTION
