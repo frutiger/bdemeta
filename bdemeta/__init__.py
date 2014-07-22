@@ -143,8 +143,8 @@ def parse_args(args):
         print('{}: error: too few arguments'.format(sys.argv[0]))
         sys.exit(-1)
 
-    def set_user_options(args, kind, type):
-        result = defaultdict(type)
+    def set_user_options(args, kind):
+        result = defaultdict(list)
         for value in getattr(args, kind):
             if len(value.split(':')) < 2:
                 raise RuntimeError('flag value should be NAME:{}'.format(
@@ -155,9 +155,9 @@ def parse_args(args):
         delattr(args,  kind)
         setattr(args, 'user_' + kind, result)
 
-    set_user_options(args, 'dependencies', frozenset)
-    set_user_options(args, 'cflags',       list)
-    set_user_options(args, 'ldflags',      list)
+    set_user_options(args, 'dependencies')
+    set_user_options(args, 'cflags')
+    set_user_options(args, 'ldflags')
 
     setattr(args, 'user_flags', defaultdict(lambda: {'c': [], 'ld': []}))
     for unit in args.user_cflags:
