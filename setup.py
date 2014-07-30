@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='bdemeta',
-      version='0.3.2',
+      version='0.3.3',
       description='Build and test BDE-style code',
       url='https://github.com/frutiger/bdemeta',
       author='Masud Rahman',

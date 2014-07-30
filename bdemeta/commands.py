@@ -115,7 +115,7 @@ build {name}: phony {output}
             if objects:
                 file.write(lib_template.format(output  = output(unit),
                                                name    = unit.name(),
-                                               input   = join(objects),
+                                               input   = join(sorted(objects)),
                                                deps    = obj_deps))
                 defaults.append(output(unit))
 

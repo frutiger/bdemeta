@@ -90,8 +90,12 @@ class Group(Unit):
             group_cflags  =                    self._flags['c']
             group_ldflags = self.flags('ld') + self._flags['ld']
 
-            cflags  = list(chain(package_cflags,  group_cflags,  deps_cflags))
-            ldflags = list(chain(package_ldflags, group_ldflags, deps_ldflags))
+            cflags  = list(sorted(chain(package_cflags,
+                                        group_cflags,
+                                        deps_cflags)))
+            ldflags = list(sorted(chain(package_ldflags,
+                                        group_ldflags,
+                                        deps_ldflags)))
 
             for m in package.members():
                 result.append({
@@ -131,7 +135,7 @@ class Application(Unit):
                                                                for d in deps]))
 
         inputs = ' '.join((os.path.join(self._path, m + '.cpp') \
-                                                       for m in self._members))
+                                               for m in sorted(self._members)))
         return ({
             'cflags':  ' ' + ' '.join(cflags) if cflags else '',
             'input':   inputs,
