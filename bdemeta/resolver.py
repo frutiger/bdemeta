@@ -37,14 +37,15 @@ class Resolver(object):
             elif len(name) >= 3:
                 group = name[:3]
                 candidate = os.path.join(root.strip(), 'groups', group, name)
-                cpp  = lambda x: x + '.cpp'
-                tcpp = lambda x: x + '.t.cpp'
+                cpp      = lambda x: x + '.cpp'
+                tcpp     = lambda x: x + '.t.cpp'
+                basename = os.path.basename
                 if os.path.isdir(candidate):
                     if '+' in name:
                         ms = os.listdir(candidate)
                         ms = (os.path.splitext(m) for m in ms)
                         ms = (m for m in ms if m[1] == '.c' or m[1] == '.cpp')
-                        ms = ({'name':   candidate + '_' + m[0],
+                        ms = ({'name':   basename(candidate) + '_' + m[0],
                                'path':   os.path.join(candidate, m[0] + m[1]),
                                'driver': None} for m in ms)
                     else:
