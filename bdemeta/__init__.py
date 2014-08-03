@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import argparse
+import io
+import locale
 import os
 import sys
 from collections import defaultdict
@@ -127,10 +129,15 @@ def get_parser():
 def parse_args(args):
     def args_from_file(filename):
         if os.path.isfile(filename):
-            with open(filename) as f:
+            with io.open(filename) as f:
+                # Use 'io.open' over 'open' to read file in 'unicode'
                 options = [l[:-1] for l in f.readlines() if l[0] != '#']
                 return ' '.join(options).split()
         return []
+
+    if sys.version_info.major < 3:
+        # Convert arguments to 'unicode' on pre-Python 3
+        args = [arg.decode(locale.getpreferredencoding()) for arg in args]
 
     args = args_from_file(os.path.expanduser('~/.bdemetarc')) + \
                                            args_from_file('.bdemetarc') + args
