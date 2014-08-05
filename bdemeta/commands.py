@@ -10,12 +10,17 @@ from bdemeta.graph import traverse, tsort
 def walk(units):
     return u' '.join(u.name() for u in tsort(traverse(units)))
 
-def flags(units, type):
+def cflags(units):
     units  = tsort(traverse(units))
-    flags  = chain(*[u.flags(type) for u in units])
+    flags  = chain(*[u.cflags() for u in units])
     return u' '.join(flags)
 
-def ninja(units, cc, cxx, ar, file):
+def ldflags(units):
+    units  = tsort(traverse(units))
+    flags  = chain(*[u.ldflags() for u in units])
+    return u' '.join(flags)
+
+def ninja(units, config, file):
     rules = u'''\
 rule cc-object
   deps    = gcc
@@ -35,7 +40,7 @@ rule cxx-executable
 rule ar
   command = {ar} -crs $out $in
 
-'''.format(cc=cc, cxx=cxx, ar=ar)
+'''.format(cc=config['cc'], cxx=config['c++'], ar=config['ar'])
     lib_template=u'''\
 build {output}: ar {input}{deps}
 

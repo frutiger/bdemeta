@@ -2,7 +2,7 @@ import io
 from unittest import TestCase
 
 from bdemeta.types    import Unit
-from bdemeta.commands import walk, flags, ninja, runtests
+from bdemeta.commands import walk, cflags, ldflags, ninja, runtests
 
 boilerplate = u'''\
 rule cc-object
@@ -47,7 +47,11 @@ class MockUnit(object):
 class TestNinja(TestCase):
     def test_boilerplate(self):
         result = io.StringIO()
-        ninja((), '1', '2', '3', result)
+        ninja((), {
+            'cc':  '1',
+            'c++': '2',
+            'ar':  '3',
+        }, result)
         assert(result.getvalue() == boilerplate)
 
     def test_component(self):
@@ -58,7 +62,11 @@ class TestNinja(TestCase):
             'output': 'a.o',
         },), 'library')
         result = io.StringIO()
-        ninja((u,), '1', '2', '3', result)
+        ninja((u,), {
+            'cc':  '1',
+            'c++': '2',
+            'ar':  '3',
+        }, result)
         assert(result.getvalue() == boilerplate + u'''\
 build out/objs/a.o: cxx-object a.cpp
   flags = -Ia
@@ -85,7 +93,11 @@ default out/libs/libfoo.a
             'output': 'foo_1.o',
         },), 'library')
         result = io.StringIO()
-        ninja((foo,), '1', '2', '3', result)
+        ninja((foo,), {
+            'cc':  '1',
+            'c++': '2',
+            'ar':  '3',
+        }, result)
         assert(result.getvalue() == boilerplate + u'''\
 build out/objs/foo_1.o: cxx-object foo_1.cpp
   flags =
@@ -114,7 +126,11 @@ default out/libs/libfoo.a out/libs/libbar.a
             'output':  'a.t',
         },), 'library')
         result = io.StringIO()
-        ninja((u,), '1', '2', '3', result)
+        ninja((u,), {
+            'cc':  '1',
+            'c++': '2',
+            'ar':  '3',
+        }, result)
         assert(result.getvalue() == boilerplate + u'''\
 build out/tests/a.t: cxx-executable a.t.cpp | out/libs/libfoo.a
   cflags = -Ia
@@ -137,7 +153,11 @@ build tests: phony out/tests/a.t
             'output':  'a',
         },), 'executable')
         result = io.StringIO()
-        ninja((u,), '1', '2', '3', result)
+        ninja((u,), {
+            'cc':  '1',
+            'c++': '2',
+            'ar':  '3',
+        }, result)
         assert(result.getvalue() == boilerplate + u'''\
 build out/apps/a: cxx-executable a.m.cpp b.cpp
   cflags = -Ia
