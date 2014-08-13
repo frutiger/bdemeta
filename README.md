@@ -133,7 +133,7 @@ First, test that the dependencies can be traversed correctly:
     $ bdemeta walk bdl
     bdl bsl
 
-Next, generate generate the ninja build file for `bdl` and all its transitive
+Next, generate the ninja build file for `bdl` and all its transitive
 dependencies (i.e. `bsl`) into `build.ninja`:
 
     $ bdemeta ninja bdl > build.ninja
