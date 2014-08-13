@@ -38,8 +38,6 @@ Platforms running Python 2.7, 3.3 or 3.4 are supported.  Install using `pip`:
 
     $ pip install git+https://github.com/frutiger/bdemeta
 
-**Note**: the script name has changed from `bde-meta` to `bdemeta`.
-
 ### OPTIONS
 
 `bdemeta` takes any number of the following options:
