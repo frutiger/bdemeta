@@ -8,12 +8,12 @@ from itertools import chain, count
 from bdemeta.graph import traverse, tsort
 
 def walk(units):
-    return ' '.join(u.name() for u in tsort(traverse(units)))
+    return u' '.join(u.name() for u in tsort(traverse(units)))
 
 def flags(units, type):
     units  = tsort(traverse(units))
     flags  = chain(*[u.flags(type) for u in units])
-    return ' '.join(flags)
+    return u' '.join(flags)
 
 def ninja(units, cc, cxx, ar, file):
     rules = u'''\
