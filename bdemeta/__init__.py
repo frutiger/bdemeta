@@ -5,6 +5,7 @@ import io
 import locale
 import os
 import sys
+import shlex
 from collections import defaultdict
 
 import bdemeta.resolver
@@ -128,12 +129,42 @@ def get_parser():
 
 def parse_args(args):
     def args_from_file(filename):
+        has_pwd = "PWD" in os.environ
+        if not has_pwd: # When running from a debugger
+            os.environ["PWD"] = os.getcwd()
+        result = []
         if os.path.isfile(filename):
-            with io.open(filename) as f:
-                # Use 'io.open' over 'open' to read file in 'unicode'
-                options = [l[:-1] for l in f.readlines() if l[0] != '#']
-                return ' '.join(options).split()
-        return []
+            with io.open(filename, mode='r') as f:
+                # Hacks here so that the code works both with 2.7 and 3.x Python`
+                lexer = shlex.shlex(f, os.path.abspath(filename))
+                if sys.version_info < (3, 0, 0): # Hack to make 2.7 work
+                    lexer.wordchars = unicode(lexer.wordchars, f.encoding)
+                lexer.posix = True # Cannot pass in constructor, kills wordchars on 2.7
+                lexer.eof = None # Bug in shlex -- changing .posix does not change this
+                # End hacks
+                lexer.whitespace_split = True
+                try:
+                    for token in lexer:
+                        if token == lexer.eof:
+                            break
+                        elif len(token) > 2:
+                            if token[0] in lexer.quotes and token[-1] in lexer.quotes:
+                                if token[0] == "'": # "Hard" quotes
+                                   token = token[1:-1]
+                                else: # when here, soft quotes
+                                   token = os.path.expandvars(os.path.expanduser(token[1:-1]))
+                            else:
+                               token = os.path.expandvars(os.path.expanduser(token))
+                        result.append(token)
+                except ValueError as e:
+                    print('Error in {} at line {}: "{}" while parsing:\n\t{}'.format(lexer.infile,
+                                                                                     lexer.lineno,
+                                                                                     e,
+                                                                                     lexer.token.rstrip(U'\n')))
+                    sys.exit(-1)
+        if not has_pwd:
+            del os.environ["PWD"]
+        return result
 
     if sys.version_info.major < 3:
         # Convert arguments to 'unicode' on pre-Python 3
@@ -206,3 +237,5 @@ def run(output, args):
 def main():
     run(sys.stdout, sys.argv[1:])
 
+if __name__ == "__main__":
+    main()
