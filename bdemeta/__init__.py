@@ -206,3 +206,5 @@ def run(output, args):
 def main():
     run(sys.stdout, sys.argv[1:])
 
+if __name__ == "__main__":
+    main()
