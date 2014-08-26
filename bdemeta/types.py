@@ -130,9 +130,9 @@ class Application(Unit):
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
         cflags  = self._flags['c']  + list(chain(*[d.flags('c')  \
-                                                               for d in deps]))
+                                                               for d in deps if d != self]))
         ldflags = self._flags['ld'] + list(chain(*[d.flags('ld') \
-                                                               for d in deps]))
+                                                               for d in deps if d != self]))
 
         inputs = ' '.join((os.path.join(self._path, m + '.cpp') \
                                                for m in sorted(self._members)))
