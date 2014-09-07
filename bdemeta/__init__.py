@@ -41,7 +41,7 @@ def run(output, args):
         # Convert arguments to 'unicode' on pre-Python 3
         args = [arg.decode(locale.getpreferredencoding()) for arg in args]
 
-    mode = args[0] if len(args) > 1 else None
+    mode = args[0] if len(args) > 0 else None
 
     if   mode == 'walk':
         groups = frozenset(resolver(unit) for unit in args[1:])
