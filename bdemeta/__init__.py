@@ -26,9 +26,9 @@ def run(output, args):
     config = merge(merge({
         'roots': [],
         'ninja': {
-            'cc':  u'cc',
-            'c++': u'c++',
-            'ar':  u'ar',
+            'cc':  '',
+            'c++': '',
+            'ar':  '',
         },
         'cflags':       defaultdict(list),
         'ldflags':      defaultdict(list),
@@ -53,6 +53,12 @@ def run(output, args):
         groups = frozenset(resolver(unit) for unit in args[1:])
         print(bdemeta.commands.ldflags(groups), file=output)
     elif mode == 'ninja':
+        if config['ninja']['cc'] == '':
+            config['ninja']['cc'] = 'cc'
+        if config['ninja']['c++'] == '':
+            config['ninja']['c++'] = 'c++'
+        if config['ninja']['ar'] == '':
+            config['ninja']['ar'] = 'ar'
         groups = frozenset(resolver(unit) for unit in args[1:])
         bdemeta.commands.ninja(groups, config['ninja'], output)
     elif mode == 'runtests':
