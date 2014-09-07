@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.org/frutiger/bdemeta.svg?branch=master)](https://travis-ci.org/frutiger/bdemeta)
-[![Coverage Status](https://coveralls.io/repos/frutiger/bdemeta/badge.png?branch=master)](https://coveralls.io/r/frutiger/bdemeta?branch=master)
+[![Build Status](https://img.shields.io/travis/frutiger/bdemeta/master.svg?style=flat-square)](https://travis-ci.org/frutiger/bdemeta)
+[![Coverage Status](https://img.shields.io/coveralls/frutiger/bdemeta/master.svg?style=flat-square)](https://coveralls.io/r/frutiger/bdemeta?branch=master)
 
 ##bdemeta - build and test BDE-style code
 
