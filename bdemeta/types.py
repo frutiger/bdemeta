@@ -4,12 +4,17 @@ from itertools import chain
 from bdemeta.graph import traverse, tsort
 
 class Unit(object):
-    def __init__(self, resolver, name, dependencies, cflags, ldflags):
-        self._resolver     = resolver
-        self._name         = name
-        self._dependencies = dependencies
-        self._cflags       = cflags
-        self._ldflags      = ldflags
+    def __init__(self,
+                 resolver,
+                 name,
+                 dependencies,
+                 external_cflags,
+                 external_ldflags):
+        self._resolver         = resolver
+        self._name             = name
+        self._dependencies     = dependencies
+        self._external_cflags  = external_cflags
+        self._external_ldflags = external_ldflags
 
     def __eq__(self, other):
         return self._name == other._name
@@ -28,11 +33,11 @@ class Unit(object):
     def dependencies(self):
         return frozenset(self._resolver(name) for name in self._dependencies)
 
-    def cflags(self):
-        return self._cflags
+    def external_cflags(self):
+        return self._external_cflags
 
-    def ldflags(self):
-        return self._ldflags
+    def external_ldflags(self):
+        return self._external_ldflags
 
     def components(self):
         return {}
@@ -42,66 +47,89 @@ class Unit(object):
 
 class Package(Unit):
     def __init__(self, resolver, path, members, dependencies, cflags, ldflags):
-        self._path    = path
-        self._members = members
-        name          = os.path.basename(path)
-        super(Package, self).__init__(resolver,
-                                      name,
-                                      dependencies,
-                                      cflags,
-                                      ldflags)
+        self._path             = path
+        self._members          = members
+        self._internal_cflags  = cflags['internal'] \
+                                                  + cflags['external'] \
+                                                  + ['-I{}'.format(self._path)]
+        self._internal_ldflags = ldflags['internal'] + ldflags['external']
+        name                   = os.path.basename(path)
+        super(Package, self).__init__(
+                              resolver,
+                              name,
+                              dependencies,
+                              cflags['external'] + ['-I{}'.format(self._path)],
+                              ldflags['external'])
 
     def path(self):
         return self._path
 
-    def cflags(self):
-        return ' '.join(self._cflags[:] + ['-I{}'.format(self._path)])
+    def internal_cflags(self):
+        return ' '.join(self._internal_cflags)
 
-    def ldflags(self):
-        return ' '.join(self._ldflags[:])
+    def external_cflags(self):
+        return ' '.join(self._external_cflags)
+
+    def internal_ldflags(self):
+        return ' '.join(self._internal_ldflags)
+
+    def external_ldflags(self):
+        return ' '.join(self._external_ldflags)
 
     def members(self):
         return self._members
 
 class Group(Unit):
     def __init__(self, resolver, path, members, dependencies, cflags, ldflags):
-        self._path    = path
-        self._members = members
-        name          = os.path.basename(path)
+        self._path             = path
+        self._members          = members
+        self._internal_cflags  = cflags['internal'] + cflags['external']
+        self._internal_ldflags = ldflags['internal']
+        name                   = os.path.basename(path)
         super(Group, self).__init__(resolver,
                                     name,
                                     dependencies,
-                                    cflags,
-                                    ldflags)
+                                    cflags['external'],
+                                    ldflags['external'])
 
     def _packages(self):
         return tsort(self._resolver(member) for member in self._members)
 
-    def cflags(self):
-        flags = self._cflags + [p.cflags() for p in self._packages()]
+    def external_cflags(self):
+        flags = self._external_cflags \
+                              + [p.external_cflags() for p in self._packages()]
         return [flag for flag in flags if flag != '']
 
-    def ldflags(self):
-        flags = self._ldflags + [p.ldflags() for p in self._packages()] \
-                              + ['-Lout/libs', '-l' + self._name]
+    def external_ldflags(self):
+        flags = self._external_ldflags \
+                           + [p.external_ldflags() for p in self._packages()] \
+                           + ['-Lout/libs', '-l' + self._name]
         return [flag for flag in flags if flag != '']
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
         deps.remove(self)
-        deps_cflags  = list(chain(*[d.cflags()  for d in deps]))
-        deps_ldflags = list(chain(*[d.ldflags() for d in deps]))
+        deps_cflags  = list(chain(*[d.external_cflags()  for d in deps]))
+        deps_ldflags = list(chain(*[d.external_ldflags() for d in deps]))
 
         result = []
         for package in self._packages():
-            package_deps    = tsort(traverse(frozenset((package,))))
-            package_cflags  = [p.cflags()  for p in package_deps \
-                                                          if p.cflags()  != '']
-            package_ldflags = [p.ldflags() for p in package_deps \
-                                                          if p.ldflags() != '']
+            pkg_deps    = tsort(traverse(frozenset((package,))))
 
-            group_cflags  =                  self._cflags
-            group_ldflags = self.ldflags() + self._ldflags
+            package_cflags  = []
+            package_cflags.append(package.internal_cflags())
+            package_cflags.extend([p.external_cflags()  for p in pkg_deps \
+                                                              if p != package])
+            package_cflags = [f for f in package_cflags if f != '']
+
+            package_ldflags  = []
+            package_ldflags.append(package.internal_ldflags())
+            package_ldflags.extend([p.external_ldflags()  for p in pkg_deps \
+                                                              if p != package])
+            package_ldflags = [f for f in package_ldflags if f != '']
+
+            group_cflags  = self._internal_cflags
+            group_ldflags = self._internal_ldflags + self.external_ldflags()
 
             cflags  = list(sorted(chain(package_cflags,
                                         group_cflags,
@@ -132,25 +160,29 @@ class Group(Unit):
 
 class Application(Unit):
     def __init__(self, resolver, path, members, dependencies, cflags, ldflags):
-        self._path    = path
-        self._members = members
-        name          = os.path.basename(path)
+        self._path             = path
+        self._members          = members
+        self._internal_cflags  = cflags['internal']
+        self._internal_ldflags = ldflags['internal']
+        name                   = os.path.basename(path)
         super(Application, self).__init__(resolver,
                                           name,
                                           dependencies,
-                                          cflags,
-                                          ldflags)
+                                          cflags['external'],
+                                          ldflags['external'])
 
-    def cflags(self):
-        return self._cflags
+    def external_cflags(self):
+        return self._external_cflags
 
-    def ldflags(self):
-        return self._ldflags
+    def external_ldflags(self):
+        return self._external_ldflags
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
-        cflags  = self._cflags  + list(chain(*[d.cflags()  for d in deps]))
-        ldflags = self._ldflags + list(chain(*[d.ldflags() for d in deps]))
+        cflags  = self._internal_cflags  \
+                           + list(chain(*[d.external_cflags()  for d in deps]))
+        ldflags = self._internal_ldflags \
+                           + list(chain(*[d.external_ldflags() for d in deps]))
 
         inputs = ' '.join((os.path.join(self._path, m + '.cpp') \
                                                for m in sorted(self._members)))

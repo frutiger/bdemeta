@@ -22,18 +22,20 @@ def run(output, args):
     user_config  = parse_config(os.path.expanduser('~/.bdemetarc'))
     local_config = parse_config('.bdemetarc')
 
-    merge  = bdemeta.config.merge
-    config = merge(merge({
+    flags = lambda: { 'internal': [], 'external': [] }
+    config = {
         'roots': [],
         'ninja': {
             'cc':  '',
             'c++': '',
             'ar':  '',
         },
-        'cflags':       defaultdict(list),
-        'ldflags':      defaultdict(list),
+        'cflags':       defaultdict(flags),
+        'ldflags':      defaultdict(flags),
         'dependencies': defaultdict(list),
-    }, user_config), local_config)
+    }
+    config = bdemeta.config.merge(config, user_config)
+    config = bdemeta.config.merge(config, local_config)
 
     resolver = bdemeta.resolver.Resolver(config)
 

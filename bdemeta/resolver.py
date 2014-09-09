@@ -79,6 +79,6 @@ class Resolver(object):
         return bdemeta.types.Unit(self,
                                   name,
                                   self._config['dependencies'][name],
-                                  self._config['cflags'][name],
-                                  self._config['ldflags'][name])
+                                  self._config['cflags'][name]['external'],
+                                  self._config['ldflags'][name]['external'])
 

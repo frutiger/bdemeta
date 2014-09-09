@@ -12,12 +12,12 @@ def walk(units):
 
 def cflags(units):
     units  = tsort(traverse(units))
-    flags  = chain(*[u.cflags() for u in units])
+    flags  = chain(*[u.external_cflags() for u in units])
     return u' '.join(flags)
 
 def ldflags(units):
     units  = tsort(traverse(units))
-    flags  = chain(*[u.ldflags() for u in units])
+    flags  = chain(*[u.external_ldflags() for u in units])
     return u' '.join(flags)
 
 def ninja(units, config, file):
