@@ -61,11 +61,14 @@ The configuration is as follows:
     {
         "roots": ["<root>", ...],
         "ninja": {
-            "cc":  ["<cc>"  = "cc"],
-            "c++": ["<c++>" = "c++"],
-            "ar":  ["<ar>   = "ar"],
+            "cc":  "<cc>",
+            "c++": "<c++>",
+            "ar":  "<ar>"
         },
         "cflags": {
+            "#universal": {
+                "external": ["<univ_cflag>", ...]
+            },
             "<unit1>": {
                 "internal": ["<int_cflag>", ...],
                 "external": ["<ext_cflag>", ...]
@@ -73,6 +76,9 @@ The configuration is as follows:
             ...
         },
         "ldflags": {
+            "#universal": {
+                "external": ["<univ_ldflag>", ...]
+            },
             "<unit2>": {
                 "internal": ["<int_ldflag>", ...],
                 "external": ["<ext_ldflag>", ...]
@@ -86,17 +92,26 @@ The configuration is as follows:
     }
 
 The specified `<root>`s are added to the package group and standalone
-package search paths.  The optionally specified `<cc>`, `<c++>` and `<ar>` are
-used as the C compiler, C++ compiler and library archiver respectively.  If
-unspecified, these default to `cc`, `c++` and `ar` respectively.  The
-optionally specified `<int_cflag>` is appended when generating cflags for
+package search paths.
+
+The optionally specified `<cc>`, `<c++>` and `<ar>` are used as the C compiler,
+C++ compiler and library archiver respectively.  If unspecified, these default
+to `cc`, `c++` and `ar` respectively.
+
+The optionally specified `<int_cflag>` is appended when generating cflags for
 components in the specified `<unit1>`, while the optionally specified
 `<ext_cflag>` is appended when generating cflags for any component that depends
-on `<unit1>`.  The optionally specified `<int_ldflag>` is appended when
-generating ldflags for test drivers in the specified `<unit2>`, while the
-optionally specified `<ext_ldflag>` is appended when generating ldflags for any
-application or test driver that depends on `<unit2>`.  The optionally specified
-`<unit1>` is considered to be a dependency of the specified `<unit3>`.
+on `<unit1>`.  The optionally specified `<univ_cflag>` is appended when
+generating cflags for any component.
+
+The optionally specified `<int_ldflag>` is appended when generating ldflags for
+test drivers in the specified `<unit2>`, while the optionally specified
+`<ext_ldflag>` is appended when generating ldflags for any application or test
+driver that depends on `<unit2>`.  The optionally specified `<univ_ldflag>` is
+appended when generating ldflags for any component.
+
+The optionally specified `<unit1>` is considered to be a dependency of the
+specified `<unit3>`.
 
 ### Roots
 <a name="roots"></a>

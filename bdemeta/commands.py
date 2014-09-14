@@ -8,7 +8,8 @@ from itertools import chain, count
 from bdemeta.graph import traverse, tsort
 
 def walk(units):
-    return u' '.join(u.name() for u in tsort(traverse(units)))
+    return u' '.join(u.name() for u in tsort(traverse(units)) \
+                                                         if u.name()[0] != '#')
 
 def cflags(units):
     units  = tsort(traverse(units))

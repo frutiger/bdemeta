@@ -3,7 +3,6 @@ import os
 import bdemeta.functional
 import bdemeta.types
 
-@bdemeta.functional.memoize
 def bde_items(*args):
     items_filename = os.path.join(*args)
     items = []
@@ -11,7 +10,10 @@ def bde_items(*args):
         for l in items_file:
             if len(l) > 1 and l[0] != '#':
                 items = items + l.split()
-    return frozenset(items)
+    return items
+
+def universalize(dependencies):
+    return frozenset(dependencies + ['#universal'])
 
 class Resolver(object):
     def __init__(self, config):
@@ -24,12 +26,12 @@ class Resolver(object):
                 candidate = os.path.join(root.strip(), 'groups', name)
                 if os.path.isdir(candidate):
                     members = bde_items(candidate, 'group', name + '.mem')
-                    deps    = frozenset(self._config['dependencies'][name]) | \
-                                   bde_items(candidate, 'group', name + '.dep')
+                    deps    = self._config['dependencies'][name] \
+                                 + bde_items(candidate, 'group', name + '.dep')
                     return bdemeta.types.Group(self,
                                                candidate,
                                                members,
-                                               deps,
+                                               universalize(deps),
                                                self._config['cflags'][name],
                                                self._config['ldflags'][name])
             elif len(name) >= 3:
@@ -54,12 +56,12 @@ class Resolver(object):
                                'driver': os.path.isfile(tcpp(m[1])) and
                                                                      tcpp(m[1])
                               } for m in ms)
-                    deps = frozenset(self._config['dependencies'][name]) | \
-                                 bde_items(candidate, 'package', name + '.dep')
+                    deps = self._config['dependencies'][name] \
+                               + bde_items(candidate, 'package', name + '.dep')
                     return bdemeta.types.Package(self,
                                                  candidate,
                                                  list(ms),
-                                                 deps,
+                                                 frozenset(deps),
                                                  self._config['cflags'][name],
                                                  self._config['ldflags'][name])
 
@@ -67,18 +69,27 @@ class Resolver(object):
             candidate = os.path.join(root.strip(), 'applications', name)
             if os.path.isdir(candidate):
                 members = bde_items(candidate, 'application', name + '.mem')
-                deps    = frozenset(self._config['dependencies'][name]) | \
-                             bde_items(candidate, 'application', name + '.dep')
+                deps    = self._config['dependencies'][name] \
+                           + bde_items(candidate, 'application', name + '.dep')
                 return bdemeta.types.Application(self,
                                                  candidate,
                                                  members,
-                                                 deps,
+                                                 universalize(deps),
                                                  self._config['cflags'][name],
                                                  self._config['ldflags'][name])
 
-        return bdemeta.types.Unit(self,
-                                  name,
-                                  self._config['dependencies'][name],
-                                  self._config['cflags'][name]['external'],
-                                  self._config['ldflags'][name]['external'])
+        if name == '#universal':
+            return bdemeta.types.Unit(
+                                     self,
+                                     name,
+                                     frozenset(),
+                                     self._config['cflags'][name]['external'],
+                                     self._config['ldflags'][name]['external'])
+
+        return bdemeta.types.Unit(
+                              self,
+                              name,
+                              universalize(self._config['dependencies'][name]),
+                              self._config['cflags'][name]['external'],
+                              self._config['ldflags'][name]['external'])
 
