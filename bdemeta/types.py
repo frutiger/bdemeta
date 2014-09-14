@@ -103,7 +103,7 @@ class Group(Unit):
     def external_ldflags(self):
         flags = self._external_ldflags \
                            + [p.external_ldflags() for p in self._packages()] \
-                           + ['-Lout/libs', '-l' + self._name]
+                           + ['out/libs/lib' + self._name + '.a']
         return [flag for flag in flags if flag != '']
 
     def components(self):

@@ -320,7 +320,7 @@ class TestGroup(TestCase):
                   None,
                   self.empty_flags,
                   self.empty_flags)
-        assert(g.external_ldflags() == ['-Lout/libs', '-lgr1'])
+        assert(g.external_ldflags() == ['out/libs/libgr1.a'])
 
     def test_custom_internal_ldflags(self):
         path = os.path.join('gr1', 'gr1pkg1')
@@ -339,7 +339,7 @@ class TestGroup(TestCase):
                       'external': ['bar'],
                   })
         # note that internal flags do not appear as external flags
-        assert(g.external_ldflags() == ['bar', '-Lout/libs', '-lgr1'])
+        assert(g.external_ldflags() == ['bar', 'out/libs/libgr1.a'])
 
     def test_custom_external_ldflags(self):
         path = os.path.join('gr1', 'gr1pkg1')
@@ -358,7 +358,7 @@ class TestGroup(TestCase):
                       'external': [],
                   })
         # note that custom flags precede default flags
-        assert(g.external_ldflags() == ['-Lout/libs', '-lgr1'])
+        assert(g.external_ldflags() == ['out/libs/libgr1.a'])
 
     def test_custom_internal_and_external_ldflags(self):
         path = os.path.join('gr1', 'gr1pkg1')
@@ -377,7 +377,7 @@ class TestGroup(TestCase):
                       'external': ['bar'],
                   })
         # note that internal flags do not appear as external flags
-        assert(g.external_ldflags() == ['bar', '-Lout/libs', '-lgr1'])
+        assert(g.external_ldflags() == ['bar', 'out/libs/libgr1.a'])
 
     def test_components_without_driver(self):
         pjoin = os.path.join
@@ -472,7 +472,7 @@ class TestGroup(TestCase):
             'type':    'test',
             'input':   'gr1/gr1pkg1/gr1pkg1_c1.t.cpp',
             'cflags':  ' -Igr1/gr1pkg1',
-            'ldflags': ' -Lout/libs -lgr1',
+            'ldflags': ' out/libs/libgr1.a',
             'output':  'gr1pkg1_c1.t',
         }))
 
@@ -542,6 +542,6 @@ class TestApplication(TestCase):
         assert(a.components() == ({
             'input':   'baz/a.cpp',
             'cflags':  '',
-            'ldflags': ' -Lout/libs -lgr1',
+            'ldflags': ' out/libs/libgr1.a',
         },))
 
