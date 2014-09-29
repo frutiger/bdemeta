@@ -134,9 +134,7 @@ class Group(Unit):
             cflags  = list(sorted(chain(package_cflags,
                                         group_cflags,
                                         deps_cflags)))
-            ldflags = list(sorted(chain(package_ldflags,
-                                        group_ldflags,
-                                        deps_ldflags)))
+            ldflags = list(chain(package_ldflags, group_ldflags, deps_ldflags))
 
             for m in package.members():
                 result.append({
@@ -179,8 +177,8 @@ class Application(Unit):
 
     def components(self):
         deps = tsort(traverse(frozenset((self,))))
-        cflags  = self._internal_cflags  \
-                           + list(chain(*[d.external_cflags()  for d in deps]))
+        cflags  = sorted(chain(self._internal_cflags,
+                               *[d.external_cflags()  for d in deps]))
         ldflags = self._internal_ldflags \
                            + list(chain(*[d.external_ldflags() for d in deps]))
 
