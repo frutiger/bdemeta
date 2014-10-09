@@ -99,6 +99,7 @@ class TsortTest(TestCase):
         assert(len(tsort(())) == 0)
 
     def test_identity_for_one_node(self):
+        #  a    =>    a
         a = make_graph(['a'], [])[0]
         nodes = traverse(frozenset((a,)))
         nodes = tsort(nodes)
@@ -107,6 +108,9 @@ class TsortTest(TestCase):
         assert(a in nodes)
 
     def test_two_linear_nodes(self):
+        #  a
+        #  |    =>    a, b
+        #  b
         a, b = make_graph(['a', 'b'], [['a', 'b']])
 
         for permutation in itertools.permutations([a, b]):
@@ -116,6 +120,11 @@ class TsortTest(TestCase):
             assert(nodes[1] == b)
 
     def test_three_linear_nodes(self):
+        #  a
+        #  |
+        #  b    =>    a, b, c
+        #  |
+        #  c
         a, b, c = make_graph(['a', 'b', 'c'],
                              [['a', 'b'],
                               ['b', 'c']])
@@ -128,6 +137,9 @@ class TsortTest(TestCase):
             assert(nodes[2] == c)
 
     def test_three_nodes_two_edges(self):
+        #    a
+        #   / \     =>    a, b, c
+        #  b   c
         a, b, c = make_graph(['a', 'b', 'c'],
                              [['a', 'b'],
                               ['a', 'c']])
@@ -136,6 +148,48 @@ class TsortTest(TestCase):
             nodes = tsort(frozenset(permutation))
             assert(len(nodes) == 3)
             assert(nodes[0] == a)
-            assert(nodes[1] == b or nodes[2] == b)
-            assert(nodes[1] == c or nodes[2] == c)
+            assert(nodes[1] == b)
+            assert(nodes[2] == c)
+
+    def test_four_nodes_diamond(self):
+        #    a
+        #   / \
+        #  b   c    =>    a, b, c, d
+        #   \ /
+        #    d
+        a, b, c, d = make_graph(['a', 'b', 'c', 'd'],
+                                [['a', 'b'],
+                                 ['a', 'c'],
+                                 ['b', 'd'],
+                                 ['c', 'd']])
+
+        for permutation in itertools.permutations([a, b, c, d]):
+            nodes = tsort(frozenset(permutation))
+            assert(len(nodes) == 4)
+            assert(nodes[0] == a)
+            assert(nodes[1] == b)
+            assert(nodes[2] == c)
+            assert(nodes[3] == d)
+
+    def test_six_nodes_two_graphs(self):
+        #       c
+        #      / \
+        #  a  |   d    =>    c, a, d, b, e, f
+        #  |  |   |
+        #  b  e   f
+        a, b, c, d, e, f = make_graph(['a', 'b', 'c', 'd', 'e', 'f'],
+                                      [['a', 'b'],
+                                       ['c', 'd'],
+                                       ['c', 'e'],
+                                       ['d', 'f']])
+
+        for permutation in itertools.permutations([a, b, c, d, e, f]):
+            nodes = tsort(frozenset(permutation))
+            assert(len(nodes) == 6)
+            assert(nodes[0] == c)
+            assert(nodes[1] == a)
+            assert(nodes[2] == d)
+            assert(nodes[3] == b)
+            assert(nodes[4] == e)
+            assert(nodes[5] == f)
 

@@ -9,21 +9,30 @@ def traverse(ns):
 
 @memoize
 def tsort(nodes):
-    tsorted = []
-    marks   = {}
+    nodeLevels = {}
+    levelNodes = {}
 
     def visit(node):
-        if node.name() not in marks:
-            marks[node.name()] = 'working'
+        if node.name() not in nodeLevels:
+            nodeLevels[node.name()] = -1
+            level = 0
             for child in node.dependencies():
-                visit(child)
-            marks[node.name()] = 'done'
-            tsorted.insert(0, node)
-        elif marks[node.name()] == 'done':
-            return
-        else:
+                level = max(level, visit(child) + 1)
+            nodeLevels[node.name()] = level
+            if level not in levelNodes:
+                levelNodes[level] = []
+            levelNodes[level].append(node)
+            return level
+        elif -1 == nodeLevels[node.name()]:
             raise RuntimeError('cyclic graph')
+        else:
+            return nodeLevels[node.name()]
 
-    [visit(n) for n in nodes]
+    [visit (n) for n in nodes]
+
+    tsorted = []
+    for level in levelNodes:
+        tsorted[:0] = sorted(levelNodes[level], key=lambda n: n.name())
+
     return tsorted
 
