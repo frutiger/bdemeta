@@ -3,7 +3,7 @@
 import os
 from itertools import chain
 
-from bdemeta.graph import traverse, tsort
+from bdemeta.graph import tsort
 
 class Unit(object):
     def __init__(self,
@@ -95,7 +95,9 @@ class Group(Unit):
                                     ldflags['external'])
 
     def _packages(self):
-        return tsort(self._resolver(member) for member in self._members)
+        return tsort([self._resolver(member) for member in self._members],
+                     lambda x: x.dependencies(),
+                     sorted)
 
     def external_cflags(self):
         flags = self._external_cflags \
@@ -109,14 +111,14 @@ class Group(Unit):
         return [flag for flag in flags if flag != '']
 
     def components(self):
-        deps = tsort(traverse(frozenset((self,))))
+        deps = tsort([self], lambda x: x.dependencies(), sorted)
         deps.remove(self)
         deps_cflags  = list(chain(*[d.external_cflags()  for d in deps]))
         deps_ldflags = list(chain(*[d.external_ldflags() for d in deps]))
 
         result = []
         for package in self._packages():
-            pkg_deps    = tsort(traverse(frozenset((package,))))
+            pkg_deps = tsort([package], lambda x: x.dependencies(), sorted)
 
             package_cflags  = []
             package_cflags.append(package.internal_cflags())
@@ -178,7 +180,7 @@ class Application(Unit):
         return self._external_ldflags
 
     def components(self):
-        deps = tsort(traverse(frozenset((self,))))
+        deps = tsort([self], lambda x: x.dependencies(), sorted)
         cflags  = sorted(chain(self._internal_cflags,
                                *[d.external_cflags()  for d in deps]))
         ldflags = self._internal_ldflags \

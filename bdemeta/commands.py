@@ -7,20 +7,20 @@ import subprocess
 import signal
 from itertools import chain, count
 
-from bdemeta.graph import traverse, tsort
+from bdemeta.graph import tsort
 
 def walk(units):
-    return u' '.join(u.name() for u in tsort(traverse(units)) \
-                                                         if u.name()[0] != '#')
+    units = tsort(units, lambda x: x.dependencies(), sorted)
+    return u' '.join(u.name() for u in units if u.name()[0] != '#')
 
 def cflags(units):
-    units  = tsort(traverse(units))
-    flags  = chain(*[u.external_cflags() for u in units])
+    units = tsort(units, lambda x: x.dependencies(), sorted)
+    flags = chain(*[u.external_cflags() for u in units])
     return u' '.join(flags)
 
 def ldflags(units):
-    units  = tsort(traverse(units))
-    flags  = chain(*[u.external_ldflags() for u in units])
+    units = tsort(units, lambda x: x.dependencies(), sorted)
+    flags = chain(*[u.external_ldflags() for u in units])
     return u' '.join(flags)
 
 def ninja(units, config, file):
@@ -88,17 +88,18 @@ build {name}: phony {output}
 
     defaults  = []
     all_tests = []
-    for unit in tsort(traverse(units)):
+    for unit in tsort(units, lambda x: x.dependencies(), sorted):
         if unit.result_type() == 'library':
             objects    = []
             unit_tests = []
 
-            obj_deps = join([output(u) for u in tsort(traverse((unit,))) if \
+            unit_deps = tsort([unit], lambda x: x.dependencies(), sorted)
+
+            obj_deps = join([output(u) for u in unit_deps if \
                                                       u != unit and output(u)])
             obj_deps = ' | ' + obj_deps if obj_deps else ''
 
-            test_deps = join([output(u) for u in tsort(traverse((unit,))) if \
-                                                                    output(u)])
+            test_deps = join([output(u) for u in unit_deps if output(u)])
             test_deps = ' | ' + test_deps if test_deps else ''
 
             for c in unit.components():
@@ -133,7 +134,9 @@ build {name}: phony {output}
 
 
         elif unit.result_type() == 'executable':
-            exec_deps = join([output(u) for u in tsort(traverse((unit,))) if \
+            unit_deps = tsort([unit], lambda x: x.dependencies(), sorted)
+
+            exec_deps = join([output(u) for u in unit_deps if \
                                                       u != unit and output(u)])
             exec_deps = ' | ' + exec_deps if exec_deps else ''
 
