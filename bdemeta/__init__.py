@@ -2,16 +2,20 @@
 
 from __future__ import print_function
 
+import collections
 import io
+import itertools
 import json
 import locale
-import os
+import os.path
 import sys
-from collections import defaultdict
 
-import bdemeta.resolver
-import bdemeta.commands
 import bdemeta.config
+import bdemeta.graph
+import bdemeta.ninja
+import bdemeta.resolver
+import bdemeta.testing
+import bdemeta.types
 
 def parse_config(filename):
     if os.path.isfile(filename):
@@ -20,11 +24,18 @@ def parse_config(filename):
     else:
         return {}
 
+class InvalidArgumentsError(RuntimeError):
+    def __init__(self, message):
+        self.message = message
+
 def run(output, args):
     user_config  = parse_config(os.path.expanduser('~/.bdemetarc'))
     local_config = parse_config('.bdemetarc')
 
-    flags = lambda: { 'internal': [], 'external': [] }
+    unit_options = lambda: { 'internal_cflags': [],
+                             'external_cflags': [],
+                             'ld_args':         [],
+                             'deps':            [], }
     config = {
         'roots': [],
         'ninja': {
@@ -32,9 +43,7 @@ def run(output, args):
             'c++': '',
             'ar':  '',
         },
-        'cflags':       defaultdict(flags),
-        'ldflags':      defaultdict(flags),
-        'dependencies': defaultdict(list),
+        'units': collections.defaultdict(unit_options),
     }
     config = bdemeta.config.merge(config, user_config)
     config = bdemeta.config.merge(config, local_config)
@@ -45,17 +54,20 @@ def run(output, args):
         # Convert arguments to 'unicode' on pre-Python 3
         args = [arg.decode(locale.getpreferredencoding()) for arg in args]
 
-    mode = args[0] if len(args) > 0 else None
+    if len(args) == 0:
+        raise InvalidArgumentsError('No mode specifed')
 
-    if   mode == 'walk':
-        groups = frozenset(resolver(unit) for unit in args[1:])
-        print(bdemeta.commands.walk(groups), file=output)
+    mode = args[0]
+    args = args[1:]
+
+    if mode == 'walk':
+        units = resolver(args)
+        targets = [t for t in units if isinstance(t, bdemeta.types.Target)]
+        print(' '.join(targets), file=output)
     elif mode == 'cflags':
-        groups = frozenset(resolver(unit) for unit in args[1:])
-        print(bdemeta.commands.cflags(groups), file=output)
-    elif mode == 'ldflags':
-        groups = frozenset(resolver(unit) for unit in args[1:])
-        print(bdemeta.commands.ldflags(groups), file=output)
+        units = resolver(args)
+        print(' '.join(itertools.chain(*[u.cflags() for u in units])),
+              file=output)
     elif mode == 'ninja':
         if config['ninja']['cc'] == '':
             config['ninja']['cc'] = 'cc'
@@ -63,14 +75,30 @@ def run(output, args):
             config['ninja']['c++'] = 'c++'
         if config['ninja']['ar'] == '':
             config['ninja']['ar'] = 'ar'
-        groups = frozenset(resolver(unit) for unit in args[1:])
-        bdemeta.commands.ninja(groups, config['ninja'], output)
+        units = resolver(args)
+        targets = [t for t in units if isinstance(t, bdemeta.types.Target)]
+        bdemeta.ninja.generate(targets, config['ninja'], output)
     elif mode == 'runtests':
-        bdemeta.commands.runtests(args[1:])
+        bdemeta.testing.runtests(args)
     else:
-        raise RuntimeError('Unknown mode, should be one of: walk, cflags '
-                           'ldflags, ninja, runtests')
+        raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
 
 def main():
-    run(sys.stdout, sys.argv[1:])
+    try:
+        run(sys.stdout, sys.argv[1:])
+    except InvalidArgumentsError as e:
+        usage = '''{0}. Usage:
+
+{1} walk     <unit> [<unit>...] - walk and topologically sort dependencies
+{1} cflags   <unit> [<unit>...] - produce flags for compiling dependents
+{1} ninja    <unit> [<unit>...] - generate a ninja build for building units
+{1} runtests [<test>...]        - run unit tests'''
+
+        print(usage.format(e.message, os.path.basename(sys.argv[0])),
+              file=sys.stderr)
+        return -1
+    except bdemeta.graph.CyclicGraphError as e:
+        print('Cyclic dependency error: {}'.format(' -> '.join(e.cycle)),
+              file=sys.stderr)
+        return -1
 

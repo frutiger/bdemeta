@@ -1,199 +1,212 @@
 # bdemeta.types
 
+import collections
 import os
-from itertools import chain
 
-from bdemeta.graph import tsort
+def concat(*lists):
+    # TBD: move
+    result = []
+    for l in lists:
+        result = result + l
+    return result
 
-class Unit(object):
-    def __init__(self,
-                 resolver,
-                 name,
-                 dependencies,
-                 external_cflags,
-                 external_ldflags):
-        self._resolver         = resolver
-        self._name             = name
-        self._dependencies     = dependencies
-        self._external_cflags  = external_cflags
-        self._external_ldflags = external_ldflags
+Component = collections.namedtuple('Component', ['name', 'source', 'driver'])
 
-    def __eq__(self, other):
-        return self._name == other._name
+Source = collections.namedtuple('Source', ['type',
+                                           'name',
+                                           'input',
+                                           'compiler',
+                                           'flags',
+                                           'output'])
 
-    def __ne__(self, other):
-        # Note: in Python 2, != is not defined as not ==, so we must implement
-        # this method
-        return not self == other
-
-    def __hash__(self):
-        return hash(self._name)
-
-    def name(self):
-        return self._name
-
-    def dependencies(self):
-        return frozenset(self._resolver(name) for name in self._dependencies)
-
-    def external_cflags(self):
-        return self._external_cflags
-
-    def external_ldflags(self):
-        return self._external_ldflags
-
-    def components(self):
-        return {}
-
-    def result_type(self):
-        return None
-
-class Package(Unit):
-    def __init__(self, resolver, path, members, dependencies, cflags, ldflags):
-        self._path             = path
-        self._members          = members
-        self._internal_cflags  = cflags['internal'] \
-                                                  + cflags['external'] \
-                                                  + ['-I{}'.format(self._path)]
-        self._internal_ldflags = ldflags['internal'] + ldflags['external']
-        name                   = os.path.basename(path)
-        super(Package, self).__init__(
-                              resolver,
-                              name,
-                              dependencies,
-                              cflags['external'] + ['-I{}'.format(self._path)],
-                              ldflags['external'])
-
-    def path(self):
-        return self._path
+class Buildable(object):
+    def __init__(self, internal_cflags, external_cflags):
+        self._internal_cflags = internal_cflags
+        self._external_cflags = external_cflags
 
     def internal_cflags(self):
-        return ' '.join(self._internal_cflags)
-
-    def external_cflags(self):
-        return ' '.join(self._external_cflags)
-
-    def internal_ldflags(self):
-        return ' '.join(self._internal_ldflags)
-
-    def external_ldflags(self):
-        return ' '.join(self._external_ldflags)
-
-    def members(self):
-        return self._members
-
-class Group(Unit):
-    def __init__(self, resolver, path, members, dependencies, cflags, ldflags):
-        self._path             = path
-        self._members          = members
-        self._internal_cflags  = cflags['internal'] + cflags['external']
-        self._internal_ldflags = ldflags['internal']
-        name                   = os.path.basename(path)
-        super(Group, self).__init__(resolver,
-                                    name,
-                                    dependencies,
-                                    cflags['external'],
-                                    ldflags['external'])
-
-    def _packages(self):
-        return tsort([self._resolver(member) for member in self._members],
-                     lambda x: x.dependencies(),
-                     sorted)
-
-    def external_cflags(self):
-        flags = self._external_cflags \
-                              + [p.external_cflags() for p in self._packages()]
-        return [flag for flag in flags if flag != '']
-
-    def external_ldflags(self):
-        flags = self._external_ldflags \
-                           + [p.external_ldflags() for p in self._packages()] \
-                           + ['out/libs/lib' + self._name + '.a']
-        return [flag for flag in flags if flag != '']
-
-    def components(self):
-        deps = tsort([self], lambda x: x.dependencies(), sorted)
-        deps.remove(self)
-        deps_cflags  = list(chain(*[d.external_cflags()  for d in deps]))
-        deps_ldflags = list(chain(*[d.external_ldflags() for d in deps]))
-
-        result = []
-        for package in self._packages():
-            pkg_deps = tsort([package], lambda x: x.dependencies(), sorted)
-
-            package_cflags  = []
-            package_cflags.append(package.internal_cflags())
-            package_cflags.extend([p.external_cflags()  for p in pkg_deps \
-                                                              if p != package])
-            package_cflags = [f for f in package_cflags if f != '']
-
-            package_ldflags  = []
-            package_ldflags.append(package.internal_ldflags())
-            package_ldflags.extend([p.external_ldflags()  for p in pkg_deps \
-                                                              if p != package])
-            package_ldflags = [f for f in package_ldflags if f != '']
-
-            group_cflags  = self._internal_cflags
-            group_ldflags = self._internal_ldflags + self.external_ldflags()
-
-            cflags  = list(sorted(chain(package_cflags,
-                                        group_cflags,
-                                        deps_cflags)))
-            ldflags = list(chain(package_ldflags, group_ldflags, deps_ldflags))
-
-            for m in package.members():
-                result.append({
-                    'type':   'object',
-                    'input':   m['path'],
-                    'cflags': ' ' + ' '.join(cflags) if cflags else '',
-                    'output':  m['name'] + '.o',
-                })
-                if m['driver']:
-                    result.append({
-                        'type':    'test',
-                        'input':    m['driver'],
-                        'cflags':  ' ' + ' '.join(cflags)  if cflags else '',
-                        'ldflags': ' ' + ' '.join(ldflags) if ldflags else '',
-                        'output':   m['name'] + '.t',
-                    })
-        return tuple(result)
-
-    def result_type(self):
-        return 'library'
-
-class Application(Unit):
-    def __init__(self, resolver, path, members, dependencies, cflags, ldflags):
-        self._path             = path
-        self._members          = members
-        self._internal_cflags  = cflags['internal']
-        self._internal_ldflags = ldflags['internal']
-        name                   = os.path.basename(path)
-        super(Application, self).__init__(resolver,
-                                          name,
-                                          dependencies,
-                                          cflags['external'],
-                                          ldflags['external'])
+        return self._internal_cflags
 
     def external_cflags(self):
         return self._external_cflags
 
-    def external_ldflags(self):
-        return self._external_ldflags
+class Node(str):
+    def __new__(cls, name, *args):
+        return str.__new__(cls, name)
+
+    def __init__(self, name, dependencies):
+        self._dependencies = dependencies
+
+    def dependencies(self):
+        return self._dependencies
+
+class Unit(Node, Buildable):
+    def __init__(self, name, dependencies, internal_cflags, external_cflags):
+        Node.__init__(self, name, dependencies)
+        Buildable.__init__(self, internal_cflags, external_cflags)
+
+    def cflags(self):
+        return self._external_cflags
+
+    def ld_args(self):
+        return []
+
+    def ld_input(self):
+        return []
+
+class Package(Unit):
+    def __new__(cls, path, *args):
+        return str.__new__(cls, os.path.basename(path))
+
+    def __init__(self,
+                 path,
+                 dependencies,
+                 internal_cflags,
+                 external_cflags,
+                 components):
+        Unit.__init__(self,
+                      os.path.basename(path),
+                      dependencies,
+                      internal_cflags,
+                      external_cflags + ['-I' + path])
+        self._components = components
 
     def components(self):
-        deps = tsort([self], lambda x: x.dependencies(), sorted)
-        cflags  = sorted(chain(self._internal_cflags,
-                               *[d.external_cflags()  for d in deps]))
-        ldflags = self._internal_ldflags \
-                           + list(chain(*[d.external_ldflags() for d in deps]))
+        return self._components
 
-        inputs = ' '.join((os.path.join(self._path, m + '.cpp') \
-                                               for m in sorted(self._members)))
-        return ({
-            'cflags':  ' ' + ' '.join(cflags) if cflags else '',
-            'input':   inputs,
-            'ldflags': ' ' + ' '.join(ldflags) if ldflags else '',
-        },)
+class Target(Unit):
+    def __init__(self,
+                 name,
+                 dependencies,
+                 internal_cflags,
+                 external_cflags,
+                 sources,
+                 ld_args,
+                 output):
+        Unit.__init__(self,
+                      name,
+                      dependencies,
+                      internal_cflags,
+                      external_cflags)
+        self._sources = sources
+        self._ld_args = ld_args
+        self._output  = output
 
-    def result_type(self):
-        return 'executable'
+    def sources(self):
+        return self._sources
+
+    def objects(self):
+        return sorted([s.output for s in self._sources if s.type == 'object'])
+
+    def unit_tests(self):
+        return []
+
+    def ld_args(self):
+        return self._ld_args
+
+    def output(self):
+        return self._output
+
+    def ld_input(self):
+        return ([self._output] if self._output else []) + self._ld_args
+
+class Group(Target):
+    def __new__(cls, path, *args):
+        return str.__new__(cls, os.path.basename(path))
+
+    def __init__(self,
+                 path,
+                 dependencies,
+                 internal_cflags,
+                 external_cflags,
+                 packages,
+                 ld_args):
+        name    = os.path.basename(path)
+        sources = []
+        Target.__init__(self,
+                        name,
+                        dependencies,
+                        internal_cflags,
+                        external_cflags,
+                        sources,
+                        ld_args,
+                        os.path.join('out', 'libs', 'lib' + name + '.a'))
+        self._packages = packages
+
+        group_flags = concat(self.internal_cflags(),
+                             self.external_cflags(),
+                             *[u.cflags() for u in dependencies])
+
+        ld_input = concat(self.ld_input(),
+                          *[u.ld_input() for u in dependencies])
+        ld_input = ' ' + ' '.join(ld_input) if ld_input else ''
+
+        for package in reversed(packages):
+            flags = concat(
+                        group_flags,
+                        package.internal_cflags(),
+                        package.external_cflags(),
+                        *[p.cflags() for p in package.dependencies()])
+
+            for c in package.components():
+                sources.append(
+                        Source('object',
+                                c.name + '.o',
+                                c.source,
+                               'cxx' if c.source[-4:] == '.cpp' else 'cc',
+                               ' ' + ' '.join(flags) if flags else '',
+                                os.path.join('out', 'objs', c.name + '.o')))
+                if c.driver:
+                    sources.append(
+                       Source('executable',
+                               c.name + '.t',
+                               c.driver + ld_input,
+                              'cxx',
+                              ' ' + ' '.join(flags) if flags else '',
+                               os.path.join('out', 'tests', c.name + '.t')))
+
+    def cflags(self):
+        return concat(self.external_cflags(),
+                      *[p.external_cflags() for p in self._packages])
+
+    def unit_tests(self):
+        return sorted([s.output for s in self._sources \
+                                                    if s.type == 'executable'])
+
+class Application(Target):
+    def __new__(cls, path, *args):
+        return str.__new__(cls, os.path.basename(path))
+
+    def __init__(self,
+                 path,
+                 dependencies,
+                 internal_cflags,
+                 external_cflags,
+                 ld_args):
+        name    = os.path.basename(path)
+        sources = []
+        Target.__init__(self,
+                        name,
+                        dependencies,
+                        internal_cflags,
+                        external_cflags,
+                        sources,
+                        ld_args,
+                        os.path.join('out', 'apps', name))
+
+        flags = concat(self.internal_cflags(),
+                       self.external_cflags(),
+                       *[u.cflags() for u in dependencies])
+
+        ld_input = concat(self._ld_args,
+                          *[u.ld_input() for u in dependencies])
+        ld_input = ' ' + ' '.join(ld_input) if ld_input else ''
+
+        sources.append(
+                    Source('executable',
+                            str(self),
+                            os.path.join(path, name[2:] + '.m.cpp') + ld_input,
+                           'cxx',
+                           ' ' + ' '.join(flags) if flags else '',
+                            self._output))
 

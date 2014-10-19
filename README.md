@@ -7,25 +7,23 @@ Build and test BDE-style code.
 
 ## Synopsis
 
-`bdemeta walk GROUP [GROUP ...]`<br/>
-`bdemeta cflags GROUP [GROUP ...]`<br/>
-`bdemeta ldflags GROUP [GROUP ...]`<br/>
-`bdemeta ninja GROUP [GROUP ...]`<br/>
+`bdemeta walk UNIT [UNIT ...]`<br/>
+`bdemeta cflags UNIT [UNIT ...]`<br/>
+`bdemeta ninja UNIT [UNIT ...]`<br/>
 `bdemeta runtests [TEST ...]`:
 
 ## Description
 
 `bdemeta` is a set of basic tools to assist building and testing [BDE-style
 source trees](https://github.com/bloomberg/bde).  It can generate [ninja build
-files](https://github.com/martine/ninja) for a particular package group,
-provide `cflags`/`ldflags` (`-I`/`-L/-l` rules respectively by default, along
-with any user-supplied ones) when building applications that depend on such
-package groups.  It can also run all the unit tests for a particular package
-group.
+files](https://github.com/martine/ninja) for a particular target (i.e. a
+package group or an application) and its test drivers, and provide `cflags`
+(`-I` rules by default, along with any user-supplied ones) required to build
+any particular target.  It can also invoke BDE-style test drivers.
 
-`bdemeta` supports finding package groups across [disconnected
-directory structures](#roots), [arbitrary flags](#flags) for any given
-dependency, and [dependencies that are not actually package groups](#units).
+`bdemeta` supports finding targets across [disconnected directory
+structures](#roots), [arbitrary flags](#flags) for any given dependency, and
+[dependencies that are not actually targets](#units).
 
 ## Installation
 
@@ -35,22 +33,19 @@ Platforms running Python 2.7, 3.3 or 3.4 are supported.  Install using `pip`:
 
 ## Modes
 
-`bdemeta` runs in one of five modes as given by the first positional argument:
+`bdemeta` runs in one of four modes as given by the first positional argument:
 
-  * `walk GROUP [GROUP ...]`:
+  * `walk UNIT [UNIT ...]`:<br/>
     Walk and topologically sort dependencies
 
-  * `cflags GROUP [GROUP ...]`:
+  * `cflags UNIT [UNIT ...]`:<br/>
     Produce flags for compiling dependents
 
-  * `ldflags GROUP [GROUP ...]`:
-    Produce ldflags for linking dependents
+  * `ninja UNIT [UNIT ...]`:<br/>
+    Generate a ninja build file for building units
 
-  * `ninja GROUP [GROUP ...]`:
-    Generate a ninja build file
-
-  * `runtests [TEST ...]`:
-    Run BDE-style unit tests
+  * `runtests [TEST ...]`:<br/>
+    Run unit tests
 
 ## Configuration
 
@@ -65,82 +60,71 @@ The configuration is as follows:
             "c++": "<c++>",
             "ar":  "<ar>"
         },
-        "cflags": {
+        "units": {
             "#universal": {
-                "external": ["<univ_cflag>", ...]
+                "external_cflags": ["<univ_cflag>",  ...]
             },
-            "<unit1>": {
-                "internal": ["<int_cflag>", ...],
-                "external": ["<ext_cflag>", ...]
+            "<unit>": {
+                "internal_cflags": ["<int_cflag>",  ...],
+                "external_cflags": ["<ext_cflag>",  ...],
+                "ld_args":         ["<ld_arg>",     ...],
+                "deps":            ["<other_unit>", ...]
             },
-            ...
-        },
-        "ldflags": {
-            "#universal": {
-                "external": ["<univ_ldflag>", ...]
-            },
-            "<unit2>": {
-                "internal": ["<int_ldflag>", ...],
-                "external": ["<ext_ldflag>", ...]
-            },
-            ...
-        },
-        "dependencies": {
-            "<unit3>": ["<unit1>", ...],
             ...
         }
     }
 
-The specified `<root>`s are added to the package group and standalone
-package search paths.
+The specified `<root>`s are added to the target search paths.
 
 The optionally specified `<cc>`, `<c++>` and `<ar>` are used as the C compiler,
 C++ compiler and library archiver respectively.  If unspecified, these default
 to `cc`, `c++` and `ar` respectively.
 
-The optionally specified `<int_cflag>` is appended when generating cflags for
-components in the specified `<unit1>`, while the optionally specified
-`<ext_cflag>` is appended when generating cflags for any component that depends
-on `<unit1>`.  The optionally specified `<univ_cflag>` is appended when
+The cflags used to build components in the specified `<unit>` will be preceded
+by the optionally specified `<int_cflag>` and `<ext_cflag>`, while those used
+to build components in any unit that depends on `<unit>` will be preceded by
+`<ext_cflag>` only.  The optionally specified `<univ_cflag>` is appended when
 generating cflags for any component.
 
-The optionally specified `<int_ldflag>` is appended when generating ldflags for
-test drivers in the specified `<unit2>`, while the optionally specified
-`<ext_ldflag>` is appended when generating ldflags for any application or test
-driver that depends on `<unit2>`.  The optionally specified `<univ_ldflag>` is
-appended when generating ldflags for any component.
+The optionally specified `<ld_arg>` is appended when determining linker input
+for test drivers in or dependent applications of the specified `<unit>`.
 
-The optionally specified `<unit1>` is considered to be a dependency of the
-specified `<unit3>`.
+The optionally specified `<other_unit>` is considered to be a dependency of the
+specified `<unit>`.
 
 ### Roots
-<a name="roots"></a>
 
-`bdemeta` will look for package groups in directories specified by (possibly
-multiple) `<root>`s in the configuration.  This makes it easy to build code
-across multiple BDE-style repositories, including your own.
+`bdemeta` will look for targets in directories specified by (possibly multiple)
+`<root>`s in the configuration.  This makes it easy to build code across
+multiple BDE-style repositories, including your own.
 
 ### Flags
-<a name="flags"></a>
 
-Compiler and linker flags may be specified in addition to the ones generated by
-the structure of the package group.  Flags required for all dependents of a
-given package or package group are specified via `<int_cflag>`s or
-`<int_ldflag>`s for the appropriate `<unit>` in the configuration.  Flags
-required only when building components or test drivers within a package or
-package group are specified via `<ext_cflag>`s or `<ext_ldflag>`s for the
-appropriate `<unit>` in the configuration.
+Compiler flags may be specified in addition to the ones generated by the
+structure of the target.  Flags required for all dependents of a given
+package or target are specified via `<ext_cflag>`s for the appropriate
+`<unit>` in the configuration.  Flags required only when building components or
+test drivers within a package or target are specified via `<ext_cflag>`s for
+the appropriate `<unit>` in the configuration.
+
+### Linker arguments
+
+A given target may require some additional system-provided or externally built
+libraries.  These can be supplied using the `<ld_arg>` configuration option for
+any given target.  If such a linker dependency is a real file, its modification
+time will be considered when performing rebuilds.  Otherwise, it will always be
+assumed to be up-to-date.
 
 ### Units
-<a name="units"></a>
 
-`bdemeta` supports dependencies that are not package groups (i.e. 'units').
-This can be useful when depending on headers and libraries provided by the
-system.  By default, such dependencies introduce no new flags unless such a
-flag has been specified with an internal or external cflag or ldflag in the
-configuration.  In order to ensure that link lines are correctly topologically
-sorted, `bdemeta` will require dependency information that can be specified in
-the with `dependencies` section of the configuration.
+`bdemeta` supports dependencies that are not targets (i.e. 'units').  This can
+be useful when depending on headers and libraries provided by the system.  By
+default, such dependencies introduce no new cflags unless such a flag has been
+specified with an internal or external cflag and no new linker input unless
+such an input has been specified in the configuration.  In order to ensure that
+link lines are correctly topologically sorted, `bdemeta` will require
+dependency information that can be specified in the with `deps` section of the
+configuration.
 
 ## Examples
 
@@ -161,12 +145,12 @@ that directory:
         "roots": [
             "/path/to/bde/clone"
         ],
-        "cflags": {
+        "units": {
             "bsl": {
-                "external": ["-DBDE_BUILD_TARGET_EXC", "-DBDE_BUILD_TARGET_MT"]
+                "external_cflags": ["-DBDE_BUILD_TARGET_EXC", "-DBDE_BUILD_TARGET_MT"]
             },
             "bdl+decnumber": {
-                "internal": ["-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common"]
+                "internal_cflags": ["-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common"]
             }
         }
     }
@@ -249,12 +233,12 @@ Then, add your new root to your `.bdemetarc` file:
             "/path/to/bde/clone",
             "/my/root"
         ],
-        "cflags": {
+        "units": {
             "bsl": {
-                "external": ["-DBDE_BUILD_TARGET_EXC", "-DBDE_BUILD_TARGET_MT"]
+                "external_cflags": ["-DBDE_BUILD_TARGET_EXC", "-DBDE_BUILD_TARGET_MT"]
             },
             "bdl+decnumber": {
-                "internal": ["-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common"]
+                "internal_cflags": ["-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common"]
             }
         }
     }
