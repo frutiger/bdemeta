@@ -1,3 +1,5 @@
+# tests.test_functional
+
 from unittest import TestCase
 
 from bdemeta.functional import memoize

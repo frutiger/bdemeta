@@ -1,3 +1,5 @@
+# bdemeta.resolver
+
 import os
 
 import bdemeta.functional

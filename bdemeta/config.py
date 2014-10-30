@@ -1,3 +1,5 @@
+# bdemeta.config
+
 import copy
 
 def merge(source, extension):

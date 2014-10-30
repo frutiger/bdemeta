@@ -1,3 +1,5 @@
+# bdemeta.commands
+
 import glob
 import multiprocessing
 import os.path as path
