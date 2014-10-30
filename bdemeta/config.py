@@ -29,3 +29,4 @@ def merge(source, extension):
             result[k] = copy.copy(extension[k])
 
     return result
+

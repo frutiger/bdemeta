@@ -10,3 +10,4 @@ setup(name='bdemeta',
       entry_points={
           'console_scripts': ['bdemeta=bdemeta:main'],
       })
+
