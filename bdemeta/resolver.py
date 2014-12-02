@@ -80,27 +80,49 @@ class Resolver(object):
         self._config      = config
         self._resolutions = {}
 
+    def _identify(self, name):
+        if name[:2] == 'm_':
+            for root in self._config['roots']:
+                path = os.path.join(root.strip(), 'applications', name)
+                if os.path.isdir(path):
+                    return {
+                        'type': 'application',
+                        'path':  path,
+                    }
+
+        if len(name) == 3:
+            for root in self._config['roots']:
+                path = os.path.join(root.strip(), 'groups', name)
+                if os.path.isdir(path):
+                    return {
+                        'type': 'group',
+                        'path':  path,
+                    }
+
+        return {
+            'type': None,
+        }
+
     def dependencies(self, name):
         config = self._config['units'][name]
 
         if name == '#universal':
             return []
-        if name[:2] == 'm_':
-            for root in self._config['roots']:
-                path = os.path.join(root.strip(), 'applications', name)
-                if os.path.isdir(path):
-                    return itertools.chain(
-                                 config['deps'],
-                                 bde_items(path, 'application', name + '.dep'),
-                                 ['#universal'])
-        if len(name) == 3:
-            for root in self._config['roots']:
-                path = os.path.join(root.strip(), 'groups', name)
-                if os.path.isdir(path):
-                    return itertools.chain(
-                                       config['deps'],
-                                       bde_items(path, 'group', name + '.dep'),
-                                       ['#universal'])
+
+        unit = self._identify(name)
+
+        if unit['type'] == 'application':
+            return itertools.chain(
+                         config['deps'],
+                         bde_items(unit['path'], 'application', name + '.dep'),
+                         ['#universal'])
+
+        if unit['type'] == 'group':
+            return itertools.chain(
+                               config['deps'],
+                               bde_items(unit['path'], 'group', name + '.dep'),
+                               ['#universal'])
+
         return config['deps'] + ['#universal']
 
     def _resolve(self, name):
@@ -114,29 +136,28 @@ class Resolver(object):
                                       deps,
                                       [],
                                       config['external_cflags'])
-        if name[:2] == 'm_':
-            for root in self._config['roots']:
-                path = os.path.join(root.strip(), 'applications', name)
-                if os.path.isdir(path):
-                    return bdemeta.types.Application(path,
-                                                     deps,
-                                                     config['internal_cflags'],
-                                                     config['external_cflags'],
-                                                     config['ld_args'])
-        if len(name) == 3:
-            for root in self._config['roots']:
-                path = os.path.join(root.strip(), 'groups', name)
-                if os.path.isdir(path):
-                    package_resolver = PackageResolver(self._config, path)
-                    packages = package_resolver(bde_items(path,
-                                                          'group',
-                                                          name + '.mem'))
-                    return bdemeta.types.Group(path,
-                                               deps,
-                                               config['internal_cflags'],
-                                               config['external_cflags'],
-                                               packages,
-                                               config['ld_args'])
+
+        unit = self._identify(name)
+
+        if unit['type'] == 'application':
+            return bdemeta.types.Application(unit['path'],
+                                             deps,
+                                             config['internal_cflags'],
+                                             config['external_cflags'],
+                                             config['ld_args'])
+
+        if unit['type'] == 'group':
+            package_resolver = PackageResolver(self._config, unit['path'])
+            packages = package_resolver(bde_items(unit['path'],
+                                                  'group',
+                                                  name + '.mem'))
+            return bdemeta.types.Group(unit['path'],
+                                       deps,
+                                       config['internal_cflags'],
+                                       config['external_cflags'],
+                                       packages,
+                                       config['ld_args'])
+
         return bdemeta.types.Target(name,
                                     deps,
                                     config['internal_cflags'],
