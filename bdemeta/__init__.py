@@ -63,10 +63,10 @@ def run(output, args):
     if mode == 'walk':
         units = resolver(args)
         targets = [t for t in units if isinstance(t, bdemeta.types.Target)]
-        print(' '.join(targets), file=output)
+        print(u' '.join(targets), file=output)
     elif mode == 'cflags':
         units = resolver(args)
-        print(' '.join(itertools.chain(*[u.cflags() for u in units])),
+        print(u' '.join(itertools.chain(*[u.cflags() for u in units])),
               file=output)
     elif mode == 'ninja':
         if config['ninja']['cc'] == '':
