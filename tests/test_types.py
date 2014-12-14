@@ -219,11 +219,11 @@ class TestGroup(TestCase):
         assert('gp1_c1.o'      == s.name)
         assert(c1_path         == s.input)
         assert('cxx'           == s.compiler)
-        assert(' a' +                       # g internal cflag
-               ' b' +                       # g external cflag
-               ' a' +                       # p internal cflag
-               ' b' +                       # p external cflag
-               ' -I' + p1_path == s.flags)  # p package  cflag
+        assert(' a'  +                      # p internal cflag
+               ' b'  +                      # p external cflag
+               ' -I' + p1_path +            # p package  cflag
+               ' a'  +                      # g internal cflag
+               ' b'            == s.flags)  # g external cflag
         assert(pj('out', 'objs', 'gp1_c1.o') == s.output)
 
     def test_sources_one_c_component_no_driver(self):
@@ -240,11 +240,11 @@ class TestGroup(TestCase):
         assert('gp1_c1.o'      == s.name)
         assert(c1_path         == s.input)
         assert('cc'            == s.compiler)
-        assert(' a' +                       # g internal cflag
-               ' b' +                       # g external cflag
-               ' a' +                       # p internal cflag
-               ' b' +                       # p external cflag
-               ' -I' + p1_path == s.flags)  # p package  cflag
+        assert(' a'  +                      # p internal cflag
+               ' b'  +                      # p external cflag
+               ' -I' + p1_path +            # p package  cflag
+               ' a'  +                      # g internal cflag
+               ' b'            == s.flags)  # g external cflag
         assert(pj('out', 'objs', 'gp1_c1.o') == s.output)
 
     def test_sources_one_cpp_component_with_driver(self):
@@ -259,15 +259,15 @@ class TestGroup(TestCase):
         assert(2 == len(g.sources()))
 
         s1 = g.sources()[0]
-        assert('object'               == s1.type)
-        assert('gp1_c1.o'             == s1.name)
-        assert(c1_path                == s1.input)
-        assert('cxx'                  == s1.compiler)
-        assert(' a' +                               # g internal cflag
-               ' b' +                               # g external cflag
-               ' a' +                               # p internal cflag
-               ' b' +                               # p external cflag
-               ' -I' + p1_path        == s1.flags)  # p package  cflag
+        assert('object'        == s1.type)
+        assert('gp1_c1.o'      == s1.name)
+        assert(c1_path         == s1.input)
+        assert('cxx'           == s1.compiler)
+        assert(' a'  +                       # p internal cflag
+               ' b'  +                       # p external cflag
+               ' -I' + p1_path +             # p package  cflag
+               ' a'  +                       # g internal cflag
+               ' b'            == s1.flags)  # g external cflag
         assert(pj('out', 'objs', 'gp1_c1.o') == s1.output)
 
         s2 = g.sources()[1]
@@ -277,11 +277,11 @@ class TestGroup(TestCase):
                pj(' out', 'libs', 'libg.a ') +        # dependent library
                'baz'                    == s2.input)  # g ld_dep
         assert('cxx'                    == s2.compiler)
-        assert(' a' +                                 # g internal cflag
-               ' b' +                                 # g external cflag
-               ' a' +                                 # p internal cflag
-               ' b' +                                 # p external cflag
-               ' -I' + p1_path          == s2.flags)  # p package  cflag
+        assert(' a'  +                       # p internal cflag
+               ' b'  +                       # p external cflag
+               ' -I' + p1_path +             # p package  cflag
+               ' a'  +                       # g internal cflag
+               ' b'            == s1.flags)  # g external cflag
         assert(pj('out', 'tests', 'gp1_c1.t') == s2.output)
 
 class TestApplication(TestCase):

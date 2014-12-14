@@ -133,20 +133,18 @@ class Group(Target):
                         os.path.join('out', 'libs', 'lib' + name + '.a'))
         self._packages = packages
 
-        group_flags = concat(self.internal_cflags(),
-                             self.external_cflags(),
-                             *[u.cflags() for u in dependencies])
-
         ld_input = concat(self.ld_input(),
                           *[u.ld_input() for u in dependencies])
         ld_input = ' ' + ' '.join(ld_input) if ld_input else ''
 
         for package in reversed(packages):
-            flags = concat(
-                        group_flags,
-                        package.internal_cflags(),
-                        package.external_cflags(),
-                        *[p.cflags() for p in package.dependencies()])
+            flags = concat(package.internal_cflags(),
+                           package.external_cflags(),
+                           *[p.cflags() for p in package.dependencies()])
+            flags = concat(flags,
+                           self.internal_cflags(),
+                           self.external_cflags(),
+                           *[u.cflags() for u in dependencies])
 
             for c in package.components():
                 sources.append(
