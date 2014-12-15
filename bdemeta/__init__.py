@@ -48,7 +48,7 @@ def run(output, args):
     config = bdemeta.config.merge(config, user_config)
     config = bdemeta.config.merge(config, local_config)
 
-    resolver = bdemeta.resolver.Resolver(config)
+    resolver = bdemeta.resolver.UnitResolver(config)
 
     if sys.version_info.major < 3:
         # Convert arguments to 'unicode' on pre-Python 3
@@ -61,11 +61,11 @@ def run(output, args):
     args = args[1:]
 
     if mode == 'walk':
-        units = resolver(args)
+        units = bdemeta.resolver.resolve(resolver, args)
         targets = [t for t in units if isinstance(t, bdemeta.types.Target)]
         print(u' '.join(targets), file=output)
     elif mode == 'cflags':
-        units = resolver(args)
+        units = bdemeta.resolver.resolve(resolver, args)
         print(u' '.join(itertools.chain(*[u.cflags() for u in units])),
               file=output)
     elif mode == 'ninja':
@@ -75,7 +75,7 @@ def run(output, args):
             config['ninja']['c++'] = 'c++'
         if config['ninja']['ar'] == '':
             config['ninja']['ar'] = 'ar'
-        units = resolver(args)
+        units = bdemeta.resolver.resolve(resolver, args)
         targets = [t for t in units if isinstance(t, bdemeta.types.Target)]
         bdemeta.ninja.generate(targets, config['ninja'], output)
     elif mode == 'runtests':

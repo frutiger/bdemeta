@@ -15,26 +15,28 @@ def bde_items(*args):
                 items = items + l.split()
     return items
 
+def lookup_dependencies(name, get_dependencies, resolved_units):
+    units = bdemeta.graph.tsort([name], get_dependencies, sorted)
+    units.remove(name)
+    return [resolved_units[u] for u in units]
+
+def resolve(resolver, names):
+    store = {}
+    units = bdemeta.graph.tsort(names, resolver.dependencies, sorted)
+    for u in reversed(units):
+        store[u] = resolver.resolve(u, store)
+    return [store[u] for u in units]
+
 class PackageResolver(object):
     def __init__(self, config, group_path):
-        self._config      = config
-        self._group_path  = group_path
-        self._resolutions = {}
+        self._config     = config
+        self._group_path = group_path
 
     def dependencies(self, name):
-        return itertools.chain(self._config['units'][name]['deps'],
-                               bde_items(self._group_path,
-                                         name,
-                                         'package',
-                                         name + '.dep'))
+        return bde_items(self._group_path, name, 'package', name + '.dep')
 
-    def _resolve(self, name):
-        path   = os.path.join(self._group_path, name)
-        config = self._config['units'][name]
-
-        deps = bdemeta.graph.tsort([name], self.dependencies, sorted)
-        deps = [self._cached_resolve(d) for d in deps if d != name]
-
+    def resolve(self, name, resolved_packages):
+        path       = os.path.join(self._group_path, name)
         components = []
         if '+' in path:
             for file in os.listdir(path):
@@ -55,27 +57,22 @@ class PackageResolver(object):
                 components.append(bdemeta.types.Component(item,
                                                           source,
                                                           driver))
+
+        config = self._config['units'][name]
+        deps   = lookup_dependencies(name,
+                                     self.dependencies,
+                                     resolved_packages)
         return bdemeta.types.Package(path,
                                      deps,
                                      config['internal_cflags'],
                                      config['external_cflags'],
                                      components)
 
-    def _cached_resolve(self, name):
-        if name not in self._resolutions:
-            self._resolutions[name] = self._resolve(name)
-        return self._resolutions[name]
-
-    def __call__(self, names):
-        units = bdemeta.graph.tsort(names, self.dependencies, sorted)
-        return [self._cached_resolve(u) for u in units]
-
-class Resolver(object):
+class UnitResolver(object):
     def __init__(self, config):
-        self._config      = config
-        self._resolutions = {}
+        self._config = config
 
-    def _identify(self, name):
+    def identify(self, name):
         if name[:2] == 'm_':
             for root in self._config['roots']:
                 path = os.path.join(root.strip(), 'applications', name)
@@ -104,27 +101,28 @@ class Resolver(object):
         if name == '#universal':
             return []
 
-        unit = self._identify(name)
+        unit = self.identify(name)
 
         if unit['type'] == 'application':
-            return itertools.chain(
+            return list(itertools.chain(
                          config['deps'],
                          bde_items(unit['path'], 'application', name + '.dep'),
-                         ['#universal'])
+                         ['#universal']))
 
         if unit['type'] == 'group':
-            return itertools.chain(
+            return list(itertools.chain(
                                config['deps'],
                                bde_items(unit['path'], 'group', name + '.dep'),
-                               ['#universal'])
+                               ['#universal']))
 
         return config['deps'] + ['#universal']
 
-    def _resolve(self, name):
+    def resolve(self, name, resolved_targets):
         config = self._config['units'][name]
 
-        deps = bdemeta.graph.tsort([name], self.dependencies, sorted)
-        deps = [self._cached_resolve(d) for d in deps if d != name]
+        deps = lookup_dependencies(name,
+                                   self.dependencies,
+                                   resolved_targets)
 
         if name == '#universal':
             return bdemeta.types.Unit(name,
@@ -132,7 +130,7 @@ class Resolver(object):
                                       [],
                                       config['external_cflags'])
 
-        unit = self._identify(name)
+        unit = self.identify(name)
 
         if unit['type'] == 'application':
             return bdemeta.types.Application(unit['path'],
@@ -142,10 +140,8 @@ class Resolver(object):
                                              config['ld_args'])
 
         if unit['type'] == 'group':
-            package_resolver = PackageResolver(self._config, unit['path'])
-            packages = package_resolver(bde_items(unit['path'],
-                                                  'group',
-                                                  name + '.mem'))
+            packages = resolve(PackageResolver(self._config, unit['path']),
+                               bde_items(unit['path'], 'group', name + '.mem'))
             return bdemeta.types.Group(unit['path'],
                                        deps,
                                        config['internal_cflags'],
@@ -160,13 +156,4 @@ class Resolver(object):
                                     [],
                                     config['ld_args'],
                                     None)
-
-    def _cached_resolve(self, name):
-        if name not in self._resolutions:
-            self._resolutions[name] = self._resolve(name)
-        return self._resolutions[name]
-
-    def __call__(self, names):
-        units = bdemeta.graph.tsort(names, self.dependencies, sorted)
-        return [self._cached_resolve(u) for u in units]
 
