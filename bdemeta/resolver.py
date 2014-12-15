@@ -29,42 +29,37 @@ class PackageResolver(object):
                                          name + '.dep'))
 
     def _resolve(self, name):
+        path   = os.path.join(self._group_path, name)
         config = self._config['units'][name]
 
         deps = bdemeta.graph.tsort([name], self.dependencies, sorted)
         deps = [self._cached_resolve(d) for d in deps if d != name]
 
-        if len(name) > 3:
-            group = name[:3]
-            for root in self._config['roots']:
-                path = os.path.join(root.strip(), 'groups', group, name)
-                if os.path.isdir(path):
-                    name = os.path.basename(path)
-                    components = []
-                    if '+' in path:
-                        for file in os.listdir(path):
-                            root, ext = os.path.splitext(file)
-                            if ext != '.c' and ext != '.cpp':
-                                continue
-                            components.append(bdemeta.types.Component(
-                                                      name + '_' + root,
-                                                      os.path.join(path, file),
-                                                      None))
-                    else:
-                        for item in bde_items(path, 'package', name + '.mem'):
-                            base   = os.path.join(path, item)
-                            source = base + '.cpp'
-                            driver = base + '.t.cpp'
-                            if not os.path.isfile(driver):
-                                driver = None
-                            components.append(bdemeta.types.Component(item,
-                                                                      source,
-                                                                      driver))
-                    return bdemeta.types.Package(path,
-                                                 deps,
-                                                 config['internal_cflags'],
-                                                 config['external_cflags'],
-                                                 components)
+        components = []
+        if '+' in path:
+            for file in os.listdir(path):
+                root, ext = os.path.splitext(file)
+                if ext != '.c' and ext != '.cpp':
+                    continue
+                components.append(bdemeta.types.Component(
+                                          name + '_' + root,
+                                          os.path.join(path, file),
+                                          None))
+        else:
+            for item in bde_items(path, 'package', name + '.mem'):
+                base   = os.path.join(path, item)
+                source = base + '.cpp'
+                driver = base + '.t.cpp'
+                if not os.path.isfile(driver):
+                    driver = None
+                components.append(bdemeta.types.Component(item,
+                                                          source,
+                                                          driver))
+        return bdemeta.types.Package(path,
+                                     deps,
+                                     config['internal_cflags'],
+                                     config['external_cflags'],
+                                     components)
 
     def _cached_resolve(self, name):
         if name not in self._resolutions:
