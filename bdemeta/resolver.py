@@ -38,7 +38,7 @@ class PackageResolver(object):
     def resolve(self, name, resolved_packages):
         path       = os.path.join(self._group_path, name)
         components = []
-        if '+' in path:
+        if '+' in name:
             for file in os.listdir(path):
                 root, ext = os.path.splitext(file)
                 if ext != '.c' and ext != '.cpp':
