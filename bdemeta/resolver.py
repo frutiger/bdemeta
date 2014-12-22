@@ -33,7 +33,7 @@ class PackageResolver(object):
         self._group_path = group_path
 
     def dependencies(self, name):
-        return bde_items(self._group_path, name, 'package', name + '.dep')
+        return set(bde_items(self._group_path, name, 'package', name + '.dep'))
 
     def resolve(self, name, resolved_packages):
         path       = os.path.join(self._group_path, name)
@@ -99,23 +99,23 @@ class UnitResolver(object):
         config = self._config['units'][name]
 
         if name == '#universal':
-            return []
+            return set()
 
         unit = self.identify(name)
 
         if unit['type'] == 'application':
-            return list(itertools.chain(
+            return set(itertools.chain(
                          config['deps'],
                          bde_items(unit['path'], 'application', name + '.dep'),
                          ['#universal']))
 
         if unit['type'] == 'group':
-            return list(itertools.chain(
+            return set(itertools.chain(
                                config['deps'],
                                bde_items(unit['path'], 'group', name + '.dep'),
                                ['#universal']))
 
-        return config['deps'] + ['#universal']
+        return set(config['deps'] + ['#universal'])
 
     def resolve(self, name, resolved_targets):
         config = self._config['units'][name]
