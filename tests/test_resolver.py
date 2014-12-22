@@ -4,7 +4,7 @@ from collections import defaultdict
 from os.path     import join as pjoin
 from unittest    import TestCase
 
-from bdemeta.resolver import bde_items, PackageResolver
+from bdemeta.resolver import bde_items, PackageResolver, UnitResolver
 from bdemeta.types    import Component
 from tests.patcher    import OsPatcher
 
@@ -242,4 +242,143 @@ class PackageResolverTest(TestCase):
         assert([pjoin('-Ir', 'g2', 'g2p2')]        == p2.cflags())
         assert([]                                  == p2.ld_input())
         assert(0                                   == len(p2.components()))
+
+class UnitResolverTest(TestCase):
+    def setUp(self):
+        self.config = {
+            'roots': ['r'],
+            'units': defaultdict(lambda: dict((('internal_cflags', []),
+                                               ('external_cflags', []),
+                                               ('ld_args',         []),
+                                               ('deps',            [])))),
+        }
+        self.config['units']['#universal']['external_cflags'] = ['foo']
+        self.config['units']['bar']['external_cflags']        = ['baz']
+        self.config['units']['bar']['ld_args']                = ['bam']
+        self._patcher = OsPatcher(bdemeta.resolver, {
+            'r': {
+                'applications': {
+                    'm_app': {
+                        'application': {
+                            'm_app.dep': u'gr2',
+                        },
+                    },
+                },
+                'groups': {
+                    'gr1': {
+                        'group': {
+                            'gr1.dep': u'',
+                            'gr1.mem': u'gr1p1 gr1p2',
+                        },
+                        'gr1p1': {
+                            'package': {
+                                'gr1p1.dep': u'',
+                            },
+                        },
+                        'gr1p2': {
+                            'package': {
+                                'gr1p2.dep': u'',
+                            },
+                        },
+                    },
+                    'gr2': {
+                        'group': {
+                            'gr2.dep': u'gr1',
+                        },
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_group_identification(self):
+        r = UnitResolver(self.config)
+        assert({
+            'type': 'group',
+            'path': pjoin('r', 'groups', 'gr1')
+        } == r.identify('gr1'))
+
+    def test_application_identification(self):
+        r = UnitResolver(self.config)
+        assert({
+            'type': 'application',
+            'path': pjoin('r', 'applications', 'm_app')
+        } == r.identify('m_app'))
+
+    def test_non_identification(self):
+        r = UnitResolver(self.config)
+        assert({ 'type': None } == r.identify('foo'))
+
+    def test_universal_unit_no_dependency(self):
+        r = UnitResolver(self.config)
+        assert(set() == r.dependencies('#universal'))
+
+    def test_non_universal_unit_has_universal_dependency(self):
+        r = UnitResolver(self.config)
+        assert(set(['#universal']) == r.dependencies('foo'))
+
+    def test_group_has_universal_dependency(self):
+        r = UnitResolver(self.config)
+        assert(set(['#universal']) == r.dependencies('gr1'))
+
+    def test_group_with_one_dependency(self):
+        r = UnitResolver(self.config)
+        assert(set(['gr1', '#universal']) == r.dependencies('gr2'))
+
+    def test_application_with_one_dependency(self):
+        r = UnitResolver(self.config)
+        assert(set(['gr2', '#universal']) == r.dependencies('m_app'))
+
+    def test_universal_unit_resolution(self):
+        r = UnitResolver(self.config)
+        u = r.resolve('#universal', {})
+        assert('#universal' == u)
+        assert(['foo']      == u.cflags())
+
+    def test_unknown_target_resolution(self):
+        r = UnitResolver(self.config)
+        universal = r.resolve('#universal', {})
+        bar       = r.resolve('bar',        { '#universal': universal })
+        assert('bar'   == bar)
+        assert(['baz'] == bar.cflags())
+        assert(['bam'] == bar.ld_args())
+
+    def test_level_one_group_resolution(self):
+        r = UnitResolver(self.config)
+
+        universal = r.resolve('#universal', {})
+        gr1       = r.resolve('gr1',        { '#universal': universal })
+        assert('gr1' == gr1)
+
+    def test_level_one_group_resolution_packages(self):
+        ur = UnitResolver(self.config)
+        pr = PackageResolver(self.config, pjoin('r', 'groups', 'gr1'))
+
+        universal = ur.resolve('#universal', {})
+        gr1       = ur.resolve('gr1',        { '#universal': universal })
+        assert('gr1' == gr1)
+        assert(resolve(pr, ['gr1p1', 'gr1p2']) == gr1._packages)
+
+    def test_level_two_group_resolution(self):
+        r = UnitResolver(self.config)
+
+        universal = r.resolve('#universal', {})
+        gr1       = r.resolve('gr1',        { '#universal': universal  })
+        gr2       = r.resolve('gr2',        { '#universal': universal,
+                                              'gr1':        gr1        })
+        assert('gr2' == gr2)
+
+    def test_application_resolution(self):
+        r = UnitResolver(self.config)
+
+        universal = r.resolve('#universal', {})
+        gr1       = r.resolve('gr1',        { '#universal': universal  })
+        gr2       = r.resolve('gr2',        { '#universal': universal,
+                                              'gr1':        gr1        })
+        m_app     = r.resolve('m_app',      { '#universal': universal,
+                                              'gr1':        gr1,
+                                              'gr2':        gr2        })
+        assert('m_app' == m_app)
 
