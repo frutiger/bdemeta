@@ -6,6 +6,6 @@ python:
 install:
   - pip install coveralls
 script:
-  coverage run --source=bdemeta -m unittest discover
+  coverage run --source=bdemeta -m unittest
 after_success:
   coveralls
