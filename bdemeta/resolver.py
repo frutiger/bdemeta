@@ -11,7 +11,7 @@ def bde_items(*args):
     items = []
     with open(items_filename) as items_file:
         for l in items_file:
-            if len(l) > 1 and l[0] != '#':
+            if len(l) > 0 and l[0] != '#':
                 items = items + l.split()
     return items
 
