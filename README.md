@@ -129,8 +129,8 @@ configuration.
 ## Examples
 
 The following examples demonstrate working with the ['BDE' source
-code](https://github.com/bloomberg/bde) on a Mac OS X with the Xcode
-Commandline Tools installed.
+code](https://github.com/bloomberg/bde) on a computer running Linux with `gcc`
+and `binutils` installed.
 
 First, clone the 'BDE' repository:
 
@@ -142,15 +142,14 @@ that directory:
     $ cd /path/to/build/directory
     $ cat .bdemetarc
     {
-        "roots": [
-            "/path/to/bde/clone"
-        ],
+        "roots": ["/path/to/bde"],
         "units": {
-            "bsl": {
-                "external_cflags": ["-DBDE_BUILD_TARGET_EXC", "-DBDE_BUILD_TARGET_MT"]
-            },
             "bdl+decnumber": {
-                "internal_cflags": ["-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common"]
+                "external_cflags": ["-I/path/to/bde/groups/bdl/bdl+decnumber/common"]
+            },
+            "bsl": {
+                "internal_cflags": ["-DBDE_BUILD_TARGET_EXC"],
+                "ld_args": ["-pthread"]
             }
         }
     }
@@ -223,10 +222,9 @@ Next, go to your build directory:
 
     $ cd /path/to/build/directory
 
-Then, add your new root to your `.bdemetarc` file:
+Then, add your new root to your `.bdemetarc` file, i.e. edit the file so it
+looks something like this:
 
-    $ sed -i '3A,' .bdemetarc
-    $ sed -i '4i        "/my/root"' .bdemetarc
     $ cat .bdemetarc
     {
         "roots": [
@@ -234,15 +232,15 @@ Then, add your new root to your `.bdemetarc` file:
             "/my/root"
         ],
         "units": {
-            "bsl": {
-                "external_cflags": ["-DBDE_BUILD_TARGET_EXC", "-DBDE_BUILD_TARGET_MT"]
-            },
             "bdl+decnumber": {
-                "internal_cflags": ["-I/path/to/bde/clone/groups/bdl/bdl+decnumber/common"]
+                "external_cflags": ["-I/path/to/bde/groups/bdl/bdl+decnumber/common"]
+            },
+            "bsl": {
+                "internal_cflags": ["-DBDE_BUILD_TARGET_EXC"],
+                "ld_args": ["-pthread"]
             }
         }
     }
-
 
 Next, test that the dependencies can be traversed correctly:
 
