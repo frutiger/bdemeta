@@ -2,6 +2,14 @@
 
 Contributions in the form of issues and pull requests are greatly appreciated.
 
+## Licensing Agreement
+
+Please sign the <a
+href="https://www.clahub.com/agreements/frutiger/bdemeta">sign the Contributor
+License Agreement</a>.  It asks you to authorize the transfer of copyright
+ownership of all contributions to this project to the original author of the
+project (Mashud Rahman).
+
 ## Running tests
 
 To run the tests:
@@ -18,8 +26,4 @@ right.
 
 Please submit only one bugfix or enhancement per pull request, and please add a
 test case for the feature you are fixing/improving.
-
-By creating a pull request, you are authorizing the transfer of copyright
-ownership of the code in the pull request to the original author of the project
-(Masud Rahman).
 
