@@ -306,6 +306,8 @@ class TestGroup(TestCase):
                ' b'            == s1.flags)  # g external cflag
         assert(pj('out', 'tests', 'gp1_c1.t') == s2.output)
 
+        assert([pj('out', 'tests', 'gp1_c1.t')] == g.unit_tests())
+
 class TestApplication(TestCase):
     in_cflags = ['a']
     ex_cflags = ['b']
