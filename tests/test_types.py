@@ -156,6 +156,28 @@ class TestTarget(TestCase):
                    'zing')
         assert('zing' == t.output())
 
+    def test_objects(self):
+        s1 = Source('object', '', '', '', '', 's1')
+        s2 = Source('foo',    '', '', '', '', 's2')
+        t = Target('foo',
+                   ['bar'],
+                   self.in_cflags,
+                   self.ex_cflags,
+                   [s1, s2],
+                   ['baz'],
+                   'zing')
+        assert(['s1'] == t.objects())
+
+    def test_unit_tests(self):
+        t = Target('foo',
+                   ['bar'],
+                   self.in_cflags,
+                   self.ex_cflags,
+                   ['bam'],
+                   ['baz'],
+                   'zing')
+        assert([] == t.unit_tests())
+
     def test_ld_input(self):
         t = Target('foo',
                    ['bar'],
