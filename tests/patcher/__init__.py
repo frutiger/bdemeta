@@ -14,7 +14,7 @@ class Patcher(object):
         while len(full_name) > 1:
             names = names[full_name.pop()].__dict__
         name = full_name.pop()
-        if name in names :
+        if name in names:
             real_value = names[name]
         else:
             real_value = names['__builtins__'][name]
@@ -44,7 +44,7 @@ class OsPatcher(object):
         path.reverse()
         dir  = self._root
         while len(path) > 1:
-            dir = dir[path.pop()]
+            dir = dir.get(path.pop(), {})
         return dir.get(path.pop(), None)
 
     def _open(self, path):

@@ -55,7 +55,7 @@ def run(output, args):
         args = [arg.decode(locale.getpreferredencoding()) for arg in args]
 
     if len(args) == 0:
-        raise InvalidArgumentsError('No mode specifed')
+        raise InvalidArgumentsError('No mode specified')
 
     mode = args[0]
     args = args[1:]
