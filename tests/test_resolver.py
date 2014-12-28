@@ -4,7 +4,7 @@ from collections import defaultdict
 from os.path     import join as pjoin
 from unittest    import TestCase
 
-from bdemeta.resolver import bde_items, PackageResolver, UnitResolver
+from bdemeta.resolver import bde_items, resolve, PackageResolver, UnitResolver
 from bdemeta.types    import Component
 from tests.patcher    import OsPatcher
 
@@ -65,6 +65,51 @@ class BdeItemsTest(TestCase):
 
     def test_one_real_one_comment(self):
         assert(['a'] == bde_items('one', 'real', 'one', 'comment'))
+
+class ResolveTest(TestCase):
+    class MockResolver(object):
+        def __init__(self, adjacencies):
+            self._adjacencies = adjacencies
+            self._resolutions = []
+
+        def dependencies(self, name):
+            return self._adjacencies[name]
+
+        def resolve(self, name, store):
+            self._resolutions.append(name)
+            return name
+
+        def resolutions(self):
+            return self._resolutions
+
+    def test_no_resolution(self):
+        r  = self.MockResolver({})
+        ns = resolve(r, [])
+        assert([] == ns)
+        assert([] == r.resolutions())
+
+    def test_one_resolution_zero_deps(self):
+        r  = self.MockResolver({'a': []})
+        ns = resolve(r, ['a'])
+        assert(['a'] == ns)
+        assert(['a'] == r.resolutions())
+
+    def test_caches_resolve(self):
+        r  = self.MockResolver({'a': ['b'],
+                                'b': [],    })
+        ns = resolve(r, ['a'])
+        assert(['a', 'b'] == ns)
+        assert(2 == len(r.resolutions()))
+        assert('a' in r.resolutions())
+        assert('b' in r.resolutions())
+
+        r  = self.MockResolver({'a': ['b'],
+                                'b': [],    })
+        ns = resolve(r, ['a', 'b'])
+        assert(['a', 'b'] == ns)
+        assert(2 == len(r.resolutions()))
+        assert('a' in r.resolutions())
+        assert('b' in r.resolutions())
 
 class PackageResolverTest(TestCase):
     def setUp(self):
