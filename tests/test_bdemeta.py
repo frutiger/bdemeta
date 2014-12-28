@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from bdemeta       import parse_config
+from bdemeta       import parse_config, InvalidArgumentsError
 from tests.patcher import IoPatcher
 
 import bdemeta
@@ -21,4 +21,9 @@ class ParseConfigTest(TestCase):
 
     def test_parses_file(self):
         assert({ 'baz': 9 } == parse_config(u'foo'))
+
+class InvalidArgumentsErrorTest(TestCase):
+    def test_carries_one_attribute(self):
+        e = InvalidArgumentsError('foo')
+        assert('foo' == e.message)
 
