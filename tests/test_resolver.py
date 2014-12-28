@@ -13,29 +13,29 @@ import bdemeta.resolver
 class BdeItemsTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher(bdemeta.resolver, {
-            'one': {
+            u'one': {
                 'char': u'a',
-                'commented': {
+                u'commented': {
                     'item': u'# a',
                 },
-                'real': {
-                    'one': {
+                u'real': {
+                    u'one': {
                         'comment': u'a\n#b',
                     },
                 },
             },
-            'longer': {
+            u'longer': {
                 'char': u'ab',
             },
-            'two': {
-                'same': {
+            u'two': {
+                u'same': {
                     'line': u'a b',
                 },
-                'diff': {
+                u'diff': {
                     'lines': u'a\nb',
                 },
-                'commented': {
-                    'same': {
+                u'commented': {
+                    u'same': {
                         'line': u'# a b',
                     },
                 },
@@ -120,59 +120,59 @@ class PackageResolverTest(TestCase):
         }
         self.config['units']['g1p1']['external_cflags'] = ['foo']
         self._patcher = OsPatcher(bdemeta.resolver, {
-            'r': {
-                'g1': {
-                    'g1p1': {
-                        'package': {
+            u'r': {
+                u'g1': {
+                    u'g1p1': {
+                        u'package': {
                             'g1p1.dep': u'',
                             'g1p1.mem': u'',
                         },
                     },
-                    'g1p2': {
-                        'package': {
+                    u'g1p2': {
+                        u'package': {
                             'g1p2.dep': u'',
                             'g1p2.mem': u'g1p2_c1',
                         },
                     },
-                    'g1p3': {
-                        'package': {
+                    u'g1p3': {
+                        u'package': {
                             'g1p3.dep': u'',
                             'g1p3.mem': u'g1p3_c1',
                         },
                         'g1p3_c1.t.cpp': u'',
                     },
-                    'g1+p4': {
-                        'package': {
+                    u'g1+p4': {
+                        u'package': {
                             'g1+p4.dep': u'',
                             'g1+p4.mem': u'',
                         },
                         'a.cpp': u'',
                         'b.cpp': u'',
                     },
-                    'g1+p5': {
-                        'package': {
+                    u'g1+p5': {
+                        u'package': {
                             'g1+p5.dep': u'',
                             'g1+p5.mem': u'',
                         },
                         'a.c': u'',
                     },
-                    'g1+p6': {
-                        'package': {
+                    u'g1+p6': {
+                        u'package': {
                             'g1+p6.dep': u'',
                             'g1+p6.mem': u'',
                         },
                         'a.x': u'',
                     },
                 },
-                'g2': {
-                    'g2p1': {
-                        'package': {
+                u'g2': {
+                    u'g2p1': {
+                        u'package': {
                             'g2p1.dep': u'',
                             'g2p1.mem': u'',
                         },
                     },
-                    'g2p2': {
-                        'package': {
+                    u'g2p2': {
+                        u'package': {
                             'g2p2.dep': u'g2p1',
                             'g2p2.mem': u'',
                         },
@@ -301,33 +301,33 @@ class UnitResolverTest(TestCase):
         self.config['units']['bar']['external_cflags']        = ['baz']
         self.config['units']['bar']['ld_args']                = ['bam']
         self._patcher = OsPatcher(bdemeta.resolver, {
-            'r': {
-                'applications': {
-                    'm_app': {
-                        'application': {
+            u'r': {
+                u'applications': {
+                    u'm_app': {
+                        u'application': {
                             'm_app.dep': u'gr2',
                         },
                     },
                 },
-                'groups': {
-                    'gr1': {
-                        'group': {
+                u'groups': {
+                    u'gr1': {
+                        u'group': {
                             'gr1.dep': u'',
                             'gr1.mem': u'gr1p1 gr1p2',
                         },
-                        'gr1p1': {
-                            'package': {
+                        u'gr1p1': {
+                            u'package': {
                                 'gr1p1.dep': u'',
                             },
                         },
-                        'gr1p2': {
-                            'package': {
+                        u'gr1p2': {
+                            u'package': {
                                 'gr1p2.dep': u'',
                             },
                         },
                     },
-                    'gr2': {
-                        'group': {
+                    u'gr2': {
+                        u'group': {
                             'gr2.dep': u'gr1',
                         },
                     },

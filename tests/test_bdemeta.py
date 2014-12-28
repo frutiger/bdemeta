@@ -3,13 +3,13 @@
 from unittest import TestCase
 
 from bdemeta       import parse_config, InvalidArgumentsError
-from tests.patcher import IoPatcher
+from tests.patcher import OsPatcher
 
 import bdemeta
 
 class ParseConfigTest(TestCase):
     def setUp(self):
-        self._patcher = IoPatcher(bdemeta, {
+        self._patcher = OsPatcher(bdemeta, {
             u'foo': u'{"baz": 9}',
         })
 
