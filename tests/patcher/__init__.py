@@ -23,7 +23,7 @@ class Patcher(object):
 
 class OsPatcher(object):
     def __init__(self, module, root):
-        self._patcher = Patcher(module)
+        self._patcher       = Patcher(module)
         self._root          = root
         self._reset_open    = self._patch('open',           self._open)
         self._reset_listdir = self._patch('os.listdir',     self._listdir)
@@ -59,4 +59,13 @@ class OsPatcher(object):
 
     def _isdir(self, path):
         return type(self._traverse(path)) == dict
+
+class IoPatcher(OsPatcher):
+    def __init__(self, module, root):
+        OsPatcher.__init__(self, module, root)
+        self._reset_io_open = self._patcher.patch('io.open', self._open)
+
+    def reset(self):
+        self._reset_io_open()
+        OsPatcher.reset(self)
 
