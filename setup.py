@@ -8,6 +8,6 @@ setup(name='bdemeta',
       license='MIT',
       packages=['bdemeta'],
       entry_points={
-          'console_scripts': ['bdemeta=bdemeta:main'],
+          'console_scripts': ['bdemeta=bdemeta.__main__:main'],
       })
 
