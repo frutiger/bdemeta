@@ -22,22 +22,22 @@ class Patcher(object):
         return lambda: names.update([(name, real_value)])
 
 class OsPatcher(object):
-    def __init__(self, module, root):
-        self._patcher       = Patcher(module)
+    def __init__(self, modules, root):
+        self._patchers      = [Patcher(m) for m in modules]
         self._root          = root
-        self._reset_open    = self._patch('io.open',        self._open)
+        self._reset_open    = self._patch('open',           self._open)
         self._reset_listdir = self._patch('os.listdir',     self._listdir)
         self._reset_isfile  = self._patch('os.path.isfile', self._isfile)
         self._reset_isdir   = self._patch('os.path.isdir' , self._isdir)
 
     def _patch(self, name, value):
-        return self._patcher.patch(name, value)
+        return [patcher.patch(name, value) for patcher in self._patchers]
 
     def reset(self):
-        self._reset_open()
-        self._reset_listdir()
-        self._reset_isfile()
-        self._reset_isdir()
+        [r() for r in self._reset_open]
+        [r() for r in self._reset_listdir]
+        [r() for r in self._reset_isfile]
+        [r() for r in self._reset_isdir]
 
     def _traverse(self, path):
         path = path.split(os.path.sep)

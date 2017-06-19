@@ -22,10 +22,7 @@ def runtests(tests):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     if len(tests) == 0:
-        tests = glob.glob(os.path.join('out', 'tests', '*'))
-    else:
-        tests = [os.path.join('out', 'tests', t) for t in tests]
+        tests = glob.glob(os.path.join('.', '*.t'))
 
     multiprocessing.Pool().map(runtest, sorted(tests))
-
 
