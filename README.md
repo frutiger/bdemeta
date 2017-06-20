@@ -8,15 +8,15 @@ Build and test BDE-style code.
 ## Synopsis
 
 `bdemeta walk UNIT [UNIT ...]`<br/>
-`bdemeta cmake UNIT [UNIT ...]`<br/>
+`bdemeta cmake UNIT [UNIT ...] [-t TEST_UNIT ...]`<br/>
 `bdemeta runtests [TEST ...]`:
 
 ## Description
 
 `bdemeta` is a set of basic tools to assist building and testing [BDE-style
 source trees](https://github.com/bloomberg/bde).  It can generate
-[`CMake`](https://cmake.org) files, and it can also invoke BDE-style test
-drivers.
+[`CMake`](https://cmake.org) files for package groups and test drivers within
+them.  It can also invoke BDE-style test drivers.
 
 `bdemeta` supports finding targets across [disconnected directory
 structures](#roots).
@@ -34,8 +34,9 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
   * `walk UNIT [UNIT ...]`:<br/>
     Walk and topologically sort dependencies
 
-  * `cmake UNIT [UNIT ...]`:<br/>
+  * `cmake UNIT [UNIT ...] [-t TEST_UNIT ...]`:<br/>
     Generate CMake files in the current directory
+    Also generate test drivers for the specified `TEST_UNIT`s
 
   * `runtests [TEST ...]`:<br/>
     Run unit tests

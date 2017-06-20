@@ -1,5 +1,6 @@
 # bdemeta.cmake
 
+import argparse
 import os
 
 import bdemeta.types
@@ -48,7 +49,12 @@ COMMAND_EPILOGUE = '''\
 
 '''
 
-def generate_group(target, outdir):
+def parse_args(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--generate-test', nargs='*', type=str)
+    return parser.parse_known_args(args)
+
+def generate_group(target, outdir, generate_test):
     with open(os.path.join(outdir, f'{target}.cmake'), 'w') as out:
         out.write(PROLOGUE.format(**locals()))
 
@@ -67,19 +73,22 @@ def generate_group(target, outdir):
             out.write('    {}\n'.format(dependency))
         out.write(COMMAND_EPILOGUE)
 
-        out.write(TESTING_PROLOGUE)
-        for driver in target.drivers():
-            name = os.path.splitext(os.path.basename(driver))[0]
-            out.write(TESTING_DRIVER.format(**locals()))
-        out.write(TESTING_EPILOGUE)
+        if generate_test:
+            print(target)
+            out.write(TESTING_PROLOGUE)
+            for driver in target.drivers():
+                name = os.path.splitext(os.path.basename(driver))[0]
+                out.write(TESTING_DRIVER.format(**locals()))
+            out.write(TESTING_EPILOGUE)
 
-def generate(targets, outdir):
+def generate(targets, outdir, options):
+    test_targets = set(options.generate_test)
     with open(os.path.join(outdir, 'CMakeLists.txt'), 'w') as out:
         out.write('cmake_minimum_required(VERSION 3.8)\n')
         for target in reversed(targets):
             if any([isinstance(target, bdemeta.types.Group),
                     isinstance(target, bdemeta.types.Package)]):
-                generate_group(target, outdir)
+                generate_group(target, outdir, target in test_targets)
                 out.write('include({target}.cmake)\n'.format(**locals()))
             elif isinstance(target, bdemeta.types.CMake):
                 path = target.path()
