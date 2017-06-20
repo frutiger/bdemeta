@@ -42,12 +42,13 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
 
 ## Configuration
 
-`bdemeta` is configured by a JSON configuration files at `.bdemetarc` (i.e.
-from the current working directory).  The configuration is as follows:
+`bdemeta` is configured by a JSON configuration file in the current directory
+called `.bderoots.conf`.  The configuration is as follows:
 
-    {
-        "roots": ["<root>", ...]
-    }
+    [
+        "<root>",
+        ...
+    ]
 
 The specified `<root>`s are added to the target search paths.
 

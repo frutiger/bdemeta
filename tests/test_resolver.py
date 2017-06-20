@@ -111,9 +111,9 @@ class ResolveTest(TestCase):
 
 class PackageResolverTest(TestCase):
     def setUp(self):
-        self.config = {
-            'roots': ['r'],
-        }
+        self.roots = [
+            'r',
+        ]
         self._patcher = OsPatcher([bdemeta.resolver], {
             'r': {
                 'g1': {
@@ -270,9 +270,9 @@ class PackageResolverTest(TestCase):
 
 class UnitResolverTest(TestCase):
     def setUp(self):
-        self.config = {
-            'roots': ['r'],
-        }
+        self.roots = [
+            'r',
+        ]
         self._patcher = OsPatcher([bdemeta.resolver], {
             'r': {
                 'groups': {
@@ -305,14 +305,14 @@ class UnitResolverTest(TestCase):
         self._patcher.reset()
 
     def test_group_identification(self):
-        r = UnitResolver(self.config)
+        r = UnitResolver(self.roots)
         assert({
             'type': 'group',
             'path': pjoin('r', 'groups', 'gr1')
         } == r.identify('gr1'))
 
     def test_non_identification(self):
-        r = UnitResolver(self.config)
+        r = UnitResolver(self.roots)
         caught = False
         try:
             r.identify('foo')
@@ -321,11 +321,11 @@ class UnitResolverTest(TestCase):
         assert(caught)
 
     def test_group_with_one_dependency(self):
-        r = UnitResolver(self.config)
+        r = UnitResolver(self.roots)
         assert(set(['gr1']) == r.dependencies('gr2'))
 
     def test_unknown_target_error(self):
-        r = UnitResolver(self.config)
+        r = UnitResolver(self.roots)
         caught = False
         try:
             bar = r.resolve('bar', {})
@@ -334,13 +334,13 @@ class UnitResolverTest(TestCase):
         assert(caught)
 
     def test_level_one_group_resolution(self):
-        r = UnitResolver(self.config)
+        r = UnitResolver(self.roots)
 
         gr1 = r.resolve('gr1', {})
         assert('gr1' == gr1)
 
     def test_level_one_group_resolution_packages(self):
-        ur = UnitResolver(self.config)
+        ur = UnitResolver(self.roots)
         pr = PackageResolver(pjoin('r', 'groups', 'gr1'))
 
         gr1 = ur.resolve('gr1', {})
@@ -348,7 +348,7 @@ class UnitResolverTest(TestCase):
         assert(resolve(pr, ['gr1p1', 'gr1p2']) == gr1._packages)
 
     def test_level_two_group_resolution(self):
-        r = UnitResolver(self.config)
+        r = UnitResolver(self.roots)
 
         gr1 = r.resolve('gr1', {})
         gr2 = r.resolve('gr2', { 'gr1': gr1 })

@@ -66,8 +66,8 @@ class PackageResolver(object):
         return bdemeta.types.Package(path, deps, sources, drivers)
 
 class UnitResolver(object):
-    def __init__(self, config):
-        self._roots = config['roots']
+    def __init__(self, roots):
+        self._roots = roots
 
     def _is_group(root, name):
         path = os.path.join(root, 'groups', name)

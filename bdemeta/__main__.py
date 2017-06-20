@@ -5,7 +5,6 @@ import json
 import os.path
 import sys
 
-import bdemeta.config
 import bdemeta.graph
 import bdemeta.cmake
 import bdemeta.resolver
@@ -23,13 +22,7 @@ class InvalidArgumentsError(RuntimeError):
         self.message = message
 
 def run(output, args):
-    local_config = parse_config('.bdemetarc')
-
-    config = {
-        'roots': [],
-    }
-    config = bdemeta.config.merge(config, local_config)
-
+    config = parse_config('.bderoots.conf')
     resolver = bdemeta.resolver.UnitResolver(config)
 
     if len(args) == 0:

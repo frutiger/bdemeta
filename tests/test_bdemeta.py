@@ -31,11 +31,11 @@ class InvalidArgumentsErrorTest(TestCase):
 
 class RunTest(TestCase):
     def setUp(self):
-        self._config = {
-            'roots': ['r'],
-        }
+        self._config = [
+            'r',
+        ]
         self._patcher = OsPatcher([bdemeta.__main__, bdemeta.resolver], {
-            '.bdemetarc': '{"roots":["r"]}',
+            '.bderoots.conf': '["r"]',
             'r': {
                 'groups': {
                     'gr1': {
