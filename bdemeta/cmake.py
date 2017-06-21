@@ -51,7 +51,8 @@ COMMAND_EPILOGUE = '''\
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--generate-test', nargs='*', type=str)
+    parser.add_argument('-t', '--generate-test', type=str,
+                                                 nargs='*', default=[])
     return parser.parse_known_args(args)
 
 def generate_group(target, outdir, generate_test):
