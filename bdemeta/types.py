@@ -16,24 +16,27 @@ class Package(Unit):
     def __new__(cls, path, *args):
         return str.__new__(cls, os.path.basename(path))
 
-    def __init__(self, path, dependencies, sources, drivers):
+    def __init__(self, path, dependencies, components):
         Unit.__init__(self, str(self), dependencies)
-        self._path    = path
-        self._sources = sources
-        self._drivers = drivers
+        self._path       = path
+        self._components = components
 
     def includes(self):
         yield f'{self._path}'
 
-    def components(self):
-        return self._sources
-
-    def drivers(self):
-        return self._drivers
+    def headers(self):
+        for component in self._components:
+            if component['header']:
+                yield component['header']
 
     def sources(self):
-        for source in self._sources:
-            yield source
+        for component in self._components:
+            yield component['source']
+
+    def drivers(self):
+        for component in self._components:
+            if component['driver']:
+                yield component['driver']
 
 class Group(Unit):
     def __new__(cls, path, *args):
@@ -48,9 +51,14 @@ class Group(Unit):
         for package in self._packages:
             yield os.path.join(self._path, package)
 
+    def headers(self):
+        for package in self._packages:
+            for header in package.headers():
+                yield header
+
     def sources(self):
         for package in self._packages:
-            for source in package.components():
+            for source in package.sources():
                 yield source
 
     def drivers(self):

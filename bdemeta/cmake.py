@@ -17,19 +17,30 @@ LIBRARY_PROLOGUE = '''\
 add_library(
     {target}
 '''
-SOURCE = '''\
-    {component}
-'''
-INCLUDE = '''\
-    -I{include}
-'''
-COMPILE_OPTIONS_PROLOGUE = '''\
-target_compile_options(
+INCLUDE_DIRECTORIES_PROLOGUE = '''\
+target_include_directories(
     {target} PUBLIC
 '''
 LINK_LIBRARIES_PROLOGUE = '''\
 target_link_libraries(
     {target} PUBLIC
+'''
+INSTALL_HEADERS_PROLOGUE = '''\
+install(
+    FILES
+'''
+INSTALL_HEADERS_DESTINATION = '''\
+    DESTINATION include
+'''
+INSTALL_LIBRARY = '''\
+install(
+    TARGETS {target}
+    DESTINATION lib
+)
+'''
+COMMAND_EPILOGUE = '''\
+)
+
 '''
 TESTING_PROLOGUE = '''\
 if(BUILD_TESTING)
@@ -42,10 +53,6 @@ target_link_libraries({name} {target})
 '''
 TESTING_EPILOGUE = '''\
 endif()  # BUILD_TESTING
-
-'''
-COMMAND_EPILOGUE = '''\
-)
 
 '''
 
@@ -61,18 +68,26 @@ def generate_group(target, outdir, generate_test):
 
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
-            out.write(SOURCE.format(**locals()))
+            out.write('    {}\n'.format(component))
         out.write(COMMAND_EPILOGUE)
 
-        out.write(COMPILE_OPTIONS_PROLOGUE.format(**locals()))
+        out.write(INCLUDE_DIRECTORIES_PROLOGUE.format(**locals()))
         for include in target.includes():
-            out.write(INCLUDE.format(**locals()))
+            out.write('    {}\n'.format(include))
         out.write(COMMAND_EPILOGUE)
 
         out.write(LINK_LIBRARIES_PROLOGUE.format(**locals()))
         for dependency in target.dependencies():
             out.write('    {}\n'.format(dependency))
         out.write(COMMAND_EPILOGUE)
+
+        out.write(INSTALL_HEADERS_PROLOGUE)
+        for header in target.headers():
+            out.write('    {}\n'.format(header))
+        out.write(INSTALL_HEADERS_DESTINATION)
+        out.write(COMMAND_EPILOGUE)
+
+        out.write(INSTALL_LIBRARY.format(**locals()))
 
         if generate_test:
             print(target)

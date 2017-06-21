@@ -32,23 +32,29 @@ def resolve(resolver, names):
 
 def build_components(path):
     name = os.path.basename(path)
-    sources = []
-    drivers = []
+    components = []
     if '+' in name:
         for file in os.listdir(path):
             root, ext = os.path.splitext(file)
-            if ext != '.c' and ext != '.cpp':
-                continue
-            sources.append(os.path.join(path, file))
+            if ext == '.c' or ext == '.cpp':
+                source = os.path.join(path, file)
+                components.append({
+                    'header': None,
+                    'source': source,
+                    'driver': None,
+                })
     else:
         for item in bde_items(path, 'package', name + '.mem'):
             base   = os.path.join(path, item)
+            header = base + '.h'
             source = base + '.cpp'
             driver = base + '.t.cpp'
-            if os.path.isfile(driver):
-                drivers.append(driver)
-            sources.append(source)
-    return sources, drivers
+            components.append({
+                'header': header,
+                'source': source,
+                'driver': driver if os.path.isfile(driver) else None,
+            })
+    return components
 
 class PackageResolver(object):
     def __init__(self, group_path):
@@ -58,12 +64,12 @@ class PackageResolver(object):
         return bde_items(self._group_path, name, 'package', name + '.dep')
 
     def resolve(self, name, resolved_packages):
-        path             = os.path.join(self._group_path, name)
-        sources, drivers = build_components(path)
-        deps             = lookup_dependencies(name,
-                                               self.dependencies,
-                                               resolved_packages)
-        return bdemeta.types.Package(path, deps, sources, drivers)
+        path       = os.path.join(self._group_path, name)
+        components = build_components(path)
+        deps       = lookup_dependencies(name,
+                                         self.dependencies,
+                                         resolved_packages)
+        return bdemeta.types.Package(path, deps, components)
 
 class UnitResolver(object):
     def __init__(self, roots):
@@ -134,8 +140,8 @@ class UnitResolver(object):
             return bdemeta.types.Group(unit['path'], deps, packages)
 
         if unit['type'] == 'package':
-            sources, drivers = build_components(unit['path'])
-            return bdemeta.types.Package(unit['path'], deps, sources, drivers)
+            components = build_components(unit['path'])
+            return bdemeta.types.Package(unit['path'], deps, components)
 
         if unit['type'] == 'cmake':
             return bdemeta.types.CMake(unit['path'])

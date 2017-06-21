@@ -193,7 +193,7 @@ class PackageResolverTest(TestCase):
         assert('g1p1'                     == p)
         assert([]                         == p.dependencies())
         assert([pjoin('r', 'g1', 'g1p1')] == list(p.includes()))
-        assert([]                         == p.components())
+        assert([]                         == list(p.sources()))
 
     def test_one_non_driver_component(self):
         r = PackageResolver(pjoin('r', 'g1'))
@@ -201,9 +201,9 @@ class PackageResolverTest(TestCase):
         assert('g1p2'                     == p)
         assert([]                         == p.dependencies())
         assert([pjoin('r', 'g1', 'g1p2')] == list(p.includes()))
-        assert(1                          == len(p.components()))
         assert([pjoin('r', 'g1', 'g1p2', 'g1p2_c1.cpp')]
-                                          == list(p.components()))
+                                          == list(p.sources()))
+        assert(0                          == len(list(p.drivers())))
 
     def test_one_driver_component(self):
         r = PackageResolver(pjoin('r', 'g1'))
@@ -211,9 +211,10 @@ class PackageResolverTest(TestCase):
         assert('g1p3'                     == p)
         assert([]                         == p.dependencies())
         assert([pjoin('r', 'g1', 'g1p3')] == list(p.includes()))
-        assert(1                          == len(p.components()))
+        assert([pjoin('r', 'g1', 'g1p3', 'g1p3_c1.h')]
+                                          == list(p.headers()))
         assert([pjoin('r', 'g1', 'g1p3', 'g1p3_c1.cpp')]
-                                          == list(p.components()))
+                                          == list(p.sources()))
         assert([pjoin('r', 'g1', 'g1p3', 'g1p3_c1.t.cpp')]
                                           == list(p.drivers()))
 
@@ -232,9 +233,9 @@ class PackageResolverTest(TestCase):
         assert('g1+p4'                     == p)
         assert([]                          == p.dependencies())
         assert([pjoin('r', 'g1', 'g1+p4')] == list(p.includes()))
-        assert(2                           == len(p.components()))
-        assert(pjoin('r', 'g1', 'g1+p4', 'a.cpp') in list(p.components()))
-        assert(pjoin('r', 'g1', 'g1+p4', 'b.cpp') in list(p.components()))
+        assert(2                           == len(list(p.sources())))
+        assert(pjoin('r', 'g1', 'g1+p4', 'a.cpp') in list(p.sources()))
+        assert(pjoin('r', 'g1', 'g1+p4', 'b.cpp') in list(p.sources()))
 
     def test_thirdparty_package_lists_cs(self):
         r = PackageResolver(pjoin('r', 'g1'))
@@ -242,8 +243,8 @@ class PackageResolverTest(TestCase):
         assert('g1+p5'                     == p)
         assert([]                          == p.dependencies())
         assert([pjoin('r', 'g1', 'g1+p5')] == list(p.includes()))
-        assert(1                           == len(p.components()))
-        assert(pjoin('r', 'g1', 'g1+p5', 'a.c') in p.components())
+        assert(1                           == len(list(p.sources())))
+        assert(pjoin('r', 'g1', 'g1+p5', 'a.c') in list(p.sources()))
 
     def test_thirdparty_package_ignores_non_c_non_cpp(self):
         r = PackageResolver(pjoin('r', 'g1'))
@@ -251,7 +252,7 @@ class PackageResolverTest(TestCase):
         assert('g1+p6'                     == p)
         assert([]                          == p.dependencies())
         assert([pjoin('r', 'g1', 'g1+p6')] == list(p.includes()))
-        assert(0                           == len(p.components()))
+        assert(0                           == len(list(p.sources())))
 
     def test_level_two_package_has_dependency(self):
         r = PackageResolver(pjoin('r', 'g2'))
@@ -260,13 +261,13 @@ class PackageResolverTest(TestCase):
         assert('g2p1'                     == p1)
         assert([]                         == p1.dependencies())
         assert([pjoin('r', 'g2', 'g2p1')] == list(p1.includes()))
-        assert(0                          == len(p1.components()))
+        assert(0                          == len(list(p1.sources())))
 
         p2 = r.resolve('g2p2', { 'g2p1': p1 })
         assert('g2p2'                     == p2)
         assert([p1]                       == p2.dependencies())
         assert([pjoin('r', 'g2', 'g2p2')] == list(p2.includes()))
-        assert(0                          == len(p2.components()))
+        assert(0                          == len(list(p2.sources())))
 
 class UnitResolverTest(TestCase):
     def setUp(self):
