@@ -312,27 +312,9 @@ class UnitResolverTest(TestCase):
             'path': pjoin('r', 'groups', 'gr1')
         } == r.identify('gr1'))
 
-    def test_non_identification(self):
-        r = UnitResolver(self.roots)
-        caught = False
-        try:
-            r.identify('foo')
-        except bdemeta.resolver.TargetNotFoundError:
-            caught = True
-        assert(caught)
-
     def test_group_with_one_dependency(self):
         r = UnitResolver(self.roots)
         assert(set(['gr1']) == r.dependencies('gr2'))
-
-    def test_unknown_target_error(self):
-        r = UnitResolver(self.roots)
-        caught = False
-        try:
-            bar = r.resolve('bar', {})
-        except bdemeta.resolver.TargetNotFoundError:
-            caught = True
-        assert(caught)
 
     def test_level_one_group_resolution(self):
         r = UnitResolver(self.roots)
@@ -354,4 +336,117 @@ class UnitResolverTest(TestCase):
         gr1 = r.resolve('gr1', {})
         gr2 = r.resolve('gr2', { 'gr1': gr1 })
         assert('gr2' == gr2)
+
+class StandaloneResolverTest(TestCase):
+    def setUp(self):
+        self.roots = [
+            'r',
+        ]
+        self._patcher = OsPatcher([bdemeta.resolver], {
+            'r': {
+                'adapters': {
+                    'p1': {
+                        'package': {
+                            'p1.dep': '',
+                            'p1.mem': 'p1c1 p1c2',
+                        },
+                    },
+                    'p2': {
+                        'package': {
+                            'p2.dep': 'p1',
+                        },
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_adapter_identification(self):
+        r = UnitResolver(self.roots)
+        assert({
+            'type': 'package',
+            'path': pjoin('r', 'adapters', 'p1')
+        } == r.identify('p1'))
+
+    def test_standalone_with_one_dependency(self):
+        r = UnitResolver(self.roots)
+        assert(set(['p1']) == r.dependencies('p2'))
+
+    def test_level_one_standalone_resolution(self):
+        r = UnitResolver(self.roots)
+
+        p1 = r.resolve('p1', {})
+        assert('p1' == p1)
+
+    def test_level_one_standalone_resolution_components(self):
+        r = UnitResolver(self.roots)
+
+        p1 = r.resolve('p1', {})
+        assert('p1' == p1)
+
+        c1 = pjoin('r', 'adapters', 'p1', 'p1c1.cpp')
+        c2 = pjoin('r', 'adapters', 'p1', 'p1c2.cpp')
+        assert([c1, c2] == list(sorted(p1.sources())))
+
+    def test_level_two_group_resolution(self):
+        r = UnitResolver(self.roots)
+
+        p1 = r.resolve('p1', {})
+        assert('p1' == p1)
+
+        p2 = r.resolve('p2', { 'p1': p1 })
+        assert('p2' == p2)
+
+class CMakeResolverTest(TestCase):
+    def setUp(self):
+        self.roots = [
+            'r',
+        ]
+        self._patcher = OsPatcher([bdemeta.resolver], {
+            'r': {
+                'thirdparty': {
+                    't1': {
+                        'CMakeLists.txt': '',
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_cmake_identification(self):
+        r = UnitResolver(self.roots)
+        assert({
+            'type': 'cmake',
+            'path': pjoin('r', 'thirdparty', 't1')
+        } == r.identify('t1'))
+
+    def test_cmake_path(self):
+        r = UnitResolver(self.roots)
+        t = r.resolve('t1', {})
+        assert(pjoin('r', 'thirdparty', 't1') == t.path())
+
+class NotFoundErrorsTest(TestCase):
+    def setUp(self):
+        self.roots = [
+            'r',
+        ]
+        self._patcher = OsPatcher([bdemeta.resolver], {
+            'r': { },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_non_identification(self):
+        r = UnitResolver(self.roots)
+        caught = False
+        try:
+            r.identify('foo')
+        except bdemeta.resolver.TargetNotFoundError:
+            caught = True
+        assert(caught)
 

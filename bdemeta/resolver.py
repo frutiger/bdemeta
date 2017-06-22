@@ -146,5 +146,3 @@ class UnitResolver(object):
         if unit['type'] == 'cmake':
             return bdemeta.types.CMake(unit['path'])
 
-        raise RuntimeError('Unknown unit: ' + unit)
-
