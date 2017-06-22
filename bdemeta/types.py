@@ -14,7 +14,7 @@ class Unit(str):
 
 class Package(Unit):
     def __new__(cls, path, *args):
-        return str.__new__(cls, os.path.basename(path))
+        return Unit.__new__(cls, os.path.basename(path))
 
     def __init__(self, path, dependencies, components):
         Unit.__init__(self, str(self), dependencies)
@@ -40,7 +40,7 @@ class Package(Unit):
 
 class Group(Unit):
     def __new__(cls, path, *args):
-        return str.__new__(cls, os.path.basename(path))
+        return Unit.__new__(cls, os.path.basename(path))
 
     def __init__(self, path, dependencies, packages):
         Unit.__init__(self, str(self), dependencies)
@@ -68,7 +68,7 @@ class Group(Unit):
 
 class CMake(Unit):
     def __new__(cls, path, *args):
-        return str.__new__(cls, os.path.basename(path))
+        return Unit.__new__(cls, os.path.basename(path))
 
     def __init__(self, path):
         Unit.__init__(self, str(self), [])
