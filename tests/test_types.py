@@ -3,7 +3,7 @@
 from os.path import join as pj
 from unittest import TestCase
 
-from bdemeta.types import Package, Group
+from bdemeta.types import Package, Group, CMake
 
 class TestPackage(TestCase):
     def test_str_ness(self):
@@ -102,4 +102,14 @@ class TestGroup(TestCase):
 
         assert([c1_path]   == list(g.sources()))
         assert([c1_driver] == list(g.drivers()))
+
+class TestCMake(TestCase):
+    def test_str_ness(self):
+        c = CMake(pj('path', 'c'))
+        assert('c' == c)
+
+    def test_path(self):
+        c = CMake(pj('path', 'c'))
+        assert('c' == c)
+        assert(pj('path', 'c') == c.path())
 
