@@ -90,7 +90,6 @@ def generate_group(target, outdir, generate_test):
         out.write(INSTALL_LIBRARY.format(**locals()))
 
         if generate_test:
-            print(target)
             out.write(TESTING_PROLOGUE)
             for driver in target.drivers():
                 name = os.path.splitext(os.path.basename(driver))[0]
