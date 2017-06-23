@@ -67,12 +67,12 @@ def generate_unit(target, file_writer, generate_test):
         out.write('''project({target} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
-            out.write('    {}\n'.format(component))
+            out.write('    {}\n'.format(component).replace('\\', '/'))
         out.write(COMMAND_EPILOGUE)
 
         out.write(INCLUDE_DIRECTORIES_PROLOGUE.format(**locals()))
         for include in target.includes():
-            out.write('    {}\n'.format(include))
+            out.write('    {}\n'.format(include).replace('\\', '/'))
         out.write(COMMAND_EPILOGUE)
 
         out.write(LINK_LIBRARIES_PROLOGUE.format(**locals()))
@@ -82,7 +82,7 @@ def generate_unit(target, file_writer, generate_test):
 
         out.write(INSTALL_HEADERS_PROLOGUE)
         for header in target.headers():
-            out.write('    {}\n'.format(header))
+            out.write('    {}\n'.format(header).replace('\\', '/'))
         out.write(INSTALL_HEADERS_DESTINATION)
         out.write(COMMAND_EPILOGUE)
 
@@ -92,7 +92,7 @@ def generate_unit(target, file_writer, generate_test):
             out.write(TESTING_PROLOGUE)
             for driver in target.drivers():
                 name = os.path.splitext(os.path.basename(driver))[0]
-                out.write(TESTING_DRIVER.format(**locals()))
+                out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
             out.write(TESTING_EPILOGUE)
 
     file_writer(f'{target}.cmake', write)
@@ -109,7 +109,7 @@ def generate(targets, file_writer, test_targets):
             elif isinstance(target, bdemeta.types.CMake):
                 path = target.path()
                 out.write('add_subdirectory({path} {target})\n'.format(
-                                                                   **locals()))
+                                                **locals()).replace('\\', '/'))
 
     file_writer('CMakeLists.txt', write)
 
