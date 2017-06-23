@@ -1,12 +1,12 @@
 # tests.test_resolver
 
-from os.path     import join as pjoin
-from unittest    import TestCase
+from os.path  import join as pjoin
+from unittest import TestCase
 
 from bdemeta.resolver import bde_items, resolve, PackageResolver, UnitResolver
 from tests.patcher    import OsPatcher
 
-import bdemeta.resolver
+import bdemeta.resolver  # needed for the patcher to work
 
 class BdeItemsTest(TestCase):
     def setUp(self):
