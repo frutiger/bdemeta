@@ -21,6 +21,10 @@ class InvalidArgumentsError(RuntimeError):
     def __init__(self, message):
         self.message = message
 
+def file_writer(name, writer):
+    with open(name, 'w') as f:
+        writer(f)
+
 def run(output, args):
     config = parse_config('.bderoots.conf')
     resolver = bdemeta.resolver.UnitResolver(config)
@@ -37,7 +41,7 @@ def run(output, args):
     elif mode == 'cmake':
         options, units = bdemeta.cmake.parse_args(args)
         units = bdemeta.resolver.resolve(resolver, units)
-        bdemeta.cmake.generate(units, '.', options)
+        bdemeta.cmake.generate(units, file_writer, options)
     elif mode == 'runtests':
         bdemeta.testing.runtests(args)
     else:
@@ -49,11 +53,14 @@ def main():
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 
-{1} walk     <unit> [<unit>...]                 - walk and topologically sort
-                                                  dependencies
-{1} cmake    <unit> [<unit>...] [-t <unit> ...] - generate CMake files in the
-                                                  current directory
-{1} runtests [<test>...]                        - run unit tests'''
+{1} walk     <unit> [<unit>...]
+  walk and topologically sort dependencies
+
+{1} cmake    <unit> [<unit>...] [-t <unit> ...]
+  generate CMake files in the current directory
+
+{1} runtests [<test>...]
+  run unit tests'''
 
         print(usage.format(e.message, os.path.basename(sys.argv[0])),
               file=sys.stderr)

@@ -5,9 +5,8 @@ import os
 
 import bdemeta.types
 
-PROLOGUE = '''\
-cmake_minimum_required(VERSION 3.7)
-project({target} CXX)
+LISTS_PROLOGUE = '''\
+cmake_minimum_required(VERSION 3.8)
 
 option(BUILD_TESTING "" OFF)
 include(CTest)
@@ -60,12 +59,12 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--generate-test', type=str,
                                                  nargs='*', default=[])
-    return parser.parse_known_args(args)
+    options, units = parser.parse_known_args(args)
+    return set(options.generate_test), units
 
-def generate_group(target, outdir, generate_test):
-    with open(os.path.join(outdir, f'{target}.cmake'), 'w') as out:
-        out.write(PROLOGUE.format(**locals()))
-
+def generate_unit(target, file_writer, generate_test):
+    def write(out):
+        out.write('''project({target} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
             out.write('    {}\n'.format(component))
@@ -96,17 +95,21 @@ def generate_group(target, outdir, generate_test):
                 out.write(TESTING_DRIVER.format(**locals()))
             out.write(TESTING_EPILOGUE)
 
-def generate(targets, outdir, options):
-    test_targets = set(options.generate_test)
-    with open(os.path.join(outdir, 'CMakeLists.txt'), 'w') as out:
-        out.write('cmake_minimum_required(VERSION 3.8)\n')
+    file_writer(f'{target}.cmake', write)
+
+def generate(targets, file_writer, test_targets):
+    def write(out):
+        out.write(LISTS_PROLOGUE.format(**locals()))
+
         for target in reversed(targets):
             if any([isinstance(target, bdemeta.types.Group),
                     isinstance(target, bdemeta.types.Package)]):
-                generate_group(target, outdir, target in test_targets)
+                generate_unit(target, file_writer, target in test_targets)
                 out.write('include({target}.cmake)\n'.format(**locals()))
             elif isinstance(target, bdemeta.types.CMake):
                 path = target.path()
                 out.write('add_subdirectory({path} {target})\n'.format(
                                                                    **locals()))
+
+    file_writer('CMakeLists.txt', write)
 
