@@ -48,6 +48,7 @@ if(BUILD_TESTING)
 TESTING_DRIVER = '''\
 add_executable({name} {driver})
 target_link_libraries({name} {target})
+add_test({name} bdemeta runtests ./{name})
 
 '''
 TESTING_EPILOGUE = '''\
