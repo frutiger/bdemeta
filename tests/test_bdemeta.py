@@ -1,6 +1,7 @@
 # tests.test_bdemeta
 
 from io       import StringIO
+from pathlib  import Path as P
 from unittest import TestCase
 
 from bdemeta.__main__ import parse_config, InvalidArgumentsError, run
@@ -11,7 +12,7 @@ import bdemeta
 
 class ParseConfigTest(TestCase):
     def setUp(self):
-        self._patcher = OsPatcher([bdemeta.__main__], {
+        self._patcher = OsPatcher({
             'foo': '{"baz": 9}',
         })
 
@@ -19,22 +20,22 @@ class ParseConfigTest(TestCase):
         self._patcher.reset()
 
     def test_empty_config_for_nonexistent_file(self):
-        assert({} == parse_config('bar'))
+        assert([] == parse_config(P('bar')))
 
     def test_parses_file(self):
-        assert({ 'baz': 9 } == parse_config('foo'))
+        assert({ 'baz': 9 } == parse_config(P('foo')))
 
 class InvalidArgumentsErrorTest(TestCase):
     def test_carries_one_attribute(self):
         e = InvalidArgumentsError('foo')
-        assert('foo' == e.message)
+        assert('foo' == e.args[0])
 
 class RunTest(TestCase):
     def setUp(self):
         self._config = [
-            'r',
+            P('r'),
         ]
-        self._patcher = OsPatcher([bdemeta.__main__, bdemeta.resolver], {
+        self._patcher = OsPatcher({
             '.bderoots.conf': '["r"]',
             'r': {
                 'groups': {
@@ -71,7 +72,7 @@ class RunTest(TestCase):
         try:
             run(StringIO(), [])
         except InvalidArgumentsError as e:
-            message = e.message
+            message = e.args[0]
         assert('No mode specified' == message)
 
     def test_unknown_mode_error(self):
@@ -79,7 +80,7 @@ class RunTest(TestCase):
         try:
             run(StringIO(), ['foo'])
         except InvalidArgumentsError as e:
-            message = e.message
+            message = e.args[0]
         assert('Unknown mode \'{}\''.format('foo') == message)
 
     def test_target_with_dependencies(self):

@@ -1,21 +1,17 @@
 # bdemeta.resolver
 
-import os
-
 import bdemeta.graph
 import bdemeta.types
 
 class TargetNotFoundError(RuntimeError):
     pass
 
-def bde_items(*args):
-    items_filename = os.path.join(*args)
+def bde_items(path):
     items = []
-    if os.path.isfile(items_filename):
-        with open(items_filename) as items_file:
-            for l in items_file:
-                if len(l) > 0 and l[0] != '#':
-                    items = items + l.split()
+    with path.open() as items_file:
+        for l in items_file:
+            if len(l) > 0 and l[0] != '#':
+                items = items + l.split()
     return set(items)
 
 def lookup_dependencies(name, get_dependencies, resolved_units):
@@ -31,28 +27,26 @@ def resolve(resolver, names):
     return [store[u] for u in units]
 
 def build_components(path):
-    name = os.path.basename(path)
+    name = path.name
     components = []
     if '+' in name:
-        for file in os.listdir(path):
-            root, ext = os.path.splitext(file)
-            if ext == '.c' or ext == '.cpp':
-                source = os.path.join(path, file)
+        for file in path.iterdir():
+            if file.suffix == '.c' or file.suffix == '.cpp':
                 components.append({
                     'header': None,
-                    'source': source,
+                    'source': file,
                     'driver': None,
                 })
     else:
-        for item in bde_items(path, 'package', name + '.mem'):
-            base   = os.path.join(path, item)
-            header = base + '.h'
-            source = base + '.cpp'
-            driver = base + '.t.cpp'
+        for item in bde_items(path/'package'/(name + '.mem')):
+            base   = path/item
+            header = base.with_suffix('.h')
+            source = base.with_suffix('.cpp')
+            driver = base.with_suffix('.t.cpp')
             components.append({
                 'header': header,
                 'source': source,
-                'driver': driver if os.path.isfile(driver) else None,
+                'driver': driver if driver.is_file() else None,
             })
     return components
 
@@ -61,10 +55,10 @@ class PackageResolver(object):
         self._group_path = group_path
 
     def dependencies(self, name):
-        return bde_items(self._group_path, name, 'package', name + '.dep')
+        return bde_items(self._group_path/name/'package'/(name + '.dep'))
 
     def resolve(self, name, resolved_packages):
-        path       = os.path.join(self._group_path, name)
+        path       = self._group_path/name
         components = build_components(path)
         deps       = lookup_dependencies(name,
                                          self.dependencies,
@@ -76,26 +70,23 @@ class UnitResolver(object):
         self._roots = roots
 
     def _is_group(root, name):
-        path = os.path.join(root, 'groups', name)
-        if os.path.isdir(path) and os.path.isdir(os.path.join(path, 'group')):
+        path = root/'groups'/name
+        if path.is_dir() and (path/'group').is_dir():
             return path
 
     def _is_standalone(root, name):
         for category in ['adapters']:
-            path = os.path.join(root, category, name)
-            if os.path.isdir(path) and \
-                                  os.path.isdir(os.path.join(path, 'package')):
+            path = root/category/name
+            if path.is_dir() and (path/'package').is_dir():
                 return path
 
     def _is_cmake(root, name):
-        path = os.path.join(root, 'thirdparty', name)
-        if os.path.isdir(path) and \
-                          os.path.isfile(os.path.join(path, 'CMakeLists.txt')):
+        path = root/'thirdparty'/name
+        if path.is_dir() and (path/'CMakeLists.txt').is_file():
             return path
 
     def identify(self, name):
         for root in self._roots:
-            root = root.strip()
             path = UnitResolver._is_group(root, name)
             if path:
                 return {
@@ -124,7 +115,7 @@ class UnitResolver(object):
 
         result = set()
         if unit['type'] == 'group' or unit['type'] == 'package':
-            result |= bde_items(unit['path'], unit['type'], name + '.dep')
+            result |= bde_items(unit['path']/unit['type']/(name + '.dep'))
         return result
 
     def resolve(self, name, resolved_targets):
@@ -136,7 +127,7 @@ class UnitResolver(object):
 
         if unit['type'] == 'group':
             packages = resolve(PackageResolver(unit['path']),
-                               bde_items(unit['path'], 'group', name + '.mem'))
+                               bde_items(unit['path']/'group'/(name + '.mem')))
             return bdemeta.types.Group(unit['path'], deps, packages)
 
         if unit['type'] == 'package':

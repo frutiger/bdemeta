@@ -22,7 +22,7 @@ class Package(Unit):
         self._components = components
 
     def includes(self):
-        yield f'{self._path}'
+        yield self._path
 
     def headers(self):
         for component in self._components:

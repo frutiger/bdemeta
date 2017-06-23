@@ -3,6 +3,7 @@
 import collections
 import json
 import os.path
+import pathlib
 import sys
 
 import bdemeta.graph
@@ -10,24 +11,31 @@ import bdemeta.cmake
 import bdemeta.resolver
 import bdemeta.testing
 
-def parse_config(filename):
-    if os.path.isfile(filename):
-        with open(filename) as f:
+def parse_config(filepath):
+    if filepath.is_file():
+        with filepath.open() as f:
             return json.load(f)
     else:
-        return {}
+        return []
 
 class InvalidArgumentsError(RuntimeError):
-    def __init__(self, message):
-        self.message = message
+    pass
+
+class InvalidPathError(RuntimeError):
+    pass
 
 def file_writer(name, writer):
     with open(name, 'w') as f:
         writer(f)
 
 def run(output, args):
-    config = parse_config('.bderoots.conf')
-    resolver = bdemeta.resolver.UnitResolver(config)
+    roots = parse_config(pathlib.Path('.bderoots.conf'))
+    roots = list(map(pathlib.Path, roots))
+    for root in roots:
+        if not root.is_dir():
+            raise InvalidPathError(root)
+
+    resolver = bdemeta.resolver.UnitResolver(roots)
 
     if len(args) == 0:
         raise InvalidArgumentsError('No mode specified')
@@ -62,9 +70,11 @@ def main():
 {1} runtests [<test>...]
   run unit tests'''
 
-        print(usage.format(e.message, os.path.basename(sys.argv[0])),
+        print(usage.format(e.args[0], os.path.basename(sys.argv[0])),
               file=sys.stderr)
         return -1
+    except InvalidPathError as e:
+        print(f'Unknown path found in .bderoots.conf: {e.args[0]}')
     except bdemeta.graph.CyclicGraphError as e:
         print('Cyclic dependency error: {}'.format(' -> '.join(e.cycle)),
               file=sys.stderr)

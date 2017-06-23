@@ -1,16 +1,15 @@
 # tests.test_resolver
 
-from os.path  import join as pjoin
+from pathlib  import Path as P
 from unittest import TestCase
 
 from bdemeta.resolver import bde_items, resolve, PackageResolver, UnitResolver
+from bdemeta.resolver import TargetNotFoundError
 from tests.patcher    import OsPatcher
-
-import bdemeta.resolver  # needed for the patcher to work
 
 class BdeItemsTest(TestCase):
     def setUp(self):
-        self._patcher = OsPatcher([bdemeta.resolver], {
+        self._patcher = OsPatcher({
             'one': {
                 'char': 'a',
                 'commented': {
@@ -44,25 +43,25 @@ class BdeItemsTest(TestCase):
         self._patcher.reset()
 
     def test_one_char_item(self):
-        assert({'a'} == bde_items('one', 'char'))
+        assert({'a'} == bde_items(P('one')/'char'))
 
     def test_longer_char_item(self):
-        assert({'ab'} == bde_items('longer', 'char'))
+        assert({'ab'} == bde_items(P('longer')/'char'))
 
     def test_two_items_on_same_line(self):
-        assert({'a', 'b'} == bde_items('two', 'same', 'line'))
+        assert({'a', 'b'} == bde_items(P('two')/'same'/'line'))
 
     def test_item_on_each_line(self):
-        assert({'a', 'b'} == bde_items('two', 'diff', 'lines'))
+        assert({'a', 'b'} == bde_items(P('two')/'diff'/'lines'))
 
     def test_one_commented_item(self):
-        assert(set() == bde_items('one', 'commented', 'item'))
+        assert(set() == bde_items(P('one')/'commented'/'item'))
 
     def test_two_commented_items_same_line(self):
-        assert(set() == bde_items('two', 'commented', 'same', 'line'))
+        assert(set() == bde_items(P('two')/'commented'/'same'/'line'))
 
     def test_one_real_one_comment(self):
-        assert({'a'} == bde_items('one', 'real', 'one', 'comment'))
+        assert({'a'} == bde_items(P('one')/'real'/'one'/'comment'))
 
 class ResolveTest(TestCase):
     class MockResolver(object):
@@ -112,9 +111,9 @@ class ResolveTest(TestCase):
 class PackageResolverTest(TestCase):
     def setUp(self):
         self.roots = [
-            'r',
+            P('r'),
         ]
-        self._patcher = OsPatcher([bdemeta.resolver], {
+        self._patcher = OsPatcher({
             'r': {
                 'g1': {
                     'g1p1': {
@@ -180,101 +179,100 @@ class PackageResolverTest(TestCase):
         self._patcher.reset()
 
     def test_empty_dependencies(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         assert(set() == r.dependencies('g1p1'))
 
     def test_non_empty_dependencies(self):
-        r = PackageResolver(pjoin('r', 'g2'))
+        r = PackageResolver(P('r')/'g2')
         assert(set(['g2p1']) == r.dependencies('g2p2'))
 
     def test_empty_package(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1p1', {})
-        assert('g1p1'                     == p)
-        assert([]                         == p.dependencies())
-        assert([pjoin('r', 'g1', 'g1p1')] == list(p.includes()))
-        assert([]                         == list(p.sources()))
+        assert('g1p1'               == p)
+        assert([]                   == p.dependencies())
+        assert([P('r')/'g1'/'g1p1'] == list(p.includes()))
+        assert([]                   == list(p.sources()))
 
     def test_one_non_driver_component(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1p2', {})
-        assert('g1p2'                     == p)
-        assert([]                         == p.dependencies())
-        assert([pjoin('r', 'g1', 'g1p2')] == list(p.includes()))
-        assert([pjoin('r', 'g1', 'g1p2', 'g1p2_c1.cpp')]
-                                          == list(p.sources()))
-        assert(0                          == len(list(p.drivers())))
+        assert('g1p2'                             == p)
+        assert([]                                 == p.dependencies())
+        assert([P('r')/'g1'/'g1p2']               == list(p.includes()))
+        assert([P('r')/'g1'/'g1p2'/'g1p2_c1.cpp'] == list(p.sources()))
+        assert([]                                 == list(p.drivers()))
 
     def test_one_driver_component(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1p3', {})
-        assert('g1p3'                     == p)
-        assert([]                         == p.dependencies())
-        assert([pjoin('r', 'g1', 'g1p3')] == list(p.includes()))
-        assert([pjoin('r', 'g1', 'g1p3', 'g1p3_c1.h')]
-                                          == list(p.headers()))
-        assert([pjoin('r', 'g1', 'g1p3', 'g1p3_c1.cpp')]
-                                          == list(p.sources()))
-        assert([pjoin('r', 'g1', 'g1p3', 'g1p3_c1.t.cpp')]
-                                          == list(p.drivers()))
+        assert('g1p3'                               == p)
+        assert([]                                   == p.dependencies())
+        assert([P('r')/'g1'/'g1p3']                 == list(p.includes()))
+        assert([P('r')/'g1'/'g1p3'/'g1p3_c1.h']     == list(p.headers()))
+        assert([P('r')/'g1'/'g1p3'/'g1p3_c1.cpp']   == list(p.sources()))
+        assert([P('r')/'g1'/'g1p3'/'g1p3_c1.t.cpp'] == list(p.drivers()))
 
     def test_empty_package_with_dependency(self):
-        r = PackageResolver(pjoin('r', 'g2'))
+        r = PackageResolver(P('r')/'g2')
+
         p1 = r.resolve('g2p1', {})
         assert('g2p1' == p1)
         assert([]     == p1.dependencies())
+
         p2 = r.resolve('g2p2', { 'g2p1': p1 })
         assert('g2p2' == p2)
         assert([p1]   == p2.dependencies())
 
     def test_thirdparty_package_lists_cpps(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1+p4', {})
-        assert('g1+p4'                     == p)
-        assert([]                          == p.dependencies())
-        assert([pjoin('r', 'g1', 'g1+p4')] == list(p.includes()))
+
+        assert('g1+p4'               == p)
+        assert([]                    == p.dependencies())
+        assert([P('r')/'g1'/'g1+p4'] == list(p.includes()))
+
         assert(2                           == len(list(p.sources())))
-        assert(pjoin('r', 'g1', 'g1+p4', 'a.cpp') in list(p.sources()))
-        assert(pjoin('r', 'g1', 'g1+p4', 'b.cpp') in list(p.sources()))
+        assert(P('r')/'g1'/'g1+p4'/'a.cpp' in list(p.sources()))
+        assert(P('r')/'g1'/'g1+p4'/'b.cpp' in list(p.sources()))
 
     def test_thirdparty_package_lists_cs(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1+p5', {})
         assert('g1+p5'                     == p)
         assert([]                          == p.dependencies())
-        assert([pjoin('r', 'g1', 'g1+p5')] == list(p.includes()))
-        assert(1                           == len(list(p.sources())))
-        assert(pjoin('r', 'g1', 'g1+p5', 'a.c') in list(p.sources()))
+        assert([P('r')/'g1'/'g1+p5']       == list(p.includes()))
+        assert([P('r')/'g1'/'g1+p5'/'a.c'] == list(p.sources()))
 
     def test_thirdparty_package_ignores_non_c_non_cpp(self):
-        r = PackageResolver(pjoin('r', 'g1'))
+        r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1+p6', {})
-        assert('g1+p6'                     == p)
-        assert([]                          == p.dependencies())
-        assert([pjoin('r', 'g1', 'g1+p6')] == list(p.includes()))
-        assert(0                           == len(list(p.sources())))
+        assert('g1+p6'               == p)
+        assert([]                    == p.dependencies())
+        assert([P('r')/'g1'/'g1+p6'] == list(p.includes()))
+        assert([]                    == list(p.sources()))
 
     def test_level_two_package_has_dependency(self):
-        r = PackageResolver(pjoin('r', 'g2'))
+        r = PackageResolver(P('r')/'g2')
 
         p1 = r.resolve('g2p1', {})
-        assert('g2p1'                     == p1)
-        assert([]                         == p1.dependencies())
-        assert([pjoin('r', 'g2', 'g2p1')] == list(p1.includes()))
-        assert(0                          == len(list(p1.sources())))
+        assert('g2p1'               == p1)
+        assert([]                   == p1.dependencies())
+        assert([P('r')/'g2'/'g2p1'] == list(p1.includes()))
+        assert(0                    == len(list(p1.sources())))
 
         p2 = r.resolve('g2p2', { 'g2p1': p1 })
-        assert('g2p2'                     == p2)
-        assert([p1]                       == p2.dependencies())
-        assert([pjoin('r', 'g2', 'g2p2')] == list(p2.includes()))
-        assert(0                          == len(list(p2.sources())))
+        assert('g2p2'               == p2)
+        assert([p1]                 == p2.dependencies())
+        assert([P('r')/'g2'/'g2p2'] == list(p2.includes()))
+        assert([]                   == list(p2.sources()))
 
 class UnitResolverTest(TestCase):
     def setUp(self):
         self.roots = [
-            'r',
+            P('r'),
         ]
-        self._patcher = OsPatcher([bdemeta.resolver], {
+        self._patcher = OsPatcher({
             'r': {
                 'groups': {
                     'gr1': {
@@ -309,7 +307,7 @@ class UnitResolverTest(TestCase):
         r = UnitResolver(self.roots)
         assert({
             'type': 'group',
-            'path': pjoin('r', 'groups', 'gr1')
+            'path': P('r')/'groups'/'gr1'
         } == r.identify('gr1'))
 
     def test_group_with_one_dependency(self):
@@ -324,7 +322,7 @@ class UnitResolverTest(TestCase):
 
     def test_level_one_group_resolution_packages(self):
         ur = UnitResolver(self.roots)
-        pr = PackageResolver(pjoin('r', 'groups', 'gr1'))
+        pr = PackageResolver(P('r')/'groups'/'gr1')
 
         gr1 = ur.resolve('gr1', {})
         assert('gr1' == gr1)
@@ -340,9 +338,9 @@ class UnitResolverTest(TestCase):
 class StandaloneResolverTest(TestCase):
     def setUp(self):
         self.roots = [
-            'r',
+            P('r'),
         ]
-        self._patcher = OsPatcher([bdemeta.resolver], {
+        self._patcher = OsPatcher({
             'r': {
                 'adapters': {
                     'p1': {
@@ -367,7 +365,7 @@ class StandaloneResolverTest(TestCase):
         r = UnitResolver(self.roots)
         assert({
             'type': 'package',
-            'path': pjoin('r', 'adapters', 'p1')
+            'path': P('r')/'adapters'/'p1'
         } == r.identify('p1'))
 
     def test_standalone_with_one_dependency(self):
@@ -386,8 +384,8 @@ class StandaloneResolverTest(TestCase):
         p1 = r.resolve('p1', {})
         assert('p1' == p1)
 
-        c1 = pjoin('r', 'adapters', 'p1', 'p1c1.cpp')
-        c2 = pjoin('r', 'adapters', 'p1', 'p1c2.cpp')
+        c1 = P('r')/'adapters'/'p1'/'p1c1.cpp'
+        c2 = P('r')/'adapters'/'p1'/'p1c2.cpp'
         assert([c1, c2] == list(sorted(p1.sources())))
 
     def test_level_two_group_resolution(self):
@@ -402,9 +400,9 @@ class StandaloneResolverTest(TestCase):
 class CMakeResolverTest(TestCase):
     def setUp(self):
         self.roots = [
-            'r',
+            P('r'),
         ]
-        self._patcher = OsPatcher([bdemeta.resolver], {
+        self._patcher = OsPatcher({
             'r': {
                 'thirdparty': {
                     't1': {
@@ -421,20 +419,20 @@ class CMakeResolverTest(TestCase):
         r = UnitResolver(self.roots)
         assert({
             'type': 'cmake',
-            'path': pjoin('r', 'thirdparty', 't1')
+            'path': P('r')/'thirdparty'/'t1'
         } == r.identify('t1'))
 
     def test_cmake_path(self):
         r = UnitResolver(self.roots)
         t = r.resolve('t1', {})
-        assert(pjoin('r', 'thirdparty', 't1') == t.path())
+        assert(P('r')/'thirdparty'/'t1' == t.path())
 
 class NotFoundErrorsTest(TestCase):
     def setUp(self):
         self.roots = [
-            'r',
+            P('r'),
         ]
-        self._patcher = OsPatcher([bdemeta.resolver], {
+        self._patcher = OsPatcher({
             'r': { },
         })
 
@@ -446,7 +444,7 @@ class NotFoundErrorsTest(TestCase):
         caught = False
         try:
             r.identify('foo')
-        except bdemeta.resolver.TargetNotFoundError:
+        except TargetNotFoundError:
             caught = True
         assert(caught)
 
