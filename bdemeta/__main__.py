@@ -48,6 +48,13 @@ def run(output, args):
     if mode == 'walk':
         units = bdemeta.resolver.resolve(resolver, args)
         print(' '.join(units), file=output)
+    elif mode == 'dot':
+        units = bdemeta.resolver.resolve(resolver, args)
+        print('digraph G {')
+        for u in units:
+            for d in resolver.dependencies(u):
+                print(f'   "{u}" -> "{d}"')
+        print('}')
     elif mode == 'cmake':
         options, units = bdemeta.cmake.parse_args(args)
         units = bdemeta.resolver.resolve(resolver, units)
