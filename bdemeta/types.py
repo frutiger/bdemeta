@@ -67,10 +67,10 @@ class Group(Unit):
                 yield driver
 
 class CMake(Unit):
-    def __new__(cls, path, *args):
-        return Unit.__new__(cls, os.path.basename(path))
+    def __new__(cls, name, path, *args):
+        return Unit.__new__(cls, name)
 
-    def __init__(self, path):
+    def __init__(self, name, path):
         Unit.__init__(self, str(self), [])
         self._path = path
 

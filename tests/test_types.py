@@ -105,11 +105,16 @@ class TestGroup(TestCase):
 
 class TestCMake(TestCase):
     def test_str_ness(self):
-        c = CMake(pj('path', 'c'))
+        c = CMake('c', pj('path', 'c'))
         assert('c' == c)
 
     def test_path(self):
-        c = CMake(pj('path', 'c'))
+        c = CMake('c', pj('path', 'c'))
         assert('c' == c)
+        assert(pj('path', 'c') == c.path())
+
+    def test_different_path(self):
+        c = CMake('d', pj('path', 'c'))
+        assert('d' == c)
         assert(pj('path', 'c') == c.path())
 

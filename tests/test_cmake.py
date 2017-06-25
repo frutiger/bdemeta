@@ -8,7 +8,7 @@ import itertools
 import re
 
 from bdemeta.cmake import parse_args, generate_unit, generate
-from bdemeta.types import Package, CMake
+from bdemeta.types import Unit, Package, CMake
 
 def parse_cmake(input):
     whitespace = re.compile('\s+')
@@ -209,7 +209,7 @@ class GenerateUnitTest(TestCase):
         self._test_package('target', pjoin('path', 'target'), [], comps, True)
 
     def test_empty_package_one_dep_no_test(self):
-        deps = ['foo']
+        deps = [Unit('foo', [])]
         self._test_package('target', pjoin('path', 'target'), deps, [], False)
 
     def test_two_empty_packages_no_deps_no_test(self):
@@ -242,7 +242,7 @@ class GenerateUnitTest(TestCase):
 
     def test_cmake_unit(self):
         path = pjoin('foo', 'bar')
-        c = CMake(path)
+        c = CMake('bar', path)
 
         files = {}
         generate([c], get_filestore_writer(files), {})

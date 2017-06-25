@@ -81,6 +81,8 @@ class UnitResolver(object):
                 return path
 
     def _is_cmake(root, name):
+        if root.stem == name and (root/'CMakeLists.txt').is_file():
+            return root
         path = root/'thirdparty'/name
         if path.is_dir() and (path/'CMakeLists.txt').is_file():
             return path
@@ -135,5 +137,5 @@ class UnitResolver(object):
             return bdemeta.types.Package(unit['path'], deps, components)
 
         if unit['type'] == 'cmake':
-            return bdemeta.types.CMake(unit['path'])
+            return bdemeta.types.CMake(unit['name'], unit['path'])
 

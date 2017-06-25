@@ -59,6 +59,15 @@ The specified `<root>`s are added to the target search paths.
 `<root>`s in the configuration.  This makes it easy to build code across
 multiple BDE-style repositories, including your own.
 
+In particular, `bdemeta` will search for targets by name within each `<root>`
+directory:
+
+    * package groups in `<root>/groups/<name>`
+    * standalone pacakges in `<root>/adapters/<name>`
+    * third party CMake packages in:
+        * `<root>/thirdparty/CMakeLists.txt`
+        * `<root>/CMakeLists.txt`
+
 ## License
 
 Copyright (C) 2013 Masud Rahman
