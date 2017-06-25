@@ -11,12 +11,8 @@ import bdemeta.cmake
 import bdemeta.resolver
 import bdemeta.testing
 
-def parse_config(filepath):
-    if filepath.is_file():
-        with filepath.open() as f:
-            return json.load(f)
-    else:
-        return []
+class NoConfigError(RuntimeError):
+    pass
 
 class InvalidArgumentsError(RuntimeError):
     pass
@@ -29,7 +25,13 @@ def file_writer(name, writer):
         writer(f)
 
 def run(output, args):
-    roots = parse_config(pathlib.Path('.bderoots.conf'))
+    config_path = pathlib.Path('.bderoots.conf')
+    try:
+        with config_path.open() as f:
+            roots = json.load(f)
+    except FileNotFoundError:
+        raise NoConfigError(config_path)
+
     roots = list(map(pathlib.Path, roots))
     for root in roots:
         if not root.is_dir():
@@ -73,6 +75,8 @@ def main():
         print(usage.format(e.args[0], os.path.basename(sys.argv[0])),
               file=sys.stderr)
         return -1
+    except NoConfigError as e:
+        print(f'Could not find config at: {e.args[0]}')
     except InvalidPathError as e:
         print(f'Unknown path found in .bderoots.conf: {e.args[0]}')
     except bdemeta.graph.CyclicGraphError as e:

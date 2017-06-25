@@ -4,26 +4,26 @@ from io       import StringIO
 from pathlib  import Path as P
 from unittest import TestCase
 
-from bdemeta.__main__ import parse_config, InvalidArgumentsError, run
+from bdemeta.__main__ import InvalidArgumentsError, NoConfigError, run
 from bdemeta.resolver import resolve, UnitResolver
 from tests.patcher    import OsPatcher
 
 import bdemeta
 
-class ParseConfigTest(TestCase):
+class NoConfigErrorTest(TestCase):
     def setUp(self):
-        self._patcher = OsPatcher({
-            'foo': '{"baz": 9}',
-        })
+        self._patcher = OsPatcher({})
 
     def tearDown(self):
         self._patcher.reset()
 
-    def test_empty_config_for_nonexistent_file(self):
-        assert([] == parse_config(P('bar')))
-
-    def test_parses_file(self):
-        assert({ 'baz': 9 } == parse_config(P('foo')))
+    def test_no_config_error(self):
+        caught = False
+        try:
+            run(StringIO(), ['walk', 'foo'])
+        except NoConfigError as e:
+            caught = True
+        assert(caught)
 
 class InvalidArgumentsErrorTest(TestCase):
     def test_carries_one_attribute(self):
