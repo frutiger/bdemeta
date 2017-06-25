@@ -44,14 +44,20 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
 ## Configuration
 
 `bdemeta` is configured by a JSON configuration file in the current directory
-called `.bderoots.conf`.  The configuration is as follows:
+called `.bdemeta.conf`.  The configuration is as follows:
 
-    [
-        "<root>",
-        ...
-    ]
+    {
+        "roots": [
+            "<root>",
+            ...
+        ],
+        "providers": {
+            "<unit1>: [<unit2>, <unit3>, ...],
+            ...
+        }
+    }
 
-The specified `<root>`s are added to the target search paths.
+The meaning of `<root>` and virtual units are explained below.
 
 ### Roots
 
@@ -67,6 +73,17 @@ directory:
     * third party CMake packages in:
         * `<root>/thirdparty/CMakeLists.txt`
         * `<root>/CMakeLists.txt`
+
+### Target providers
+
+A number of third party targets may be specified by a single `CMakeLists.txt`.
+However, the dependency from a target is on another target (i.e. library), not
+on a directory.  A "target provider" may be used to specify that a directory
+containing a `CMakeLists.txt` will actually provide other targets.
+
+The sample configuration above indicates that the `CMakeLists.txt` in `<unit1>`
+will actually provide `<unit2>` and `<unit3>`.  This allows `bdemeta` to
+consider the targets `<unit2>` and `<unit3>` found once it finds `<unit1>`.
 
 ## License
 

@@ -87,7 +87,8 @@ def generate_unit(target, file_writer, generate_test):
 
         out.write(LINK_LIBRARIES_PROLOGUE.format(**locals()))
         for dependency in target.dependencies():
-            out.write('    {}\n'.format(dependency))
+            if dependency.has_output:
+                out.write('    {}\n'.format(dependency))
         out.write(COMMAND_EPILOGUE)
 
         out.write(INSTALL_HEADERS_PROLOGUE)

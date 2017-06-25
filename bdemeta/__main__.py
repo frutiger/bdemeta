@@ -25,19 +25,19 @@ def file_writer(name, writer):
         writer(f)
 
 def run(output, args):
-    config_path = pathlib.Path('.bderoots.conf')
+    config_path = pathlib.Path('.bdemeta.conf')
     try:
         with config_path.open() as f:
-            roots = json.load(f)
+            config = json.load(f)
     except FileNotFoundError:
         raise NoConfigError(config_path)
 
-    roots = list(map(pathlib.Path, roots))
-    for root in roots:
+    config['roots'] = list(map(pathlib.Path, config['roots']))
+    for root in config['roots']:
         if not root.is_dir():
             raise InvalidPathError(root)
 
-    resolver = bdemeta.resolver.UnitResolver(roots)
+    resolver = bdemeta.resolver.UnitResolver(config)
 
     if len(args) == 0:
         raise InvalidArgumentsError('No mode specified')

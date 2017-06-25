@@ -66,8 +66,19 @@ class PackageResolver(object):
         return bdemeta.types.Package(path, deps, components)
 
 class UnitResolver(object):
-    def __init__(self, roots):
-        self._roots = roots
+    def __init__(self, config):
+        self._roots     = config['roots']
+        self._virtuals  = {}
+        self._providers = set()
+
+        providers = config.get('providers', {})
+        provideds  = set()
+        for provider, all_provided in providers.items():
+            provideds |= set(all_provided)
+            for provided in all_provided:
+                self._virtuals[provided] = provider
+
+        self._providers = set(providers.keys()) - provideds
 
     def _is_group(root, name):
         path = root/'groups'/name
@@ -107,7 +118,14 @@ class UnitResolver(object):
             if path:
                 return {
                     'type': 'cmake',
+                    'name':  name,
                     'path':  path,
+                }
+
+            if name in self._virtuals:
+                return {
+                    'type': 'virtual',
+                    'name':  name,
                 }
 
         raise TargetNotFoundError(name)
@@ -116,6 +134,8 @@ class UnitResolver(object):
         unit = self.identify(name)
 
         result = set()
+        if name in self._virtuals:
+            result.add(self._virtuals[name])
         if unit['type'] == 'group' or unit['type'] == 'package':
             result |= bde_items(unit['path']/unit['type']/(name + '.dep'))
         return result
@@ -130,12 +150,19 @@ class UnitResolver(object):
         if unit['type'] == 'group':
             packages = resolve(PackageResolver(unit['path']),
                                bde_items(unit['path']/'group'/(name + '.mem')))
-            return bdemeta.types.Group(unit['path'], deps, packages)
+            result = bdemeta.types.Group(unit['path'], deps, packages)
 
         if unit['type'] == 'package':
             components = build_components(unit['path'])
-            return bdemeta.types.Package(unit['path'], deps, components)
+            result = bdemeta.types.Package(unit['path'], deps, components)
 
         if unit['type'] == 'cmake':
-            return bdemeta.types.CMake(unit['name'], unit['path'])
+            result = bdemeta.types.CMake(name, unit['path'])
+
+        if unit['type'] == 'virtual':
+            result = bdemeta.types.Unit(name, deps)
+
+        if name in self._providers:
+            result.has_output = False
+        return result
 

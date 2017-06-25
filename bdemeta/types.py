@@ -8,6 +8,7 @@ class Unit(str):
 
     def __init__(self, name, dependencies):
         self._dependencies = dependencies
+        self.has_output    = True
 
     def dependencies(self):
         return self._dependencies

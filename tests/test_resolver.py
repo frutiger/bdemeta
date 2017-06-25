@@ -110,9 +110,11 @@ class ResolveTest(TestCase):
 
 class PackageResolverTest(TestCase):
     def setUp(self):
-        self.roots = [
-            P('r'),
-        ]
+        self.config = {
+            'roots': [
+                P('r'),
+            ]
+        }
         self._patcher = OsPatcher({
             'r': {
                 'g1': {
@@ -269,9 +271,11 @@ class PackageResolverTest(TestCase):
 
 class UnitResolverTest(TestCase):
     def setUp(self):
-        self.roots = [
-            P('r'),
-        ]
+        self.config = {
+            'roots': [
+                P('r'),
+            ]
+        }
         self._patcher = OsPatcher({
             'r': {
                 'groups': {
@@ -307,24 +311,24 @@ class UnitResolverTest(TestCase):
         self._patcher.reset()
 
     def test_group_identification(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         assert({
             'type': 'group',
             'path': P('r')/'groups'/'gr1'
         } == r.identify('gr1'))
 
     def test_group_with_one_dependency(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         assert(set(['gr1']) == r.dependencies('gr2'))
 
     def test_level_one_group_resolution(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
 
         gr1 = r.resolve('gr1', {})
         assert('gr1' == gr1)
 
     def test_level_one_group_resolution_packages(self):
-        ur = UnitResolver(self.roots)
+        ur = UnitResolver(self.config)
         pr = PackageResolver(P('r')/'groups'/'gr1')
 
         gr1 = ur.resolve('gr1', {})
@@ -332,7 +336,7 @@ class UnitResolverTest(TestCase):
         assert(resolve(pr, ['gr1p1', 'gr1p2']) == gr1._packages)
 
     def test_level_two_group_resolution(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
 
         gr1 = r.resolve('gr1', {})
         gr2 = r.resolve('gr2', { 'gr1': gr1 })
@@ -340,9 +344,11 @@ class UnitResolverTest(TestCase):
 
 class StandaloneResolverTest(TestCase):
     def setUp(self):
-        self.roots = [
-            P('r'),
-        ]
+        self.config = {
+            'roots': [
+                P('r'),
+            ]
+        }
         self._patcher = OsPatcher({
             'r': {
                 'adapters': {
@@ -366,24 +372,24 @@ class StandaloneResolverTest(TestCase):
         self._patcher.reset()
 
     def test_adapter_identification(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         assert({
             'type': 'package',
             'path': P('r')/'adapters'/'p1'
         } == r.identify('p1'))
 
     def test_standalone_with_one_dependency(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         assert(set(['p1']) == r.dependencies('p2'))
 
     def test_level_one_standalone_resolution(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
 
         p1 = r.resolve('p1', {})
         assert('p1' == p1)
 
     def test_level_one_standalone_resolution_components(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
 
         p1 = r.resolve('p1', {})
         assert('p1' == p1)
@@ -393,7 +399,7 @@ class StandaloneResolverTest(TestCase):
         assert([c1, c2] == list(sorted(p1.sources())))
 
     def test_level_two_group_resolution(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
 
         p1 = r.resolve('p1', {})
         assert('p1' == p1)
@@ -403,9 +409,11 @@ class StandaloneResolverTest(TestCase):
 
 class CMakeResolverTest(TestCase):
     def setUp(self):
-        self.roots = [
-            P('r'),
-        ]
+        self.config = {
+            'roots': [
+                P('r'),
+            ]
+        }
         self._patcher = OsPatcher({
             'r': {
                 'thirdparty': {
@@ -420,7 +428,7 @@ class CMakeResolverTest(TestCase):
         self._patcher.reset()
 
     def test_cmake_identification(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         assert({
             'type': 'cmake',
             'name': 't1',
@@ -428,15 +436,17 @@ class CMakeResolverTest(TestCase):
         } == r.identify('t1'))
 
     def test_cmake_path(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         t = r.resolve('t1', {})
         assert(P('r')/'thirdparty'/'t1' == t.path())
 
 class NotFoundErrorsTest(TestCase):
     def setUp(self):
-        self.roots = [
-            P('r'),
-        ]
+        self.config = {
+            'roots': [
+                P('r'),
+            ]
+        }
         self._patcher = OsPatcher({
             'r': { },
         })
@@ -445,7 +455,7 @@ class NotFoundErrorsTest(TestCase):
         self._patcher.reset()
 
     def test_non_identification(self):
-        r = UnitResolver(self.roots)
+        r = UnitResolver(self.config)
         caught = False
         try:
             r.identify('foo')
