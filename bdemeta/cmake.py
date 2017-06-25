@@ -16,6 +16,12 @@ LIBRARY_PROLOGUE = '''\
 add_library(
     {target}
 '''
+BUILDING_DEFINITION = '''\
+target_compile_definitions(
+    {target} PRIVATE BUILDING_{target_upper}
+)
+
+'''
 INCLUDE_DIRECTORIES_PROLOGUE = '''\
 target_include_directories(
     {target} PUBLIC
@@ -70,6 +76,9 @@ def generate_unit(target, file_writer, generate_test):
         for component in target.sources():
             out.write('    {}\n'.format(component).replace('\\', '/'))
         out.write(COMMAND_EPILOGUE)
+
+        target_upper = target.upper()
+        out.write(BUILDING_DEFINITION.format(**locals()))
 
         out.write(INCLUDE_DIRECTORIES_PROLOGUE.format(**locals()))
         for include in target.includes():
