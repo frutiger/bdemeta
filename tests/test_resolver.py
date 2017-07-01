@@ -283,17 +283,20 @@ class UnitResolverTest(TestCase):
                         'gr1p1': {
                             'package': {
                                 'gr1p1.dep': '',
+                                'gr1p1.mem': '',
                             },
                         },
                         'gr1p2': {
                             'package': {
                                 'gr1p2.dep': '',
+                                'gr1p2.mem': '',
                             },
                         },
                     },
                     'gr2': {
                         'group': {
                             'gr2.dep': 'gr1',
+                            'gr2.mem': '',
                         },
                     },
                 },
@@ -352,6 +355,7 @@ class StandaloneResolverTest(TestCase):
                     'p2': {
                         'package': {
                             'p2.dep': 'p1',
+                            'p2.mem': '',
                         },
                     },
                 },

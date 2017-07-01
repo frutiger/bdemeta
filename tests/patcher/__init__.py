@@ -24,11 +24,14 @@ class OsPatcher(object):
         pathlib._NormalAccessor.stat = self._real_stat
 
     def _traverse(self, path):
-        path = list(reversed(path.parts))
+        parts = list(reversed(path.parts))
         dir  = self._root
-        while len(path) > 1:
-            dir = dir.get(path.pop(), {})
-        return dir.get(path.pop(), None)
+        while len(parts) > 1:
+            dir = dir.get(parts.pop(), {})
+        result = dir.get(parts.pop(), None)
+        if result is None:
+            raise FileNotFoundError(2, 'No such file or directory', str(path))
+        return result
 
     def _open(self, path, *args, **kwargs):
         return io.StringIO(self._traverse(pathlib.Path(path)))
@@ -38,11 +41,9 @@ class OsPatcher(object):
 
     def _stat(self, path):
         data = self._traverse(path)
-        if data != None and type(data) != dict:
-            mode = stat.S_IFREG
-        elif type(data) == dict:
+        if type(data) == dict:
             mode = stat.S_IFDIR
         else:
-            mode = 0
+            mode = stat.S_IFREG
         return os.stat_result([mode, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
