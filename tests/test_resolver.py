@@ -431,7 +431,6 @@ class CMakeResolverTest(TestCase):
         r = UnitResolver(self.config)
         assert({
             'type': 'cmake',
-            'name': 't1',
             'path': P('r')/'thirdparty'/'t1'
         } == r.identify('t1'))
 

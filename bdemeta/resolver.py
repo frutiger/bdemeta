@@ -124,14 +124,12 @@ class UnitResolver(object):
             if path:
                 return {
                     'type': 'cmake',
-                    'name':  name,
                     'path':  path,
                 }
 
             if name in self._virtuals:
                 return {
                     'type': 'virtual',
-                    'name':  name,
                 }
 
         raise TargetNotFoundError(name)
