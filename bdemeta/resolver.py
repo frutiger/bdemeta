@@ -37,6 +37,12 @@ def build_components(path):
                     'source': file,
                     'driver': None,
                 })
+            elif file.suffix == '.h':
+                components.append({
+                    'header': file,
+                    'source': None,
+                    'driver': None,
+                })
     else:
         for item in bde_items(path/'package'/(name + '.mem')):
             base   = path/item

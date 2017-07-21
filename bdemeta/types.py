@@ -32,7 +32,8 @@ class Package(Unit):
 
     def sources(self):
         for component in self._components:
-            yield component['source']
+            if component['source']:
+                yield component['source']
 
     def drivers(self):
         for component in self._components:
