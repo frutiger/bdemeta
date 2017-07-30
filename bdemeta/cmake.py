@@ -75,10 +75,10 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--generate-test', type=str,
                                                  nargs='*', default=[])
-    options, units = parser.parse_known_args(args)
-    return set(options.generate_test), units
+    options, targets = parser.parse_known_args(args)
+    return set(options.generate_test), targets
 
-def generate_unit(target, file_writer, generate_test):
+def generate_target(target, file_writer, generate_test):
     def write(out):
         out.write('''project({target} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
@@ -127,7 +127,7 @@ def generate(targets, file_writer, test_targets):
         for target in reversed(targets):
             if any([isinstance(target, bdemeta.types.Group),
                     isinstance(target, bdemeta.types.Package)]):
-                generate_unit(target, file_writer, target in test_targets)
+                generate_target(target, file_writer, target in test_targets)
                 out.write('include({target}.cmake)\n'.format(**locals()))
             elif isinstance(target, bdemeta.types.CMake):
                 path = target.path()

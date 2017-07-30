@@ -14,17 +14,17 @@ def bde_items(path):
                 items = items + l.split()
     return set(items)
 
-def lookup_dependencies(name, get_dependencies, resolved_units):
-    units = bdemeta.graph.tsort([name], get_dependencies, sorted)
-    units.remove(name)
-    return [resolved_units[u] for u in units]
+def lookup_dependencies(name, get_dependencies, resolved_targets):
+    targets = bdemeta.graph.tsort([name], get_dependencies, sorted)
+    targets.remove(name)
+    return [resolved_targets[t] for t in targets]
 
 def resolve(resolver, names):
     store = {}
-    units = bdemeta.graph.tsort(names, resolver.dependencies, sorted)
-    for u in reversed(units):
-        store[u] = resolver.resolve(u, store)
-    return [store[u] for u in units]
+    targets = bdemeta.graph.tsort(names, resolver.dependencies, sorted)
+    for t in reversed(targets):
+        store[t] = resolver.resolve(t, store)
+    return [store[t] for t in targets]
 
 def build_components(path):
     name = path.name
@@ -71,7 +71,7 @@ class PackageResolver(object):
                                          resolved_packages)
         return bdemeta.types.Package(path, deps, components)
 
-class UnitResolver(object):
+class TargetResolver(object):
     def __init__(self, config):
         self._roots     = config['roots']
         self._virtuals  = {}
@@ -108,21 +108,21 @@ class UnitResolver(object):
 
     def identify(self, name):
         for root in self._roots:
-            path = UnitResolver._is_group(root, name)
+            path = TargetResolver._is_group(root, name)
             if path:
                 return {
                     'type': 'group',
                     'path':  path,
                 }
 
-            path = UnitResolver._is_standalone(root, name)
+            path = TargetResolver._is_standalone(root, name)
             if path:
                 return {
                     'type': 'package',
                     'path':  path,
                 }
 
-            path = UnitResolver._is_cmake(root, name)
+            path = TargetResolver._is_cmake(root, name)
             if path:
                 return {
                     'type': 'cmake',
@@ -137,13 +137,13 @@ class UnitResolver(object):
         raise TargetNotFoundError(name)
 
     def dependencies(self, name):
-        unit = self.identify(name)
+        target = self.identify(name)
 
         result = set()
         if name in self._virtuals:
             result.add(self._virtuals[name])
-        if unit['type'] == 'group' or unit['type'] == 'package':
-            result |= bde_items(unit['path']/unit['type']/(name + '.dep'))
+        if target['type'] == 'group' or target['type'] == 'package':
+            result |= bde_items(target['path']/target['type']/(name + '.dep'))
         return result
 
     def resolve(self, name, resolved_targets):
@@ -151,22 +151,23 @@ class UnitResolver(object):
                                    self.dependencies,
                                    resolved_targets)
 
-        unit = self.identify(name)
+        target = self.identify(name)
 
-        if unit['type'] == 'group':
-            packages = resolve(PackageResolver(unit['path']),
-                               bde_items(unit['path']/'group'/(name + '.mem')))
-            result = bdemeta.types.Group(unit['path'], deps, packages)
+        if target['type'] == 'group':
+            path = target['path']/'group'/(name + '.mem')
+            packages = resolve(PackageResolver(target['path']),
+                               bde_items(path))
+            result = bdemeta.types.Group(target['path'], deps, packages)
 
-        if unit['type'] == 'package':
-            components = build_components(unit['path'])
-            result = bdemeta.types.Package(unit['path'], deps, components)
+        if target['type'] == 'package':
+            components = build_components(target['path'])
+            result = bdemeta.types.Package(target['path'], deps, components)
 
-        if unit['type'] == 'cmake':
-            result = bdemeta.types.CMake(name, unit['path'])
+        if target['type'] == 'cmake':
+            result = bdemeta.types.CMake(name, target['path'])
 
-        if unit['type'] == 'virtual':
-            result = bdemeta.types.Unit(name, deps)
+        if target['type'] == 'virtual':
+            result = bdemeta.types.Target(name, deps)
 
         if name in self._providers:
             result.has_output = False

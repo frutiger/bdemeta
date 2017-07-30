@@ -37,7 +37,7 @@ def run(output, args):
         if not root.is_dir():
             raise InvalidPathError(root)
 
-    resolver = bdemeta.resolver.UnitResolver(config)
+    resolver = bdemeta.resolver.TargetResolver(config)
 
     if len(args) == 0:
         raise InvalidArgumentsError('No mode specified')
@@ -46,19 +46,19 @@ def run(output, args):
     args = args[1:]
 
     if mode == 'walk':
-        units = bdemeta.resolver.resolve(resolver, args)
-        print(' '.join(units), file=output)
+        targets = bdemeta.resolver.resolve(resolver, args)
+        print(' '.join(targets), file=output)
     elif mode == 'dot':
-        units = bdemeta.resolver.resolve(resolver, args)
+        targets = bdemeta.resolver.resolve(resolver, args)
         print('digraph G {')
-        for u in units:
-            for d in resolver.dependencies(u):
-                print(f'   "{u}" -> "{d}"')
+        for t in targets:
+            for d in resolver.dependencies(t):
+                print(f'   "{t}" -> "{d}"')
         print('}')
     elif mode == 'cmake':
-        options, units = bdemeta.cmake.parse_args(args)
-        units = bdemeta.resolver.resolve(resolver, units)
-        bdemeta.cmake.generate(units, file_writer, options)
+        options, targets = bdemeta.cmake.parse_args(args)
+        targets = bdemeta.resolver.resolve(resolver, targets)
+        bdemeta.cmake.generate(targets, file_writer, options)
     elif mode == 'runtests':
         bdemeta.testing.runtests(args)
     else:
@@ -70,10 +70,10 @@ def main():
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 
-{1} walk     <unit> [<unit>...]
+{1} walk     <target> [<target>...]
   walk and topologically sort dependencies
 
-{1} cmake    <unit> [<unit>...] [-t <unit> ...]
+{1} cmake    <target> [<target>...] [-t <target> ...]
   generate CMake files in the current directory
 
 {1} runtests [<test>...]

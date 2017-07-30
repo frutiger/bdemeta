@@ -2,7 +2,7 @@
 
 import os
 
-class Unit(str):
+class Target(str):
     def __new__(cls, name, *args):
         return str.__new__(cls, name)
 
@@ -14,12 +14,12 @@ class Unit(str):
     def dependencies(self):
         return self._dependencies
 
-class Package(Unit):
+class Package(Target):
     def __new__(cls, path, *args):
-        return Unit.__new__(cls, os.path.basename(path))
+        return Target.__new__(cls, os.path.basename(path))
 
     def __init__(self, path, dependencies, components):
-        Unit.__init__(self, str(self), dependencies)
+        Target.__init__(self, str(self), dependencies)
         self._path       = path
         self._components = components
 
@@ -41,12 +41,12 @@ class Package(Unit):
             if component['driver']:
                 yield component['driver']
 
-class Group(Unit):
+class Group(Target):
     def __new__(cls, path, *args):
-        return Unit.__new__(cls, os.path.basename(path))
+        return Target.__new__(cls, os.path.basename(path))
 
     def __init__(self, path, dependencies, packages):
-        Unit.__init__(self, str(self), dependencies)
+        Target.__init__(self, str(self), dependencies)
         self._path     = path
         self._packages = list(packages)
 
@@ -69,12 +69,12 @@ class Group(Unit):
             for driver in package.drivers():
                 yield driver
 
-class CMake(Unit):
+class CMake(Target):
     def __new__(cls, name, path, *args):
-        return Unit.__new__(cls, name)
+        return Target.__new__(cls, name)
 
     def __init__(self, name, path):
-        Unit.__init__(self, str(self), [])
+        Target.__init__(self, str(self), [])
         self._path = path
 
     def path(self):

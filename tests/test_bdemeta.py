@@ -5,7 +5,7 @@ from pathlib  import Path as P
 from unittest import TestCase
 
 from bdemeta.__main__ import InvalidArgumentsError, NoConfigError, run
-from bdemeta.resolver import resolve, UnitResolver
+from bdemeta.resolver import resolve, TargetResolver
 from tests.patcher    import OsPatcher
 
 import bdemeta
@@ -92,7 +92,7 @@ class RunTest(TestCase):
         f = StringIO()
         run(f, ['walk', 'gr2'])
 
-        r  = UnitResolver(self._config)
+        r  = TargetResolver(self._config)
         us = resolve(r, ['gr2'])
 
         assert(' '.join(us) + '\n' == f.getvalue())

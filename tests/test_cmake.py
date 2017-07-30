@@ -7,8 +7,8 @@ from unittest    import TestCase
 import itertools
 import re
 
-from bdemeta.cmake import parse_args, generate_unit, generate
-from bdemeta.types import Unit, Package, CMake
+from bdemeta.cmake import parse_args, generate_target, generate
+from bdemeta.types import Target, Package, CMake
 
 def parse_cmake(input):
     whitespace = re.compile('\s+')
@@ -93,33 +93,33 @@ def grouper(iterable, n, fillvalue=None):
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 class ParseArgsTest(TestCase):
-    def test_one_unit(self):
-        options, units = parse_args(['foo'])
+    def test_one_target(self):
+        options, targets = parse_args(['foo'])
         assert(set()   == options)
-        assert(['foo'] == units)
+        assert(['foo'] == targets)
 
-    def test_four_units(self):
-        options, units = parse_args(['foo', 'bar', 'bam', 'baz'])
+    def test_four_targets(self):
+        options, targets = parse_args(['foo', 'bar', 'bam', 'baz'])
         assert(set()                        == options)
-        assert(['foo', 'bar', 'bam', 'baz'] == units)
+        assert(['foo', 'bar', 'bam', 'baz'] == targets)
 
     def test_generate_one_test(self):
-        options, units = parse_args(['-t', 'foo'])
+        options, targets = parse_args(['-t', 'foo'])
         assert({'foo'} == options)
-        assert([]      == units)
+        assert([]      == targets)
 
     def test_generate_one_test_longform(self):
-        options, units = parse_args(['--generate-test', 'foo'])
+        options, targets = parse_args(['--generate-test', 'foo'])
         assert({'foo'} == options)
-        assert([]      == units)
+        assert([]      == targets)
 
     def test_generate_one_test_longform_equals(self):
-        options, units = parse_args(['--generate-test=foo'])
+        options, targets = parse_args(['--generate-test=foo'])
         assert({'foo'} == options)
-        assert([]      == units)
+        assert([]      == targets)
 
-class GenerateUnitTest(TestCase):
-    def _check_unit_no_test(self, cmake, name, path, deps, components):
+class GenerateTargetTest(TestCase):
+    def _check_target_no_test(self, cmake, name, path, deps, components):
         _, command = find_command(cmake, 'add_library')
         assert(name == command[0])
         for index, component in enumerate(components):
@@ -152,7 +152,7 @@ class GenerateUnitTest(TestCase):
         assert('DESTINATION' == command[2])
         assert('lib'         == command[3])
 
-    def _check_unit_drivers(self, cmake, name, components):
+    def _check_target_drivers(self, cmake, name, components):
         drivers = [c['driver'] for c in components if c['driver'] != None]
         for driver, commands in zip(drivers, grouper(cmake, 2)):
             exec_command, link_command = commands
@@ -164,7 +164,7 @@ class GenerateUnitTest(TestCase):
             assert(splitext(driver)[0]     == link_command[1][0])
             assert(name                    == link_command[1][1])
 
-    def _check_unit_deps(self, cmake, name, dependencies):
+    def _check_target_deps(self, cmake, name, dependencies):
         _, command = find_command(cmake, 'target_link_libraries')
         assert(name     == command[0])
         assert('PUBLIC' == command[1])
@@ -177,15 +177,15 @@ class GenerateUnitTest(TestCase):
         return cmake[testing_start+1:testing_end]
 
     def _check_package(self, cmake, name, path, deps, comps, is_test):
-        self._check_unit_no_test(cmake, name, path, deps, comps)
+        self._check_target_no_test(cmake, name, path, deps, comps)
         if is_test:
-            self._check_unit_drivers(self._get_testing(cmake), name, comps)
+            self._check_target_drivers(self._get_testing(cmake), name, comps)
 
     def _test_package(self, name, path, deps, comps, is_test):
-        unit = Package(path, deps, comps)
+        target = Package(path, deps, comps)
 
         files = {}
-        generate_unit(unit, get_filestore_writer(files), is_test)
+        generate_target(target, get_filestore_writer(files), is_test)
 
         assert(f'{name}.cmake' in files)
         generated = files[f'{name}.cmake']
@@ -209,7 +209,7 @@ class GenerateUnitTest(TestCase):
         self._test_package('target', pjoin('path', 'target'), [], comps, True)
 
     def test_empty_package_one_dep_no_test(self):
-        deps = [Unit('foo', [])]
+        deps = [Target('foo', [])]
         self._test_package('target', pjoin('path', 'target'), deps, [], False)
 
     def test_two_empty_packages_no_deps_no_test(self):
@@ -240,7 +240,7 @@ class GenerateUnitTest(TestCase):
         assert('include(p1.cmake)' in files['CMakeLists.txt'].getvalue())
         assert('include(p2.cmake)' in files['CMakeLists.txt'].getvalue())
 
-    def test_cmake_unit(self):
+    def test_cmake_target(self):
         path = pjoin('foo', 'bar')
         c = CMake('bar', path)
 

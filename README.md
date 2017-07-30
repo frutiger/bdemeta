@@ -7,8 +7,8 @@ Build and test BDE-style code.
 
 ## Synopsis
 
-`bdemeta walk UNIT [UNIT ...]`<br/>
-`bdemeta cmake UNIT [UNIT ...] [-t TEST_UNIT ...]`<br/>
+`bdemeta walk TARGET [TARGET ...]`<br/>
+`bdemeta cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`<br/>
 `bdemeta runtests [TEST ...]`:
 
 ## Description
@@ -31,12 +31,12 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
 
 `bdemeta` runs in one of four modes as given by the first positional argument:
 
-  * `walk UNIT [UNIT ...]`:<br/>
+  * `walk TARGET [TARGET ...]`:<br/>
     Walk and topologically sort dependencies
 
-  * `cmake UNIT [UNIT ...] [-t TEST_UNIT ...]`:<br/>
+  * `cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`:<br/>
     Generate CMake files in the current directory
-    Also generate test drivers for the specified `TEST_UNIT`s
+    Also generate test drivers for the specified `TEST_TARGET`s
 
   * `runtests [TEST ...]`:<br/>
     Run unit tests
@@ -52,12 +52,12 @@ called `.bdemeta.conf`.  The configuration is as follows:
             ...
         ],
         "providers": {
-            "<unit1>: [<unit2>, <unit3>, ...],
+            "<target1>: [<target2>, <target3>, ...],
             ...
         }
     }
 
-The meaning of `<root>` and virtual units are explained below.
+The meaning of `<root>` and virtual targets are explained below.
 
 ### Roots
 
@@ -81,9 +81,10 @@ However, the dependency from a target is on another target (i.e. library), not
 on a directory.  A "target provider" may be used to specify that a directory
 containing a `CMakeLists.txt` will actually provide other targets.
 
-The sample configuration above indicates that the `CMakeLists.txt` in `<unit1>`
-will actually provide `<unit2>` and `<unit3>`.  This allows `bdemeta` to
-consider the targets `<unit2>` and `<unit3>` found once it finds `<unit1>`.
+The sample configuration above indicates that the `CMakeLists.txt` in
+`<target1>` will actually provide `<target2>` and `<target3>`.  This allows
+`bdemeta` to consider the targets `<target2>` and `<target3>` found once it
+finds `<target1>`.
 
 ## License
 
