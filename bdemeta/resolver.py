@@ -86,6 +86,8 @@ class UnitResolver(object):
 
         self._providers = set(providers.keys()) - provideds
 
+        self._lazily_bound = set(config.get('lazily_bound', []))
+
     def _is_group(root, name):
         path = root/'groups'/name
         if path.is_dir() and (path/'group').is_dir():
@@ -168,5 +170,9 @@ class UnitResolver(object):
 
         if name in self._providers:
             result.has_output = False
+
+        if name in self._lazily_bound:
+            result.lazily_bound = True
+
         return result
 

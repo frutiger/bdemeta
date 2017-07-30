@@ -30,6 +30,15 @@ LINK_LIBRARIES_PROLOGUE = '''\
 target_link_libraries(
     {target} PUBLIC
 '''
+LAZILY_BOUND_FLAG = '''\
+if (APPLE)
+    set_target_properties(
+        {target} PROPERTIES
+        LINK_FLAGS "-undefined dynamic_lookup"
+    )
+endif ()  # APPLE
+
+'''
 INSTALL_HEADERS_PROLOGUE = '''\
 install(
     FILES
@@ -90,6 +99,9 @@ def generate_unit(target, file_writer, generate_test):
             if dependency.has_output:
                 out.write('    {}\n'.format(dependency))
         out.write(COMMAND_EPILOGUE)
+
+        if target.lazily_bound:
+            out.write(LAZILY_BOUND_FLAG.format(**locals()))
 
         out.write(INSTALL_HEADERS_PROLOGUE)
         for header in target.headers():

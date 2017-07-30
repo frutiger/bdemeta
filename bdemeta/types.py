@@ -9,6 +9,7 @@ class Unit(str):
     def __init__(self, name, dependencies):
         self._dependencies = dependencies
         self.has_output    = True
+        self.lazily_bound  = False
 
     def dependencies(self):
         return self._dependencies
