@@ -60,13 +60,13 @@ def run(output, args):
         targets = bdemeta.resolver.resolve(resolver, targets)
         bdemeta.cmake.generate(targets, file_writer, options)
     elif mode == 'runtests':
-        bdemeta.testing.runtests(args)
+        return bdemeta.testing.runtests(args)
     else:
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
 
 def main():
     try:
-        run(sys.stdout, sys.argv[1:])
+        return run(sys.stdout, sys.argv[1:])
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 
