@@ -95,7 +95,7 @@ class TargetResolver(object):
             return path
 
     def _is_standalone(root, name):
-        for category in ['adapters']:
+        for category in {'adapters', 'nodeaddons'}:
             path = root/category/name
             if path.is_dir() and (path/'package').is_dir():
                 return path
