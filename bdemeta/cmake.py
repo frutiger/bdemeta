@@ -45,11 +45,19 @@ install(
 '''
 INSTALL_HEADERS_DESTINATION = '''\
     DESTINATION include
+    COMPONENT development
 '''
 INSTALL_LIBRARY = '''\
 install(
     TARGETS {target}
     DESTINATION lib
+    COMPONENT development
+)
+
+install(
+    TARGETS {target}
+    COMPONENT runtime
+    DESTINATION .
 )
 '''
 COMMAND_EPILOGUE = '''\
@@ -68,6 +76,18 @@ add_test({name} bdemeta runtests ./{name})
 '''
 TESTING_EPILOGUE = '''\
 endif()  # BUILD_TESTING
+
+'''
+INSTALL_TARGETS = '''\
+add_custom_target(
+    install.devel
+    COMMAND ${CMAKE_COMMAND} -DCOMPONENT=devel -P ${CMAKE_BINARY_DIR}/cmake_install.cmake
+)
+
+add_custom_target(
+    install.runtime
+    COMMAND ${CMAKE_COMMAND} -DCOMPONENT=runtime -P ${CMAKE_BINARY_DIR}/cmake_install.cmake
+)
 
 '''
 
@@ -123,6 +143,7 @@ def generate_target(target, file_writer, generate_test):
 def generate(targets, file_writer, test_targets):
     def write(out):
         out.write(LISTS_PROLOGUE.format(**locals()))
+        out.write(INSTALL_TARGETS)
 
         for target in reversed(targets):
             if any([isinstance(target, bdemeta.types.Group),
