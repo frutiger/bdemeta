@@ -52,12 +52,14 @@ called `.bdemeta.conf`.  The configuration is as follows:
             ...
         ],
         "providers": {
-            "<target1>: [<target2>, <target3>, ...],
+            "<target1>: ["<target2>", "<target3>", ...],
             ...
-        }
+        },
+        "runtime_libraries": ["<target4>", "<target5">, ...]
     }
 
-The meaning of `<root>` and virtual targets are explained below.
+The meaning of `<root>` and providers and runtime libraries are explained
+below.
 
 ### Roots
 
@@ -85,6 +87,21 @@ The sample configuration above indicates that the `CMakeLists.txt` in
 `<target1>` will actually provide `<target2>` and `<target3>`.  This allows
 `bdemeta` to consider the targets `<target2>` and `<target3>` found once it
 finds `<target1>`.
+
+Note that the `providers` block is optional.
+
+### Runtime libraries
+
+Some platforms require undefined symbols to be provided at link time.  However,
+when building plug-in libraries, some symbols are expected to be supplied by
+the hosting executable at runtime.  Enumerating the libraries that contain
+symbols that will be supplied at runtime allows `bdemeta` to ensure that any
+targets that depend those libraries are linked allowing undefined symbols.
+
+The sample configuration indicates that any target depending (transitively or
+not) on `<target4>` or `<target5>` should be linked allowing undefined symbols.
+
+Note that the `runtime_libraries` block is optional.
 
 ## License
 

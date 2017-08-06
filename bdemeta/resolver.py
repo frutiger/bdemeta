@@ -87,7 +87,7 @@ class TargetResolver(object):
 
         self._providers = set(providers.keys()) - provideds
 
-        self._lazily_bound = set(config.get('lazily_bound', []))
+        self._runtime_symbols = set(config.get('runtime_symbols', []))
 
     def _is_group(root, name):
         path = root/'groups'/name
@@ -178,7 +178,7 @@ class TargetResolver(object):
         if name in self._providers:
             result.has_output = False
 
-        if name in self._lazily_bound:
+        if any(d in self._runtime_symbols for d in deps):
             result.lazily_bound = True
 
         return result
