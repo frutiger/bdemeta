@@ -10,6 +10,7 @@ class Target(str):
         self._dependencies = dependencies
         self.has_output    = True
         self.lazily_bound  = False
+        self.overrides     = None
 
     def dependencies(self):
         return self._dependencies

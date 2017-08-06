@@ -133,6 +133,8 @@ def generate(targets, file_writer, test_targets):
                 path = target.path()
                 out.write('add_subdirectory({path} {target})\n'.format(
                                                 **locals()).replace('\\', '/'))
+            if target.overrides:
+                out.write(f'include({target.overrides})\n')
 
     file_writer('CMakeLists.txt', write)
 

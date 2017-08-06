@@ -169,6 +169,11 @@ class TargetResolver(object):
         if target['type'] == 'virtual':
             result = bdemeta.types.Target(name, deps)
 
+        if 'path' in target:
+            overrides = target['path']/(name + '.cmake')
+            if overrides.is_file():
+                result.overrides = overrides
+
         if name in self._providers:
             result.has_output = False
 
