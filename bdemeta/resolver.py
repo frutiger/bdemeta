@@ -2,6 +2,7 @@
 
 import bdemeta.graph
 import bdemeta.types
+import pathlib
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -46,9 +47,9 @@ def build_components(path):
     else:
         for item in bde_items(path/'package'/(name + '.mem')):
             base   = path/item
-            header = base.with_suffix('.h')
-            source = base.with_suffix('.cpp')
-            driver = base.with_suffix('.t.cpp')
+            header = pathlib.Path(str(base) + '.h')
+            source = pathlib.Path(str(base) + '.cpp')
+            driver = pathlib.Path(str(base) + '.t.cpp')
             components.append({
                 'header': header,
                 'source': source,
