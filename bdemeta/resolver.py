@@ -51,7 +51,7 @@ def build_components(path):
             source = pathlib.Path(str(base) + '.cpp')
             driver = pathlib.Path(str(base) + '.t.cpp')
             components.append({
-                'header': header,
+                'header': header if header.is_file() else None,
                 'source': source,
                 'driver': driver if driver.is_file() else None,
             })
