@@ -16,9 +16,10 @@ LIBRARY_PROLOGUE = '''\
 add_library(
     {target}
 '''
-BUILDING_DEFINITION = '''\
-target_compile_definitions(
-    {target} PRIVATE BUILDING_{target_upper}
+DEFINE_SYMBOL = '''\
+set_target_properties(
+    {target} PROPERTIES
+    DEFINE_SYMBOL "BUILDING_{target_upper}"
 )
 
 '''
@@ -107,7 +108,7 @@ def generate_target(target, file_writer, generate_test):
         out.write(COMMAND_EPILOGUE)
 
         target_upper = target.upper()
-        out.write(BUILDING_DEFINITION.format(**locals()))
+        out.write(DEFINE_SYMBOL.format(**locals()))
 
         out.write(INCLUDE_DIRECTORIES_PROLOGUE.format(**locals()))
         for include in target.includes():
