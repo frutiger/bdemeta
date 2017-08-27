@@ -136,6 +136,7 @@ class PackageResolverTest(TestCase):
                             'g1p3.mem': 'g1p3_c1',
                         },
                         'g1p3_c1.t.cpp': '',
+                        'g1p3_c1.h':     '',
                     },
                     'g1+p4': {
                         'package': {
