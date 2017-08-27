@@ -51,8 +51,8 @@ INSTALL_HEADERS_DESTINATION = '''\
 INSTALL_LIBRARY = '''\
 install(
     TARGETS {target}
-    DESTINATION lib
     COMPONENT development
+    DESTINATION lib
 )
 
 install(

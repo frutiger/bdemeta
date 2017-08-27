@@ -146,11 +146,27 @@ class GenerateTargetTest(TestCase):
         assert('DESTINATION' == command[index + 0])
         assert('include'     == command[index + 1])
 
-        _, command = find_command(cmake, 'install', ['TARGETS'])
+        _, command = find_command(cmake, 'install', ['TARGETS',
+                                                     name,
+                                                     'COMPONENT',
+                                                     'development'])
         assert('TARGETS'     == command[0])
         assert(name          == command[1])
-        assert('DESTINATION' == command[2])
-        assert('lib'         == command[3])
+        assert('COMPONENT'   == command[2])
+        assert('development' == command[3])
+        assert('DESTINATION' == command[4])
+        assert('lib'         == command[5])
+
+        _, command = find_command(cmake, 'install', ['TARGETS',
+                                                     name,
+                                                     'COMPONENT',
+                                                     'runtime'])
+        assert('TARGETS'     == command[0])
+        assert(name          == command[1])
+        assert('COMPONENT'   == command[2])
+        assert('runtime'     == command[3])
+        assert('DESTINATION' == command[4])
+        assert('.'           == command[5])
 
     def _check_target_drivers(self, cmake, name, components):
         drivers = [c['driver'] for c in components if c['driver'] != None]
