@@ -9,7 +9,7 @@ Build and test BDE-style code.
 
 `bdemeta walk TARGET [TARGET ...]`<br/>
 `bdemeta cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`<br/>
-`bdemeta runtests [TEST ...]`:
+`bdemeta runtests [-v] [TEST ...]`:
 
 ## Description
 
@@ -38,7 +38,7 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
     Generate CMake files in the current directory
     Also generate test drivers for the specified `TEST_TARGET`s
 
-  * `runtests [TEST ...]`:<br/>
+  * `runtests [-v] [TEST ...]`:<br/>
     Run unit tests
 
 ## Configuration

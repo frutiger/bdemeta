@@ -60,7 +60,8 @@ def run(output, args):
         targets = bdemeta.resolver.resolve(resolver, targets)
         bdemeta.cmake.generate(targets, file_writer, options)
     elif mode == 'runtests':
-        return bdemeta.testing.runtests(args)
+        options, tests = bdemeta.testing.parse_args(args)
+        return bdemeta.testing.run_tests(tests, options)
     else:
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
 
@@ -76,7 +77,7 @@ def main():
 {1} cmake    <target> [<target>...] [-t <target> ...]
   generate CMake files in the current directory
 
-{1} runtests [<test>...]
+{1} runtests [-v] [<test>...]
   run unit tests'''
 
         print(usage.format(e.args[0], os.path.basename(sys.argv[0])),
