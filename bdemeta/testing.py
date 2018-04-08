@@ -12,36 +12,46 @@ import sys
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--verbose', action='store_true')
+    for i in range(5):
+        short = '-' + ('v' * (i + 1))
+        long  = ('Very' * i) + 'Verbose'
+        long  = '--' + (long[0].lower() + long[1:])
+        parser.add_argument(short,
+                            long,
+                            action='store_const',
+                            const=i,
+                            dest='verbosity')
     return parser.parse_known_args(args)
 
-def run_test(test, is_verbose):
-    errors = False
-    for case in itertools.count(1):
-        try:
-            command = [test, str(case)]
-            result = subprocess.check_output(command, stderr=subprocess.STDOUT)
-            if is_verbose:
-                print(f'{test}\tCASE:{case}\tPASS')
-        except subprocess.CalledProcessError as e:
-            if e.returncode == 255:
-                break
-            else:
-                output = e.output.decode(locale.getpreferredencoding())
-                message = f'{test}, CASE {case}'
-                message += '\n' + ('=' * len(message)) + '\n'
-                message += output + '\n'
-                sys.stderr.write(message)
-                errors = True
-                if is_verbose:
-                    print(f'{test}\tCASE:{case}\tFAIL:{e.returncode}')
-    return errors
+class Runner:
+    def __init__(self, log, verbosity=None):
+        self._log       = log
+        self._verbosity = verbosity
 
-def run_verbose(test):
-    return run_test(test, True)
-
-def run_silent(test):
-    return run_test(test, False)
+    def __call__(self, test):
+        errors = False
+        for case in itertools.count(1):
+            try:
+                command = [test, str(case)] + ['.'] * self._verbosity
+                result = subprocess.check_output(command,
+                                                 stderr=subprocess.STDOUT)
+                if self._log:
+                    print(f'{test}\tCASE:{case}\tPASS')
+                if self._verbosity:
+                    print(result.decode(locale.getpreferredencoding()))
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 255:
+                    break
+                else:
+                    output = e.output.decode(locale.getpreferredencoding())
+                    message = f'{test}, CASE {case}'
+                    message += '\n' + ('=' * len(message)) + '\n'
+                    message += output + '\n'
+                    sys.stderr.write(message)
+                    errors = True
+                    if self._log:
+                        print(f'{test}\tCASE:{case}\tFAIL:{e.returncode}')
+        return errors
 
 def run_tests(tests, options):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -49,7 +59,10 @@ def run_tests(tests, options):
     if len(tests) == 0:
         tests = glob.glob(os.path.join('.', '*.t'))
 
-    runner = run_verbose if options.verbose else run_silent
+    if options.verbosity == None:
+        runner = Runner(False)
+    else:
+        runner = Runner(True, options.verbosity)
     errors = multiprocessing.Pool().map(runner, sorted(tests))
     return 0 if not any(errors) else -1
 
