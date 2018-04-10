@@ -24,7 +24,7 @@ def parse_args(args):
     return parser.parse_known_args(args)
 
 class Runner:
-    def __init__(self, log, verbosity=None):
+    def __init__(self, log, verbosity):
         self._log       = log
         self._verbosity = verbosity
 
@@ -37,7 +37,7 @@ class Runner:
                                                  stderr=subprocess.STDOUT)
                 if self._log:
                     print(f'{test}\tCASE:{case}\tPASS')
-                if self._verbosity:
+                if self._verbosity > 0:
                     print(result.decode(locale.getpreferredencoding()))
             except subprocess.CalledProcessError as e:
                 if e.returncode == 255:
@@ -59,10 +59,7 @@ def run_tests(tests, options):
     if len(tests) == 0:
         tests = glob.glob(os.path.join('.', '*.t'))
 
-    if options.verbosity == None:
-        runner = Runner(False)
-    else:
-        runner = Runner(True, options.verbosity)
+    runner = Runner(options.verbosity != None, options.verbosity or 0)
     errors = multiprocessing.Pool().map(runner, sorted(tests))
     return 0 if not any(errors) else -1
 
