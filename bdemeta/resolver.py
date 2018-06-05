@@ -147,7 +147,7 @@ class TargetResolver(object):
             result |= bde_items(target['path']/target['type']/(name + '.dep'))
         return result
 
-    def _add_override(self, target, result):
+    def _add_override(self, target, name, result):
         if 'path' in target:
             overrides = target['path']/(name + '.cmake')
             if overrides.is_file():
@@ -165,12 +165,12 @@ class TargetResolver(object):
             packages = resolve(PackageResolver(target['path']),
                                bde_items(path))
             result = bdemeta.types.Group(target['path'], deps, packages)
-            self._add_override(target, result)
+            self._add_override(target, name, result)
 
         if target['type'] == 'package':
             components = build_components(target['path'])
             result = bdemeta.types.Package(target['path'], deps, components)
-            self._add_override(target, result)
+            self._add_override(target, name, result)
 
         if target['type'] == 'cmake':
             result = bdemeta.types.CMake(name, target['path'])
