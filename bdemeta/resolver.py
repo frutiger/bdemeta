@@ -2,12 +2,12 @@
 
 import abc
 from pathlib import Path
-from typing import (Set, List, Callable, Mapping, Optional, Dict, Sequence,
-                    TypeVar, Union, cast, Generic, Any)
-Node  = TypeVar('Node')
+from typing import (Callable, cast, Dict, Generic, List, Mapping, Optional,
+                    Set, Sequence, TypeVar)
+Node = TypeVar('Node')
 
 import bdemeta.graph
-from bdemeta.types import CMake, Group, Identification, Package, Target
+from bdemeta.types import CMake, Config, Group, Identification, Package, Target
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -21,11 +21,11 @@ def bde_items(path: Path) -> Set[str]:
     return set(items)
 
 def lookup_dependencies(name: str,
-                        get_dependencies: Callable[[str], Set[str]],
-                        resolved_targets: Mapping[str, Node]) -> Sequence[Node]:
-    targets = bdemeta.graph.tsort([name], get_dependencies, sorted)
+                        deps: Callable[[str], Set[str]],
+                        seen: Mapping[str, Node]) -> Sequence[Node]:
+    targets = bdemeta.graph.tsort([name], deps, sorted)
     targets.remove(name)
-    return [resolved_targets[t] for t in targets]
+    return [seen[t] for t in targets]
 
 class Resolver(Generic[Node]):
     @abc.abstractmethod
@@ -91,8 +91,7 @@ class PackageResolver(Resolver[Package]):
         return Package(str(path), deps, components)
 
 class TargetResolver(Resolver[Target]):
-    def __init__(self,
-                 config: Dict[str, Union[List[Path], List[str], Dict[str, str]]]) -> None:
+    def __init__(self, config: Config) -> None:
         self._roots                     = cast(List[Path], config['roots'])
         self._virtuals: Dict[str, str]  = {}
         self._providers: Set[str]       = set()
@@ -173,10 +172,8 @@ class TargetResolver(Resolver[Target]):
             if overrides.is_file():
                 target.overrides = str(overrides)
 
-    def resolve(self, name: str, resolved_targets: Dict[str, Target]) -> Target:
-        deps = lookup_dependencies(name,
-                                   self.dependencies,
-                                   resolved_targets)
+    def resolve(self, name: str, seen: Dict[str, Target]) -> Target:
+        deps = lookup_dependencies(name, self.dependencies, seen)
 
         identification = self.identify(name)
 

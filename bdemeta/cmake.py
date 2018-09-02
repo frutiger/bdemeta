@@ -2,7 +2,7 @@
 
 import argparse
 import os
-from typing import List, Tuple, Set, Callable, TextIO, Union
+from typing import Callable, List, Set, TextIO, Tuple, Union
 
 from bdemeta.types import CMake, Group, Package, Target
 BdeTarget = Union[Group, Package]
@@ -101,10 +101,9 @@ def parse_args(args: List[str]) -> Tuple[Set[str], List[str]]:
     options, targets = parser.parse_known_args(args)
     return set(options.generate_test), targets
 
-def generate_target(
-                   target: BdeTarget,
-                   file_writer: Callable[[str, Callable[[TextIO], None]], None],
-                   generate_test: bool) -> None:
+def generate_target(target: BdeTarget,
+                    writer: Callable[[str, Callable[[TextIO], None]], None],
+                    tests:  bool) -> None:
     def write(out: TextIO) -> None:
         out.write('''project({target.name} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
@@ -137,17 +136,17 @@ def generate_target(
 
         out.write(INSTALL_LIBRARY.format(**locals()))
 
-        if generate_test:
+        if tests:
             out.write(TESTING_PROLOGUE)
             for driver in target.drivers():
                 name = os.path.splitext(os.path.basename(driver))[0]
                 out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
             out.write(TESTING_EPILOGUE)
 
-    file_writer(f'{target.name}.cmake', write)
+    writer(f'{target.name}.cmake', write)
 
-def generate(targets: List[Target],
-             file_writer: Callable[[str, Callable[[TextIO], None]], None],
+def generate(targets:      List[Target],
+             writer:       Callable[[str, Callable[[TextIO], None]], None],
              test_targets: Set[str]) -> None:
     def write(out: TextIO) -> None:
         out.write(LISTS_PROLOGUE.format(**locals()))
@@ -155,7 +154,7 @@ def generate(targets: List[Target],
 
         for target in reversed(targets):
             if isinstance(target, Group) or isinstance(target, Package):
-                generate_target(target, file_writer, target in test_targets)
+                generate_target(target, writer, target in test_targets)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
             elif isinstance(target, CMake):
                 path = target.path()
@@ -164,5 +163,5 @@ def generate(targets: List[Target],
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))
 
-    file_writer('CMakeLists.txt', write)
+    writer('CMakeLists.txt', write)
 

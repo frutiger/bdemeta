@@ -5,10 +5,10 @@ import itertools
 import locale
 import multiprocessing
 import os
-import subprocess
 import signal
+import subprocess
 import sys
-from typing import Tuple, Set, List
+from typing import List, Set, Tuple
 
 def runner(test: str) -> Tuple[str, int, Set[int]]:
     num_cases = 0

@@ -2,7 +2,9 @@
 
 import os
 from pathlib import Path
-from typing import Sequence, List, Dict, Iterator, Optional
+from typing import Dict, Iterator, List, Optional, Sequence, Union
+
+Config = Dict[str, Union[List[Path], List[str], Dict[str, str]]]
 
 class Identification:
     def __init__(self, type: str, path: Optional[Path] = None) -> None:

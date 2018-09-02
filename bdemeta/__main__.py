@@ -5,10 +5,10 @@ import json
 import os.path
 import pathlib
 import sys
-from typing import Callable, TextIO, List
+from typing import Callable, List, TextIO
 
-import bdemeta.graph
 import bdemeta.cmake
+import bdemeta.graph
 import bdemeta.resolver
 import bdemeta.testing
 
