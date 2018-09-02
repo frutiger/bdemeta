@@ -36,12 +36,12 @@ def build_components(path):
             if file.suffix == '.c' or file.suffix == '.cpp':
                 components.append({
                     'header': None,
-                    'source': file,
+                    'source': str(file),
                     'driver': None,
                 })
             elif file.suffix == '.h':
                 components.append({
-                    'header': file,
+                    'header': str(file),
                     'source': None,
                     'driver': None,
                 })
@@ -52,9 +52,9 @@ def build_components(path):
             source = Path(str(base) + '.cpp')
             driver = Path(str(base) + '.t.cpp')
             components.append({
-                'header': header if header.is_file() else None,
-                'source': source,
-                'driver': driver if driver.is_file() else None,
+                'header': str(header) if header.is_file() else None,
+                'source': str(source),
+                'driver': str(driver) if driver.is_file() else None,
             })
     return components
 
@@ -71,7 +71,7 @@ class PackageResolver(object):
         deps       = lookup_dependencies(name,
                                          self.dependencies,
                                          resolved_packages)
-        return Package(path, deps, components)
+        return Package(str(path), deps, components)
 
 class TargetResolver(object):
     def __init__(self, config):
@@ -168,16 +168,16 @@ class TargetResolver(object):
             path = target['path']/'group'/(name + '.mem')
             packages = resolve(PackageResolver(target['path']),
                                bde_items(path))
-            result = Group(target['path'], deps, packages)
+            result = Group(str(target['path']), deps, packages)
             self._add_override(target, name, result)
 
         if target['type'] == 'package':
             components = build_components(target['path'])
-            result = Package(target['path'], deps, components)
+            result = Package(str(target['path']), deps, components)
             self._add_override(target, name, result)
 
         if target['type'] == 'cmake':
-            result = CMake(name, target['path'])
+            result = bdemeta.types.CMake(name, str(target['path']))
 
         if target['type'] == 'virtual':
             result = Target(name, deps)

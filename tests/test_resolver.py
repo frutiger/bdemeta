@@ -192,29 +192,29 @@ class PackageResolverTest(TestCase):
     def test_empty_package(self):
         r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1p1', {})
-        assert('g1p1'               == p)
-        assert([]                   == p.dependencies())
-        assert([P('r')/'g1'/'g1p1'] == list(p.includes()))
-        assert([]                   == list(p.sources()))
+        assert('g1p1'                    == p)
+        assert([]                        == p.dependencies())
+        assert([str(P('r')/'g1'/'g1p1')] == list(p.includes()))
+        assert([]                        == list(p.sources()))
 
     def test_one_non_driver_component(self):
         r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1p2', {})
-        assert('g1p2'                             == p)
-        assert([]                                 == p.dependencies())
-        assert([P('r')/'g1'/'g1p2']               == list(p.includes()))
-        assert([P('r')/'g1'/'g1p2'/'g1p2_c1.cpp'] == list(p.sources()))
-        assert([]                                 == list(p.drivers()))
+        assert('g1p2'                                  == p)
+        assert([]                                      == p.dependencies())
+        assert([str(P('r')/'g1'/'g1p2')]               == list(p.includes()))
+        assert([str(P('r')/'g1'/'g1p2'/'g1p2_c1.cpp')] == list(p.sources()))
+        assert([]                                      == list(p.drivers()))
 
     def test_one_driver_component(self):
         r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1p3', {})
-        assert('g1p3'                               == p)
-        assert([]                                   == p.dependencies())
-        assert([P('r')/'g1'/'g1p3']                 == list(p.includes()))
-        assert([P('r')/'g1'/'g1p3'/'g1p3_c1.h']     == list(p.headers()))
-        assert([P('r')/'g1'/'g1p3'/'g1p3_c1.cpp']   == list(p.sources()))
-        assert([P('r')/'g1'/'g1p3'/'g1p3_c1.t.cpp'] == list(p.drivers()))
+        assert('g1p3'                                    == p)
+        assert([]                                        == p.dependencies())
+        assert([str(P('r')/'g1'/'g1p3')]                 == list(p.includes()))
+        assert([str(P('r')/'g1'/'g1p3'/'g1p3_c1.h')]     == list(p.headers()))
+        assert([str(P('r')/'g1'/'g1p3'/'g1p3_c1.cpp')]   == list(p.sources()))
+        assert([str(P('r')/'g1'/'g1p3'/'g1p3_c1.t.cpp')] == list(p.drivers()))
 
     def test_empty_package_with_dependency(self):
         r = PackageResolver(P('r')/'g2')
@@ -231,44 +231,44 @@ class PackageResolverTest(TestCase):
         r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1+p4', {})
 
-        assert('g1+p4'               == p)
-        assert([]                    == p.dependencies())
-        assert([P('r')/'g1'/'g1+p4'] == list(p.includes()))
+        assert('g1+p4'                    == p)
+        assert([]                         == p.dependencies())
+        assert([str(P('r')/'g1'/'g1+p4')] == list(p.includes()))
 
-        assert(2                           == len(list(p.sources())))
-        assert(P('r')/'g1'/'g1+p4'/'a.cpp' in list(p.sources()))
-        assert(P('r')/'g1'/'g1+p4'/'b.cpp' in list(p.sources()))
+        assert(2                                == len(list(p.sources())))
+        assert(str(P('r')/'g1'/'g1+p4'/'a.cpp') in list(p.sources()))
+        assert(str(P('r')/'g1'/'g1+p4'/'b.cpp') in list(p.sources()))
 
     def test_thirdparty_package_lists_cs(self):
         r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1+p5', {})
-        assert('g1+p5'                     == p)
-        assert([]                          == p.dependencies())
-        assert([P('r')/'g1'/'g1+p5']       == list(p.includes()))
-        assert([P('r')/'g1'/'g1+p5'/'a.c'] == list(p.sources()))
+        assert('g1+p5'                          == p)
+        assert([]                               == p.dependencies())
+        assert([str(P('r')/'g1'/'g1+p5')]       == list(p.includes()))
+        assert([str(P('r')/'g1'/'g1+p5'/'a.c')] == list(p.sources()))
 
     def test_thirdparty_package_ignores_non_c_non_cpp(self):
         r = PackageResolver(P('r')/'g1')
         p = r.resolve('g1+p6', {})
-        assert('g1+p6'               == p)
-        assert([]                    == p.dependencies())
-        assert([P('r')/'g1'/'g1+p6'] == list(p.includes()))
-        assert([]                    == list(p.sources()))
+        assert('g1+p6'                    == p)
+        assert([]                         == p.dependencies())
+        assert([str(P('r')/'g1'/'g1+p6')] == list(p.includes()))
+        assert([]                         == list(p.sources()))
 
     def test_level_two_package_has_dependency(self):
         r = PackageResolver(P('r')/'g2')
 
         p1 = r.resolve('g2p1', {})
-        assert('g2p1'               == p1)
-        assert([]                   == p1.dependencies())
-        assert([P('r')/'g2'/'g2p1'] == list(p1.includes()))
-        assert(0                    == len(list(p1.sources())))
+        assert('g2p1'                    == p1)
+        assert([]                        == p1.dependencies())
+        assert([str(P('r')/'g2'/'g2p1')] == list(p1.includes()))
+        assert(0                         == len(list(p1.sources())))
 
         p2 = r.resolve('g2p2', { 'g2p1': p1 })
-        assert('g2p2'               == p2)
-        assert([p1]                 == p2.dependencies())
-        assert([P('r')/'g2'/'g2p2'] == list(p2.includes()))
-        assert([]                   == list(p2.sources()))
+        assert('g2p2'                    == p2)
+        assert([p1]                      == p2.dependencies())
+        assert([str(P('r')/'g2'/'g2p2')] == list(p2.includes()))
+        assert([]                        == list(p2.sources()))
 
 class TargetResolverTest(TestCase):
     def setUp(self):
@@ -397,7 +397,7 @@ class StandaloneResolverTest(TestCase):
 
         c1 = P('r')/'adapters'/'p1'/'p1c1.cpp'
         c2 = P('r')/'adapters'/'p1'/'p1c2.cpp'
-        assert([c1, c2] == list(sorted(p1.sources())))
+        assert([str(c1), str(c2)] == list(sorted(p1.sources())))
 
     def test_level_two_group_resolution(self):
         r = TargetResolver(self.config)
@@ -438,7 +438,7 @@ class CMakeResolverTest(TestCase):
     def test_cmake_path(self):
         r = TargetResolver(self.config)
         t = r.resolve('t1', {})
-        assert(P('r')/'thirdparty'/'t1' == t.path())
+        assert(str(P('r')/'thirdparty'/'t1') == t.path())
 
 class NotFoundErrorsTest(TestCase):
     def setUp(self):
