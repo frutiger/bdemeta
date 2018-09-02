@@ -3,7 +3,12 @@
 from os.path import join as pj
 from unittest import TestCase
 
-from bdemeta.types import Package, Group, CMake
+from bdemeta.types import Target, Package, Group, CMake
+
+class TestTarget(TestCase):
+    def test_overrides_none(self):
+        t = Target('foo', [])
+        assert(None == t.overrides)
 
 class TestPackage(TestCase):
     def test_name(self):

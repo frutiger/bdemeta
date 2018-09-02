@@ -8,8 +8,9 @@ import os
 import subprocess
 import signal
 import sys
+from typing import Tuple, Set, List
 
-def runner(test):
+def runner(test: str) -> Tuple[str, int, Set[int]]:
     num_cases = 0
     errors    = set()
     for case in itertools.count(1):
@@ -25,14 +26,14 @@ def runner(test):
                 errors.add(case)
     return test, num_cases, errors
 
-def trimpad(name, length=40, ellipsis='...'):
+def trimpad(name: str, length: int=40, ellipsis: str='...') -> str:
     max_length = length - len(ellipsis)
     if len(name) > length:
         return name[max_length] + '...'
     else:
         return name[:length] + (' ' * (length - len(name)))
 
-def run_tests(tests):
+def run_tests(tests: List[str]) -> int:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     tests = tests or glob.glob(os.path.join('.', '*.t'))

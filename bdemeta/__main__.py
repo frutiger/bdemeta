@@ -5,6 +5,7 @@ import json
 import os.path
 import pathlib
 import sys
+from typing import Callable, TextIO, List
 
 import bdemeta.graph
 import bdemeta.cmake
@@ -20,11 +21,11 @@ class InvalidArgumentsError(RuntimeError):
 class InvalidPathError(RuntimeError):
     pass
 
-def file_writer(name, writer):
+def file_writer(name: str, writer: Callable[[TextIO], None]) -> None:
     with open(name, 'w') as f:
         writer(f)
 
-def run(output, args):
+def run(output: TextIO, args: List[str]) -> int:
     config_path = pathlib.Path('.bdemeta.conf')
     try:
         with config_path.open() as f:
@@ -65,7 +66,7 @@ def run(output, args):
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
     return 0
 
-def main():
+def main() -> int:
     try:
         return run(sys.stdout, sys.argv[1:])
     except InvalidArgumentsError as e:

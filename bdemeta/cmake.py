@@ -2,8 +2,10 @@
 
 import argparse
 import os
+from typing import List, Tuple, Set, Callable, TextIO, Union
 
-from bdemeta.types import CMake, Group, Package
+from bdemeta.types import CMake, Group, Package, Target
+BdeTarget = Union[Group, Package]
 
 LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
@@ -92,15 +94,18 @@ add_custom_target(
 
 '''
 
-def parse_args(args):
+def parse_args(args: List[str]) -> Tuple[Set[str], List[str]]:
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--generate-test', type=str,
                                                  nargs='*', default=[])
     options, targets = parser.parse_known_args(args)
     return set(options.generate_test), targets
 
-def generate_target(target, file_writer, generate_test):
-    def write(out):
+def generate_target(
+                   target: BdeTarget,
+                   file_writer: Callable[[str, Callable[[TextIO], None]], None],
+                   generate_test: bool) -> None:
+    def write(out: TextIO) -> None:
         out.write('''project({target.name} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
@@ -141,14 +146,15 @@ def generate_target(target, file_writer, generate_test):
 
     file_writer(f'{target.name}.cmake', write)
 
-def generate(targets, file_writer, test_targets):
-    def write(out):
+def generate(targets: List[Target],
+             file_writer: Callable[[str, Callable[[TextIO], None]], None],
+             test_targets: Set[str]) -> None:
+    def write(out: TextIO) -> None:
         out.write(LISTS_PROLOGUE.format(**locals()))
         out.write(INSTALL_TARGETS)
 
         for target in reversed(targets):
-            if any([isinstance(target, Group),
-                    isinstance(target, Package)]):
+            if isinstance(target, Group) or isinstance(target, Package):
                 generate_target(target, file_writer, target in test_targets)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
             elif isinstance(target, CMake):
