@@ -10,11 +10,9 @@ class Identification:
     def __eq__(self, other):
         return (self.type, self.path) == (other.type, other.path)
 
-class Target(str):
-    def __new__(cls, name, *args):
-        return str.__new__(cls, name)
-
+class Target:
     def __init__(self, name, dependencies):
+        self.name          = name
         self._dependencies = dependencies
         self.has_output    = True
         self.lazily_bound  = False
@@ -24,11 +22,8 @@ class Target(str):
         return self._dependencies
 
 class Package(Target):
-    def __new__(cls, path, *args):
-        return Target.__new__(cls, os.path.basename(path))
-
     def __init__(self, path, dependencies, components):
-        Target.__init__(self, str(self), dependencies)
+        Target.__init__(self, os.path.basename(path), dependencies)
         self._path       = path
         self._components = components
 
@@ -51,17 +46,14 @@ class Package(Target):
                 yield component['driver']
 
 class Group(Target):
-    def __new__(cls, path, *args):
-        return Target.__new__(cls, os.path.basename(path))
-
     def __init__(self, path, dependencies, packages):
-        Target.__init__(self, str(self), dependencies)
+        Target.__init__(self, os.path.basename(path), dependencies)
         self._path     = path
         self._packages = list(packages)
 
     def includes(self):
         for package in self._packages:
-            yield os.path.join(self._path, package)
+            yield os.path.join(self._path, package.name)
 
     def headers(self):
         for package in self._packages:
@@ -79,11 +71,8 @@ class Group(Target):
                 yield driver
 
 class CMake(Target):
-    def __new__(cls, name, path, *args):
-        return Target.__new__(cls, name)
-
     def __init__(self, name, path):
-        Target.__init__(self, str(self), [])
+        Target.__init__(self, name, [])
         self._path = path
 
     def path(self):

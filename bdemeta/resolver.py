@@ -175,7 +175,7 @@ class TargetResolver(object):
         if name in self._providers:
             result.has_output = False
 
-        if any(d in self._runtime_libraries for d in deps):
+        if any(d.name in self._runtime_libraries for d in deps):
             result.lazily_bound = True
 
         return result

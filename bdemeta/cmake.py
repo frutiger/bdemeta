@@ -14,27 +14,27 @@ include(CTest)
 '''
 LIBRARY_PROLOGUE = '''\
 add_library(
-    {target}
+    {target.name}
 '''
 DEFINE_SYMBOL = '''\
 set_target_properties(
-    {target} PROPERTIES
+    {target.name} PROPERTIES
     DEFINE_SYMBOL "BUILDING_{target_upper}"
 )
 
 '''
 INCLUDE_DIRECTORIES_PROLOGUE = '''\
 target_include_directories(
-    {target} PUBLIC
+    {target.name} PUBLIC
 '''
 LINK_LIBRARIES_PROLOGUE = '''\
 target_link_libraries(
-    {target} PUBLIC
+    {target.name} PUBLIC
 '''
 LAZILY_BOUND_FLAG = '''\
 if (APPLE)
     set_target_properties(
-        {target} PROPERTIES
+        {target.name} PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup"
     )
 endif ()  # APPLE
@@ -50,13 +50,13 @@ INSTALL_HEADERS_DESTINATION = '''\
 '''
 INSTALL_LIBRARY = '''\
 install(
-    TARGETS {target}
+    TARGETS {target.name}
     COMPONENT development
     DESTINATION lib
 )
 
 install(
-    TARGETS {target}
+    TARGETS {target.name}
     COMPONENT runtime
     DESTINATION .
 )
@@ -71,7 +71,7 @@ if(BUILD_TESTING)
 '''
 TESTING_DRIVER = '''\
 add_executable({name} {driver})
-target_link_libraries({name} {target})
+target_link_libraries({name} {target.name})
 add_test({name} bdemeta runtests ./{name})
 
 '''
@@ -101,13 +101,13 @@ def parse_args(args):
 
 def generate_target(target, file_writer, generate_test):
     def write(out):
-        out.write('''project({target} CXX)\n'''.format(**locals()))
+        out.write('''project({target.name} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
             out.write('    {}\n'.format(component).replace('\\', '/'))
         out.write(COMMAND_EPILOGUE)
 
-        target_upper = target.upper()
+        target_upper = target.name.upper()
         out.write(DEFINE_SYMBOL.format(**locals()))
 
         out.write(INCLUDE_DIRECTORIES_PROLOGUE.format(**locals()))
@@ -118,7 +118,7 @@ def generate_target(target, file_writer, generate_test):
         out.write(LINK_LIBRARIES_PROLOGUE.format(**locals()))
         for dependency in target.dependencies():
             if dependency.has_output:
-                out.write('    {}\n'.format(dependency))
+                out.write('    {}\n'.format(dependency.name))
         out.write(COMMAND_EPILOGUE)
 
         if target.lazily_bound:
@@ -139,7 +139,7 @@ def generate_target(target, file_writer, generate_test):
                 out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
             out.write(TESTING_EPILOGUE)
 
-    file_writer(f'{target}.cmake', write)
+    file_writer(f'{target.name}.cmake', write)
 
 def generate(targets, file_writer, test_targets):
     def write(out):
@@ -150,10 +150,10 @@ def generate(targets, file_writer, test_targets):
             if any([isinstance(target, Group),
                     isinstance(target, Package)]):
                 generate_target(target, file_writer, target in test_targets)
-                out.write('include({target}.cmake)\n'.format(**locals()))
+                out.write('include({target.name}.cmake)\n'.format(**locals()))
             elif isinstance(target, CMake):
                 path = target.path()
-                out.write('add_subdirectory({path} {target})\n'.format(
+                out.write('add_subdirectory({path} {target.name})\n'.format(
                                                 **locals()).replace('\\', '/'))
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))

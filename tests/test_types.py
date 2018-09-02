@@ -6,9 +6,9 @@ from unittest import TestCase
 from bdemeta.types import Package, Group, CMake
 
 class TestPackage(TestCase):
-    def test_str_ness(self):
+    def test_name(self):
         p = Package(pj('path', 'to', 'foo'), ['bar'], [])
-        assert('foo' == p)
+        assert('foo' == p.name)
 
     def test_dependencies(self):
         p = Package(pj('path', 'to', 'foo'), ['bar'], [])
@@ -40,9 +40,9 @@ class TestPackage(TestCase):
         assert([path] == list(p.includes()))
 
 class TestGroup(TestCase):
-    def test_str_ness(self):
+    def test_name(self):
         g = Group(pj('path', 'g'), [], [])
-        assert('g' == g)
+        assert('g' == g.name)
 
     def test_no_package_includes(self):
         g = Group(pj('path', 'g'), [], [])
@@ -104,17 +104,15 @@ class TestGroup(TestCase):
         assert([c1_driver] == list(g.drivers()))
 
 class TestCMake(TestCase):
-    def test_str_ness(self):
+    def test_name(self):
         c = CMake('c', pj('path', 'c'))
-        assert('c' == c)
+        assert('c' == c.name)
 
     def test_path(self):
         c = CMake('c', pj('path', 'c'))
-        assert('c' == c)
         assert(pj('path', 'c') == c.path())
 
     def test_different_path(self):
         c = CMake('d', pj('path', 'c'))
-        assert('d' == c)
         assert(pj('path', 'c') == c.path())
 
