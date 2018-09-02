@@ -63,6 +63,7 @@ def run(output, args):
         return bdemeta.testing.run_tests(args)
     else:
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
+    return 0
 
 def main():
     try:
@@ -93,6 +94,7 @@ def main():
     except bdemeta.resolver.TargetNotFoundError as e:
         print('Could not find target:', e.args[0], file=sys.stderr)
         return -1
+    return 0
 
 if __name__ == '__main__':
     main()

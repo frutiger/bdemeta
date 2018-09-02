@@ -94,12 +94,14 @@ class TargetResolver(object):
         path = root/'groups'/name
         if path.is_dir() and (path/'group').is_dir():
             return path
+        return None
 
     def _is_standalone(root, name):
         for category in {'adapters', 'nodeaddons', 'standalone'}:
             path = root/category/name
             if path.is_dir() and (path/'package').is_dir():
                 return path
+        return None
 
     def _is_cmake(root, name):
         if root.stem == name and (root/'CMakeLists.txt').is_file():
@@ -107,6 +109,7 @@ class TargetResolver(object):
         path = root/'thirdparty'/name
         if path.is_dir() and (path/'CMakeLists.txt').is_file():
             return path
+        return None
 
     def identify(self, name):
         for root in self._roots:
