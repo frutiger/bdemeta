@@ -1,8 +1,9 @@
 # bdemeta.resolver
 
 import bdemeta.graph
-import bdemeta.types
-import pathlib
+
+from pathlib       import Path
+from bdemeta.types import CMake, Group, Package, Target
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -47,9 +48,9 @@ def build_components(path):
     else:
         for item in bde_items(path/'package'/(name + '.mem')):
             base   = path/item
-            header = pathlib.Path(str(base) + '.h')
-            source = pathlib.Path(str(base) + '.cpp')
-            driver = pathlib.Path(str(base) + '.t.cpp')
+            header = Path(str(base) + '.h')
+            source = Path(str(base) + '.cpp')
+            driver = Path(str(base) + '.t.cpp')
             components.append({
                 'header': header if header.is_file() else None,
                 'source': source,
@@ -70,7 +71,7 @@ class PackageResolver(object):
         deps       = lookup_dependencies(name,
                                          self.dependencies,
                                          resolved_packages)
-        return bdemeta.types.Package(path, deps, components)
+        return Package(path, deps, components)
 
 class TargetResolver(object):
     def __init__(self, config):
@@ -164,19 +165,19 @@ class TargetResolver(object):
             path = target['path']/'group'/(name + '.mem')
             packages = resolve(PackageResolver(target['path']),
                                bde_items(path))
-            result = bdemeta.types.Group(target['path'], deps, packages)
+            result = Group(target['path'], deps, packages)
             self._add_override(target, name, result)
 
         if target['type'] == 'package':
             components = build_components(target['path'])
-            result = bdemeta.types.Package(target['path'], deps, components)
+            result = Package(target['path'], deps, components)
             self._add_override(target, name, result)
 
         if target['type'] == 'cmake':
-            result = bdemeta.types.CMake(name, target['path'])
+            result = CMake(name, target['path'])
 
         if target['type'] == 'virtual':
-            result = bdemeta.types.Target(name, deps)
+            result = Target(name, deps)
 
         if name in self._providers:
             result.has_output = False

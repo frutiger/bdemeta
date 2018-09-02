@@ -3,7 +3,7 @@
 import argparse
 import os
 
-import bdemeta.types
+from bdemeta.types import CMake, Group, Package
 
 LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
@@ -147,11 +147,11 @@ def generate(targets, file_writer, test_targets):
         out.write(INSTALL_TARGETS)
 
         for target in reversed(targets):
-            if any([isinstance(target, bdemeta.types.Group),
-                    isinstance(target, bdemeta.types.Package)]):
+            if any([isinstance(target, Group),
+                    isinstance(target, Package)]):
                 generate_target(target, file_writer, target in test_targets)
                 out.write('include({target}.cmake)\n'.format(**locals()))
-            elif isinstance(target, bdemeta.types.CMake):
+            elif isinstance(target, CMake):
                 path = target.path()
                 out.write('add_subdirectory({path} {target})\n'.format(
                                                 **locals()).replace('\\', '/'))
