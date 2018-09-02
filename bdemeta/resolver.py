@@ -114,21 +114,21 @@ class TargetResolver(object):
     def identify(self, name):
         for root in self._roots:
             path = TargetResolver._is_group(root, name)
-            if path:
+            if path is not None:
                 return {
                     'type': 'group',
                     'path':  path,
                 }
 
             path = TargetResolver._is_standalone(root, name)
-            if path:
+            if path is not None:
                 return {
                     'type': 'package',
                     'path':  path,
                 }
 
             path = TargetResolver._is_cmake(root, name)
-            if path:
+            if path is not None:
                 return {
                     'type': 'cmake',
                     'path':  path,
