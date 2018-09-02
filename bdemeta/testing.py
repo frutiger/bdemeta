@@ -16,8 +16,7 @@ def runner(test):
         num_cases += 1
         command    = [test, str(case)]
         try:
-            result = subprocess.check_output(command,
-                                             stderr=subprocess.STDOUT)
+            subprocess.check_output(command, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             if e.returncode == 255:
                 num_cases -= 1
