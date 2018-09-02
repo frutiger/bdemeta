@@ -128,7 +128,11 @@ class GenerateTargetTest(TestCase):
         _, command = find_command(cmake, 'target_include_directories')
         assert(name     == command[0])
         assert('PUBLIC' == command[1])
-        assert(path     == command[2])
+
+        # Note: CMake supports '/' for path separators on Windows (in addition
+        # to Unix), so for simplicity we use '/' universally
+        upath = path.replace('\\', '/')
+        assert(upath    == command[2])
 
         _, command = find_command(cmake, 'target_link_libraries', [name])
         assert(name     == command[0])
@@ -265,5 +269,9 @@ class GenerateTargetTest(TestCase):
 
         assert('CMakeLists.txt' in files)
         cmake = files['CMakeLists.txt'].getvalue()
-        assert(f'add_subdirectory({path} {c})' in cmake)
+
+        # Note: CMake supports '/' for path separators on Windows (in addition
+        # to Unix), so for simplicity we use '/' universally
+        upath = path.replace('\\', '/')
+        assert(f'add_subdirectory({upath} {c})' in cmake)
 
