@@ -3,7 +3,7 @@
 import bdemeta.graph
 
 from pathlib       import Path
-from bdemeta.types import CMake, Group, Package, Target
+from bdemeta.types import CMake, Group, Identification, Package, Target
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -115,29 +115,18 @@ class TargetResolver(object):
         for root in self._roots:
             path = TargetResolver._is_group(root, name)
             if path is not None:
-                return {
-                    'type': 'group',
-                    'path':  path,
-                }
+                return Identification('group', path)
 
             path = TargetResolver._is_standalone(root, name)
             if path is not None:
-                return {
-                    'type': 'package',
-                    'path':  path,
-                }
+                return Identification('package', path)
 
             path = TargetResolver._is_cmake(root, name)
             if path is not None:
-                return {
-                    'type': 'cmake',
-                    'path':  path,
-                }
+                return Identification('cmake', path)
 
             if name in self._virtuals:
-                return {
-                    'type': 'virtual',
-                }
+                return Identification('virtual')
 
         raise TargetNotFoundError(name)
 
@@ -147,39 +136,40 @@ class TargetResolver(object):
         result = set()
         if name in self._virtuals:
             result.add(self._virtuals[name])
-        if target['type'] == 'group' or target['type'] == 'package':
-            result |= bde_items(target['path']/target['type']/(name + '.dep'))
+        if target.type == 'group' or target.type == 'package':
+            assert isinstance(target.path, Path)
+            result |= bde_items(target.path/target.type/(name + '.dep'))
         return result
 
-    def _add_override(self, target, name, result):
-        if 'path' in target:
-            overrides = target['path']/(name + '.cmake')
+    def _add_override(self, identification, name, target):
+        if identification.path is not None:
+            overrides = identification.path/(name + '.cmake')
             if overrides.is_file():
-                result.overrides = overrides
+                target.overrides = str(overrides)
 
     def resolve(self, name, resolved_targets):
         deps = lookup_dependencies(name,
                                    self.dependencies,
                                    resolved_targets)
 
-        target = self.identify(name)
+        identification = self.identify(name)
 
-        if target['type'] == 'group':
-            path = target['path']/'group'/(name + '.mem')
-            packages = resolve(PackageResolver(target['path']),
+        if identification.type == 'group':
+            path = identification.path/'group'/(name + '.mem')
+            packages = resolve(PackageResolver(identification.path),
                                bde_items(path))
-            result = Group(str(target['path']), deps, packages)
-            self._add_override(target, name, result)
+            result = Group(str(identification.path), deps, packages)
+            self._add_override(identification, name, result)
 
-        if target['type'] == 'package':
-            components = build_components(target['path'])
-            result = Package(str(target['path']), deps, components)
-            self._add_override(target, name, result)
+        if identification.type == 'package':
+            components = build_components(identification.path)
+            result = Package(str(identification.path), deps, components)
+            self._add_override(identification, name, result)
 
-        if target['type'] == 'cmake':
-            result = bdemeta.types.CMake(name, str(target['path']))
+        if identification.type == 'cmake':
+            result = bdemeta.types.CMake(name, str(identification.path))
 
-        if target['type'] == 'virtual':
+        if identification.type == 'virtual':
             result = Target(name, deps)
 
         if name in self._providers:

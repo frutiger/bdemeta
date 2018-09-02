@@ -2,6 +2,14 @@
 
 import os
 
+class Identification:
+    def __init__(self, type, path):
+        self.type = type
+        self.path = path
+
+    def __eq__(self, other):
+        return (self.type, self.path) == (other.type, other.path)
+
 class Target(str):
     def __new__(cls, name, *args):
         return str.__new__(cls, name)

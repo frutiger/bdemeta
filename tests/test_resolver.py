@@ -5,6 +5,7 @@ from unittest import TestCase
 
 from bdemeta.resolver import bde_items, resolve, PackageResolver, TargetResolver
 from bdemeta.resolver import TargetNotFoundError
+from bdemeta.types    import Identification
 from tests.patcher    import OsPatcher
 
 class BdeItemsTest(TestCase):
@@ -313,10 +314,8 @@ class TargetResolverTest(TestCase):
 
     def test_group_identification(self):
         r = TargetResolver(self.config)
-        assert({
-            'type': 'group',
-            'path': P('r')/'groups'/'gr1'
-        } == r.identify('gr1'))
+        assert(Identification('group', P('r')/'groups'/'gr1') == \
+                                                             r.identify('gr1'))
 
     def test_group_with_one_dependency(self):
         r = TargetResolver(self.config)
@@ -374,10 +373,8 @@ class StandaloneResolverTest(TestCase):
 
     def test_adapter_identification(self):
         r = TargetResolver(self.config)
-        assert({
-            'type': 'package',
-            'path': P('r')/'adapters'/'p1'
-        } == r.identify('p1'))
+        assert(Identification('package', P('r')/'adapters'/'p1') == \
+                                                              r.identify('p1'))
 
     def test_standalone_with_one_dependency(self):
         r = TargetResolver(self.config)
@@ -430,10 +427,8 @@ class CMakeResolverTest(TestCase):
 
     def test_cmake_identification(self):
         r = TargetResolver(self.config)
-        assert({
-            'type': 'cmake',
-            'path': P('r')/'thirdparty'/'t1'
-        } == r.identify('t1'))
+        assert(Identification('cmake', P('r')/'thirdparty'/'t1') == \
+                                                              r.identify('t1'))
 
     def test_cmake_path(self):
         r = TargetResolver(self.config)
