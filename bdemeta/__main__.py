@@ -56,8 +56,8 @@ def run(output, args):
                 print(f'   "{t}" -> "{d}"')
         print('}')
     elif mode == 'cmake':
-        options, targets = bdemeta.cmake.parse_args(args)
-        targets = bdemeta.resolver.resolve(resolver, targets)
+        options, target_names = bdemeta.cmake.parse_args(args)
+        targets = bdemeta.resolver.resolve(resolver, target_names)
         bdemeta.cmake.generate(targets, file_writer, options)
     elif mode == 'runtests':
         return bdemeta.testing.run_tests(args)
