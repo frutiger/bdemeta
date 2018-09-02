@@ -95,5 +95,5 @@ class RunTest(TestCase):
         r  = TargetResolver(self._config)
         us = resolve(r, ['gr2'])
 
-        assert(' '.join(us) + '\n' == f.getvalue())
+        assert(' '.join(u.name for u in us) + '\n' == f.getvalue())
 

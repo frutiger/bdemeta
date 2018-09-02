@@ -3,8 +3,7 @@ language: python
 python:
   - "3.6"
 install:
-  - pip install coveralls
+  - pip install mypy
 script:
-  coverage run --source=bdemeta -m unittest
-after_success:
-  coveralls
+  - mypy -p bdemeta
+  - python3 -m unittest discover

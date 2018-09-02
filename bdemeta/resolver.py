@@ -1,33 +1,49 @@
 # bdemeta.resolver
 
+import abc
+from pathlib import Path
+from typing import (Callable, cast, Dict, Generic, List, Mapping, Optional,
+                    Set, Sequence, TypeVar)
+Node = TypeVar('Node')
+
 import bdemeta.graph
-import bdemeta.types
-import pathlib
+from bdemeta.types import CMake, Config, Group, Identification, Package, Target
 
 class TargetNotFoundError(RuntimeError):
     pass
 
-def bde_items(path):
-    items = []
+def bde_items(path: Path) -> Set[str]:
+    items: List[str] = []
     with path.open() as items_file:
         for l in items_file:
             if len(l) > 0 and l[0] != '#':
                 items = items + l.split()
     return set(items)
 
-def lookup_dependencies(name, get_dependencies, resolved_targets):
-    targets = bdemeta.graph.tsort([name], get_dependencies, sorted)
+def lookup_dependencies(name: str,
+                        deps: Callable[[str], Set[str]],
+                        seen: Mapping[str, Node]) -> Sequence[Node]:
+    targets = bdemeta.graph.tsort([name], deps, sorted)
     targets.remove(name)
-    return [resolved_targets[t] for t in targets]
+    return [seen[t] for t in targets]
 
-def resolve(resolver, names):
-    store = {}
+class Resolver(Generic[Node]):
+    @abc.abstractmethod
+    def resolve(self, name: str, resolved_nodes: Dict[str, Node]) -> Node:
+        ...
+
+    @abc.abstractmethod
+    def dependencies(self, name:str) -> Set[str]:
+        ...
+
+def resolve(resolver: Resolver[Node], names: List[str]) -> List[Node]:
+    store: Dict[str, Node] = {}
     targets = bdemeta.graph.tsort(names, resolver.dependencies, sorted)
     for t in reversed(targets):
         store[t] = resolver.resolve(t, store)
     return [store[t] for t in targets]
 
-def build_components(path):
+def build_components(path: Path) -> List[Dict[str, Optional[str]]]:
     name = path.name
     components = []
     if '+' in name:
@@ -35,51 +51,54 @@ def build_components(path):
             if file.suffix == '.c' or file.suffix == '.cpp':
                 components.append({
                     'header': None,
-                    'source': file,
+                    'source': str(file),
                     'driver': None,
                 })
             elif file.suffix == '.h':
                 components.append({
-                    'header': file,
+                    'header': str(file),
                     'source': None,
                     'driver': None,
                 })
     else:
         for item in bde_items(path/'package'/(name + '.mem')):
             base   = path/item
-            header = pathlib.Path(str(base) + '.h')
-            source = pathlib.Path(str(base) + '.cpp')
-            driver = pathlib.Path(str(base) + '.t.cpp')
+            header = Path(str(base) + '.h')
+            source = Path(str(base) + '.cpp')
+            driver = Path(str(base) + '.t.cpp')
             components.append({
-                'header': header if header.is_file() else None,
-                'source': source,
-                'driver': driver if driver.is_file() else None,
+                'header': str(header) if header.is_file() else None,
+                'source': str(source),
+                'driver': str(driver) if driver.is_file() else None,
             })
     return components
 
-class PackageResolver(object):
-    def __init__(self, group_path):
+class PackageResolver(Resolver[Package]):
+    def __init__(self, group_path: Path) -> None:
         self._group_path = group_path
 
-    def dependencies(self, name):
+    def dependencies(self, name: str) -> Set[str]:
         return bde_items(self._group_path/name/'package'/(name + '.dep'))
 
-    def resolve(self, name, resolved_packages):
+    def resolve(self,
+                name: str,
+                resolved_packages: Mapping[str, Package]) -> Package:
         path       = self._group_path/name
         components = build_components(path)
         deps       = lookup_dependencies(name,
                                          self.dependencies,
                                          resolved_packages)
-        return bdemeta.types.Package(path, deps, components)
+        return Package(str(path), deps, components)
 
-class TargetResolver(object):
-    def __init__(self, config):
-        self._roots     = config['roots']
-        self._virtuals  = {}
-        self._providers = set()
+class TargetResolver(Resolver[Target]):
+    def __init__(self, config: Config) -> None:
+        self._roots                     = cast(List[Path], config['roots'])
+        self._virtuals: Dict[str, str]  = {}
+        self._providers: Set[str]       = set()
 
         providers = config.get('providers', {})
-        provideds  = set()
+        assert isinstance(providers, dict)
+        provideds: Set[str] = set()
         for provider, all_provided in providers.items():
             provideds |= set(all_provided)
             for provided in all_provided:
@@ -87,101 +106,102 @@ class TargetResolver(object):
 
         self._providers = set(providers.keys()) - provideds
 
-        self._runtime_libraries = set(config.get('runtime_libraries', []))
+        runtime_libs = cast(List[str], config.get('runtime_libraries', []))
+        self._runtime_libraries = set(runtime_libs)
 
-    def _is_group(root, name):
+    @staticmethod
+    def _is_group(root: Path, name: str) -> Optional[Path]:
         path = root/'groups'/name
         if path.is_dir() and (path/'group').is_dir():
             return path
+        return None
 
-    def _is_standalone(root, name):
+    @staticmethod
+    def _is_standalone(root: Path, name: str) -> Optional[Path]:
         for category in {'adapters', 'nodeaddons', 'standalone'}:
             path = root/category/name
             if path.is_dir() and (path/'package').is_dir():
                 return path
+        return None
 
-    def _is_cmake(root, name):
+    @staticmethod
+    def _is_cmake(root: Path, name: str) -> Optional[Path]:
         if root.stem == name and (root/'CMakeLists.txt').is_file():
             return root
         path = root/'thirdparty'/name
         if path.is_dir() and (path/'CMakeLists.txt').is_file():
             return path
+        return None
 
-    def identify(self, name):
+    def identify(self, name: str) -> Identification:
         for root in self._roots:
             path = TargetResolver._is_group(root, name)
-            if path:
-                return {
-                    'type': 'group',
-                    'path':  path,
-                }
+            if path is not None:
+                return Identification('group', path)
 
             path = TargetResolver._is_standalone(root, name)
-            if path:
-                return {
-                    'type': 'package',
-                    'path':  path,
-                }
+            if path is not None:
+                return Identification('package', path)
 
             path = TargetResolver._is_cmake(root, name)
-            if path:
-                return {
-                    'type': 'cmake',
-                    'path':  path,
-                }
+            if path is not None:
+                return Identification('cmake', path)
 
             if name in self._virtuals:
-                return {
-                    'type': 'virtual',
-                }
+                return Identification('virtual')
 
         raise TargetNotFoundError(name)
 
-    def dependencies(self, name):
+    def dependencies(self, name: str) -> Set[str]:
         target = self.identify(name)
 
         result = set()
         if name in self._virtuals:
             result.add(self._virtuals[name])
-        if target['type'] == 'group' or target['type'] == 'package':
-            result |= bde_items(target['path']/target['type']/(name + '.dep'))
+        if target.type == 'group' or target.type == 'package':
+            assert isinstance(target.path, Path)
+            result |= bde_items(target.path/target.type/(name + '.dep'))
         return result
 
-    def _add_override(self, target, name, result):
-        if 'path' in target:
-            overrides = target['path']/(name + '.cmake')
+    @staticmethod
+    def _add_override(identification: Identification,
+                      name: str,
+                      target: Target) -> None:
+        if identification.path is not None:
+            overrides = identification.path/(name + '.cmake')
             if overrides.is_file():
-                result.overrides = overrides
+                target.overrides = str(overrides)
 
-    def resolve(self, name, resolved_targets):
-        deps = lookup_dependencies(name,
-                                   self.dependencies,
-                                   resolved_targets)
+    def resolve(self, name: str, seen: Dict[str, Target]) -> Target:
+        deps = lookup_dependencies(name, self.dependencies, seen)
 
-        target = self.identify(name)
+        identification = self.identify(name)
 
-        if target['type'] == 'group':
-            path = target['path']/'group'/(name + '.mem')
-            packages = resolve(PackageResolver(target['path']),
-                               bde_items(path))
-            result = bdemeta.types.Group(target['path'], deps, packages)
-            self._add_override(target, name, result)
+        result: Target
+        if identification.type == 'group':
+            assert isinstance(identification.path, Path)
+            path = identification.path/'group'/(name + '.mem')
+            packages = resolve(PackageResolver(identification.path),
+                               list(bde_items(path)))
+            result = Group(str(identification.path), deps, packages)
+            TargetResolver._add_override(identification, name, result)
 
-        if target['type'] == 'package':
-            components = build_components(target['path'])
-            result = bdemeta.types.Package(target['path'], deps, components)
-            self._add_override(target, name, result)
+        if identification.type == 'package':
+            assert isinstance(identification.path, Path)
+            components = build_components(identification.path)
+            result = Package(str(identification.path), deps, components)
+            TargetResolver._add_override(identification, name, result)
 
-        if target['type'] == 'cmake':
-            result = bdemeta.types.CMake(name, target['path'])
+        if identification.type == 'cmake':
+            result = bdemeta.types.CMake(name, str(identification.path))
 
-        if target['type'] == 'virtual':
-            result = bdemeta.types.Target(name, deps)
+        if identification.type == 'virtual':
+            result = Target(name, deps)
 
         if name in self._providers:
             result.has_output = False
 
-        if any(d in self._runtime_libraries for d in deps):
+        if any(d.name in self._runtime_libraries for d in deps):
             result.lazily_bound = True
 
         return result

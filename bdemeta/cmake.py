@@ -2,8 +2,10 @@
 
 import argparse
 import os
+from typing import Callable, List, Set, TextIO, Tuple, Union
 
-import bdemeta.types
+from bdemeta.types import CMake, Group, Package, Target
+BdeTarget = Union[Group, Package]
 
 LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
@@ -14,27 +16,27 @@ include(CTest)
 '''
 LIBRARY_PROLOGUE = '''\
 add_library(
-    {target}
+    {target.name}
 '''
 DEFINE_SYMBOL = '''\
 set_target_properties(
-    {target} PROPERTIES
+    {target.name} PROPERTIES
     DEFINE_SYMBOL "BUILDING_{target_upper}"
 )
 
 '''
 INCLUDE_DIRECTORIES_PROLOGUE = '''\
 target_include_directories(
-    {target} PUBLIC
+    {target.name} PUBLIC
 '''
 LINK_LIBRARIES_PROLOGUE = '''\
 target_link_libraries(
-    {target} PUBLIC
+    {target.name} PUBLIC
 '''
 LAZILY_BOUND_FLAG = '''\
 if (APPLE)
     set_target_properties(
-        {target} PROPERTIES
+        {target.name} PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup"
     )
 endif ()  # APPLE
@@ -50,13 +52,13 @@ INSTALL_HEADERS_DESTINATION = '''\
 '''
 INSTALL_LIBRARY = '''\
 install(
-    TARGETS {target}
+    TARGETS {target.name}
     COMPONENT development
     DESTINATION lib
 )
 
 install(
-    TARGETS {target}
+    TARGETS {target.name}
     COMPONENT runtime
     DESTINATION .
 )
@@ -71,7 +73,7 @@ if(BUILD_TESTING)
 '''
 TESTING_DRIVER = '''\
 add_executable({name} {driver})
-target_link_libraries({name} {target})
+target_link_libraries({name} {target.name})
 add_test({name} bdemeta runtests ./{name})
 
 '''
@@ -92,22 +94,24 @@ add_custom_target(
 
 '''
 
-def parse_args(args):
+def parse_args(args: List[str]) -> Tuple[Set[str], List[str]]:
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--generate-test', type=str,
                                                  nargs='*', default=[])
     options, targets = parser.parse_known_args(args)
     return set(options.generate_test), targets
 
-def generate_target(target, file_writer, generate_test):
-    def write(out):
-        out.write('''project({target} CXX)\n'''.format(**locals()))
+def generate_target(target: BdeTarget,
+                    writer: Callable[[str, Callable[[TextIO], None]], None],
+                    tests:  bool) -> None:
+    def write(out: TextIO) -> None:
+        out.write('''project({target.name} CXX)\n'''.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
             out.write('    {}\n'.format(component).replace('\\', '/'))
         out.write(COMMAND_EPILOGUE)
 
-        target_upper = target.upper()
+        target_upper = target.name.upper()
         out.write(DEFINE_SYMBOL.format(**locals()))
 
         out.write(INCLUDE_DIRECTORIES_PROLOGUE.format(**locals()))
@@ -118,7 +122,7 @@ def generate_target(target, file_writer, generate_test):
         out.write(LINK_LIBRARIES_PROLOGUE.format(**locals()))
         for dependency in target.dependencies():
             if dependency.has_output:
-                out.write('    {}\n'.format(dependency))
+                out.write('    {}\n'.format(dependency.name))
         out.write(COMMAND_EPILOGUE)
 
         if target.lazily_bound:
@@ -132,31 +136,32 @@ def generate_target(target, file_writer, generate_test):
 
         out.write(INSTALL_LIBRARY.format(**locals()))
 
-        if generate_test:
+        if tests:
             out.write(TESTING_PROLOGUE)
             for driver in target.drivers():
                 name = os.path.splitext(os.path.basename(driver))[0]
                 out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
             out.write(TESTING_EPILOGUE)
 
-    file_writer(f'{target}.cmake', write)
+    writer(f'{target.name}.cmake', write)
 
-def generate(targets, file_writer, test_targets):
-    def write(out):
+def generate(targets:      List[Target],
+             writer:       Callable[[str, Callable[[TextIO], None]], None],
+             test_targets: Set[str]) -> None:
+    def write(out: TextIO) -> None:
         out.write(LISTS_PROLOGUE.format(**locals()))
         out.write(INSTALL_TARGETS)
 
         for target in reversed(targets):
-            if any([isinstance(target, bdemeta.types.Group),
-                    isinstance(target, bdemeta.types.Package)]):
-                generate_target(target, file_writer, target in test_targets)
-                out.write('include({target}.cmake)\n'.format(**locals()))
-            elif isinstance(target, bdemeta.types.CMake):
+            if isinstance(target, Group) or isinstance(target, Package):
+                generate_target(target, writer, target in test_targets)
+                out.write('include({target.name}.cmake)\n'.format(**locals()))
+            elif isinstance(target, CMake):
                 path = target.path()
-                out.write('add_subdirectory({path} {target})\n'.format(
+                out.write('add_subdirectory({path} {target.name})\n'.format(
                                                 **locals()).replace('\\', '/'))
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))
 
-    file_writer('CMakeLists.txt', write)
+    writer('CMakeLists.txt', write)
 

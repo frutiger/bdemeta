@@ -1,83 +1,93 @@
 # bdemeta.types
 
 import os
+from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Sequence, Union
 
-class Target(str):
-    def __new__(cls, name, *args):
-        return str.__new__(cls, name)
+Config = Dict[str, Union[List[Path], List[str], Dict[str, str]]]
 
-    def __init__(self, name, dependencies):
-        self._dependencies = dependencies
-        self.has_output    = True
-        self.lazily_bound  = False
-        self.overrides     = None
+class Identification:
+    def __init__(self, type: str, path: Optional[Path] = None) -> None:
+        self.type = type
+        self.path = path
 
-    def dependencies(self):
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Identification):
+            return (self.type, self.path) == (other.type, other.path)
+        else:
+            return False
+
+class Target:
+    def __init__(self, name: str, dependencies: Sequence['Target']) -> None:
+        self.name                     = name
+        self._dependencies            = dependencies
+        self.has_output               = True
+        self.lazily_bound             = False
+        self.overrides: Optional[str] = None
+
+    def dependencies(self) -> Sequence['Target']:
         return self._dependencies
 
 class Package(Target):
-    def __new__(cls, path, *args):
-        return Target.__new__(cls, os.path.basename(path))
-
-    def __init__(self, path, dependencies, components):
-        Target.__init__(self, str(self), dependencies)
+    def __init__(self,
+                 path: str,
+                 dependencies: Sequence[Target],
+                 components: List[Dict[str, Optional[str]]]) -> None:
+        Target.__init__(self, os.path.basename(path), dependencies)
         self._path       = path
         self._components = components
 
-    def includes(self):
+    def includes(self) -> Iterator[str]:
         yield self._path
 
-    def headers(self):
+    def headers(self) -> Iterator[str]:
         for component in self._components:
-            if component['header']:
+            if component['header'] is not None:
                 yield component['header']
 
-    def sources(self):
+    def sources(self) -> Iterator[str]:
         for component in self._components:
-            if component['source']:
+            if component['source'] is not None:
                 yield component['source']
 
-    def drivers(self):
+    def drivers(self) -> Iterator[str]:
         for component in self._components:
-            if component['driver']:
+            if component['driver'] is not None:
                 yield component['driver']
 
 class Group(Target):
-    def __new__(cls, path, *args):
-        return Target.__new__(cls, os.path.basename(path))
-
-    def __init__(self, path, dependencies, packages):
-        Target.__init__(self, str(self), dependencies)
+    def __init__(self,
+                 path: str,
+                 dependencies: Sequence[Target],
+                 packages: Sequence[Package]) -> None:
+        Target.__init__(self, os.path.basename(path), dependencies)
         self._path     = path
         self._packages = list(packages)
 
-    def includes(self):
+    def includes(self) -> Iterator[str]:
         for package in self._packages:
-            yield os.path.join(self._path, package)
+            yield os.path.join(self._path, package.name)
 
-    def headers(self):
+    def headers(self) -> Iterator[str]:
         for package in self._packages:
             for header in package.headers():
                 yield header
 
-    def sources(self):
+    def sources(self) -> Iterator[str]:
         for package in self._packages:
             for source in package.sources():
                 yield source
 
-    def drivers(self):
+    def drivers(self) -> Iterator[str]:
         for package in self._packages:
             for driver in package.drivers():
                 yield driver
 
 class CMake(Target):
-    def __new__(cls, name, path, *args):
-        return Target.__new__(cls, name)
-
-    def __init__(self, name, path):
-        Target.__init__(self, str(self), [])
+    def __init__(self, name: str, path: str) -> None:
+        Target.__init__(self, name, [])
         self._path = path
 
-    def path(self):
+    def path(self) -> str:
         return self._path
 

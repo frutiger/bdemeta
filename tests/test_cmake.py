@@ -138,7 +138,7 @@ class GenerateTargetTest(TestCase):
         assert(name     == command[0])
         assert('PUBLIC' == command[1])
         for index, dep in enumerate(deps):
-            assert(dep == command[index + 2])
+            assert(dep.name == command[index + 2])
 
         _, command = find_command(cmake, 'install', ['FILES'])
         assert('FILES'       == command[0])
@@ -273,5 +273,5 @@ class GenerateTargetTest(TestCase):
         # Note: CMake supports '/' for path separators on Windows (in addition
         # to Unix), so for simplicity we use '/' universally
         upath = path.replace('\\', '/')
-        assert(f'add_subdirectory({upath} {c})' in cmake)
+        assert(f'add_subdirectory({upath} {c.name})' in cmake)
 

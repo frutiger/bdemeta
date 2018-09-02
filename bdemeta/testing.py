@@ -5,19 +5,19 @@ import itertools
 import locale
 import multiprocessing
 import os
-import subprocess
 import signal
+import subprocess
 import sys
+from typing import List, Set, Tuple
 
-def runner(test):
+def runner(test: str) -> Tuple[str, int, Set[int]]:
     num_cases = 0
     errors    = set()
     for case in itertools.count(1):
         num_cases += 1
         command    = [test, str(case)]
         try:
-            result = subprocess.check_output(command,
-                                             stderr=subprocess.STDOUT)
+            subprocess.check_output(command, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             if e.returncode == 255:
                 num_cases -= 1
@@ -26,14 +26,14 @@ def runner(test):
                 errors.add(case)
     return test, num_cases, errors
 
-def trimpad(name, length=40, ellipsis='...'):
+def trimpad(name: str, length: int=40, ellipsis: str='...') -> str:
     max_length = length - len(ellipsis)
     if len(name) > length:
         return name[max_length] + '...'
     else:
         return name[:length] + (' ' * (length - len(name)))
 
-def run_tests(tests):
+def run_tests(tests: List[str]) -> int:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     tests = tests or glob.glob(os.path.join('.', '*.t'))

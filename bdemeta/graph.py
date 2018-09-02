@@ -1,14 +1,19 @@
 # bdemeta.graph
 
+from typing import Callable, Iterable, List, Set
+
 class CyclicGraphError(RuntimeError):
-    def __init__(self, cycle):
+    def __init__(self, cycle: Iterable[str]) -> None:
         self.cycle = cycle
 
-def tsort(nodes, adjacencies, normalize=lambda x: x):
-    visited   = set()
-    postorder = []
+Normalize = Callable[[Iterable[str]], Iterable[str]]
+def tsort(nodes:       Iterable[str],
+          adjacencies: Callable[[str], Iterable[str]],
+          normalize:   Normalize=lambda x: x) -> List[str]:
+    visited: Set[str]    = set()
+    postorder: List[str] = []
 
-    def dft(node, stack):
+    def dft(node: str, stack: List[str]) -> None:
         if node in visited:
             return
 

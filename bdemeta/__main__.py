@@ -5,9 +5,10 @@ import json
 import os.path
 import pathlib
 import sys
+from typing import Callable, List, TextIO
 
-import bdemeta.graph
 import bdemeta.cmake
+import bdemeta.graph
 import bdemeta.resolver
 import bdemeta.testing
 
@@ -20,11 +21,11 @@ class InvalidArgumentsError(RuntimeError):
 class InvalidPathError(RuntimeError):
     pass
 
-def file_writer(name, writer):
+def file_writer(name: str, writer: Callable[[TextIO], None]) -> None:
     with open(name, 'w') as f:
         writer(f)
 
-def run(output, args):
+def run(output: TextIO, args: List[str]) -> int:
     config_path = pathlib.Path('.bdemeta.conf')
     try:
         with config_path.open() as f:
@@ -47,24 +48,25 @@ def run(output, args):
 
     if mode == 'walk':
         targets = bdemeta.resolver.resolve(resolver, args)
-        print(' '.join(targets), file=output)
+        print(' '.join(t.name for t in targets), file=output)
     elif mode == 'dot':
         targets = bdemeta.resolver.resolve(resolver, args)
         print('digraph G {')
         for t in targets:
-            for d in resolver.dependencies(t):
+            for d in resolver.dependencies(t.name):
                 print(f'   "{t}" -> "{d}"')
         print('}')
     elif mode == 'cmake':
-        options, targets = bdemeta.cmake.parse_args(args)
-        targets = bdemeta.resolver.resolve(resolver, targets)
+        options, target_names = bdemeta.cmake.parse_args(args)
+        targets = bdemeta.resolver.resolve(resolver, target_names)
         bdemeta.cmake.generate(targets, file_writer, options)
     elif mode == 'runtests':
         return bdemeta.testing.run_tests(args)
     else:
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
+    return 0
 
-def main():
+def main() -> int:
     try:
         return run(sys.stdout, sys.argv[1:])
     except InvalidArgumentsError as e:
@@ -93,6 +95,7 @@ def main():
     except bdemeta.resolver.TargetNotFoundError as e:
         print('Could not find target:', e.args[0], file=sys.stderr)
         return -1
+    return 0
 
 if __name__ == '__main__':
     main()
