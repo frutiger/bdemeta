@@ -4,6 +4,9 @@ python:
   - "3.6"
 install:
   - pip install mypy
+  - pip install coveralls
 script:
   - mypy -p bdemeta -m tests/cmake_parser
-  - python3 -m unittest discover
+  - coverage run --omit="tests/test_*","tests/**__init__.py" -m unittest discover
+after_success:
+  - coveralls
