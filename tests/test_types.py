@@ -3,7 +3,22 @@
 from os.path import join as pj
 from unittest import TestCase
 
-from bdemeta.types import Target, Package, Group, CMake, Pkg
+from bdemeta.types import Target, Package, Group, CMake, Pkg, Identification
+
+class TestIdentification(TestCase):
+    def test_equal_ids(self):
+        id1 = Identification('a')
+        id2 = Identification('a')
+        assert(id1 == id2)
+
+    def test_unequal_ids(self):
+        id1 = Identification('a')
+        id2 = Identification('b')
+        assert(id1 != id2)
+
+    def test_compare_ids_with_non_ids(self):
+        id1 = Identification('a')
+        assert(id1 != 5)
 
 class TestTarget(TestCase):
     def test_overrides_none(self):
