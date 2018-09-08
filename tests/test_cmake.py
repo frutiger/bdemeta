@@ -5,49 +5,11 @@ from os.path     import join as pjoin, splitext
 from unittest    import TestCase
 
 import itertools
-import re
 
-from bdemeta.cmake import parse_args, generate_target, generate
-from bdemeta.types import Target, Package, CMake
+from bdemeta.cmake import parse_args, generate_bde, generate
+from bdemeta.types import Target, Package, CMake, Pkg
 
-def parse_cmake(input):
-    whitespace = re.compile('\s+')
-
-    parsing_item    = False
-    parsing_command = False
-    command, args   = '', []
-    while True:
-        char = input.read(1)
-        if char is '':
-            break
-        if whitespace.match(char):
-            if parsing_item:
-                if parsing_command:
-                    args.append('')
-                else:
-                    command += char
-            parsing_item = False
-        elif char == '(':
-            if parsing_command:
-                raise RuntimeError('Nested command')
-            args.append('')
-            parsing_command = True
-            parsing_item    = False
-        elif char == ')':
-            if not parsing_command:
-                raise RuntimeError('Unexpected ")"')
-            if args[-1] == '':
-                args = args[:-1]
-            yield command, args
-            command, args   = '', []
-            parsing_item    = False
-            parsing_command = False
-        else:
-            if parsing_command:
-                args[-1] += char
-            else:
-                command += char
-            parsing_item = True
+from tests.cmake_parser import lex, find_command, parse
 
 def get_filestore_writer(files):
     def write(path, writer):
@@ -55,36 +17,6 @@ def get_filestore_writer(files):
         writer(files[path])
         files[path].seek(0)
     return write
-
-def partial_match(lhs, rhs):
-    if lhs[0] != rhs[0]:
-        return False
-
-    return all(map(lambda x: x[0] == x[1], zip(lhs[1], rhs[1])))
-
-def find_command(cmake, command, args=None):
-    args = [] if args is None else args
-
-    candidates = []
-    for index, item in enumerate(cmake):
-        if partial_match((command, args), item):
-            candidates.append((index, item[1]))
-
-    if len(candidates) == 0:
-        raise RuntimeError('Predicate ({}, {}) not found'.format(command,
-                                                                 args))
-    if len(candidates) > 1:
-        raise RuntimeError('Ambiguous predicate ({}, {}) yielded {}'.format(
-                                                                   command,
-                                                                   args,
-                                                                   candidates))
-    return candidates[0]
-
-def find_index_after(cmake, index, command):
-    while index < len(cmake):
-        if partial_match(cmake[index], (command, ())):
-            return index
-        index += 1
 
 def grouper(iterable, n, fillvalue=None):
     "Collect data into fixed-length chunks or blocks"
@@ -193,8 +125,7 @@ class GenerateTargetTest(TestCase):
 
     def _get_testing(self, cmake):
         testing_start, _ = find_command(cmake, 'if', ['BUILD_TESTING'])
-        testing_end      = find_index_after(cmake, testing_start, 'endif')
-        return cmake[testing_start+1:testing_end]
+        return parse(iter(cmake[testing_start+1:]))
 
     def _check_package(self, cmake, name, path, deps, comps, is_test):
         self._check_target_no_test(cmake, name, path, deps, comps)
@@ -205,12 +136,12 @@ class GenerateTargetTest(TestCase):
         target = Package(path, deps, comps)
 
         files = {}
-        generate_target(target, get_filestore_writer(files), is_test)
+        generate_bde(target, get_filestore_writer(files), is_test)
 
         assert(f'{name}.cmake' in files)
         generated = files[f'{name}.cmake']
 
-        cmake = list(parse_cmake(generated))
+        cmake = list(lex(generated))
         self._check_package(cmake, name, path, deps, comps, is_test)
 
     def test_empty_package_no_deps_no_test(self):
@@ -251,9 +182,9 @@ class GenerateTargetTest(TestCase):
         generated1 = files['p1.cmake']
         generated2 = files['p2.cmake']
 
-        cmake1 = list(parse_cmake(generated1))
+        cmake1 = list(lex(generated1))
         self._check_package(cmake1, 'p1', 'p1', deps1, comps1, is_test)
-        cmake2 = list(parse_cmake(generated2))
+        cmake2 = list(lex(generated2))
         self._check_package(cmake2, 'p2', 'p2', deps2, comps2, is_test)
 
         assert('CMakeLists.txt' in files)
@@ -274,4 +205,146 @@ class GenerateTargetTest(TestCase):
         # to Unix), so for simplicity we use '/' universally
         upath = path.replace('\\', '/')
         assert(f'add_subdirectory({upath} {c.name})' in cmake)
+
+    def test_no_pkg_config_no_include(self):
+        c = CMake('foo', 'bar')
+
+        files = {}
+        generate([c], get_filestore_writer(files), {})
+
+        assert('CMakeLists.txt' in files)
+        cmake = files['CMakeLists.txt'].getvalue()
+
+        assert('include(FindPkgConfig)' not in cmake)
+
+    def test_pkg_config_has_include(self):
+        p = Pkg('foo', 'bar')
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        assert('CMakeLists.txt' in files)
+        cmake = files['CMakeLists.txt'].getvalue()
+
+        assert('include(FindPkgConfig)' in cmake)
+
+    def test_pkg_config_generates_cmake(self):
+        name    = 'foo'
+        package = 'bar'
+        p = Pkg(name, package)
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        assert('CMakeLists.txt' in files)
+        cmake = files['CMakeLists.txt'].getvalue()
+
+        assert(f'{name}.cmake' in files)
+        assert(f'include({name}.cmake)' in cmake)
+
+    def test_pkg_config_generates_search(self):
+        name    = 'foo'
+        package = 'bar'
+        p = Pkg(name, package)
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        cmake = files[f'{name}.cmake'].getvalue()
+        assert(f'pkg_check_modules({name} REQUIRED {package})' in cmake)
+
+    def test_pkg_config_generates_interface_lib(self):
+        name    = 'foo'
+        package = 'bar'
+        p = Pkg(name, package)
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        cmake = list(lex(files[f'{name}.cmake']))
+        _, command = find_command(cmake, 'add_library')
+        assert(name == command[0])
+        assert('INTERFACE' == command[1])
+
+    def test_pkg_config_generates_shared_props(self):
+        name    = 'foo'
+        package = 'bar'
+        p = Pkg(name, package)
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        cmake = files[f'{name}.cmake']
+        commands = list(lex(cmake))
+        sh_lib_start, _ = find_command(commands, 'if', ['BUILD_SHARED_LIBS'])
+        stmts = parse(iter(commands[sh_lib_start:]))[0]
+
+        shared = { tuple(stmt[0]): (stmt[1], stmt[2]) for stmt in stmts[1] }
+
+        assert((f'{name}_INCLUDE_DIRS',) in shared)
+        includes = shared[(f'{name}_INCLUDE_DIRS',)]
+        assert([] == includes[1])
+        assert(1 == len(includes[0]))
+        include = includes[0][0]
+        assert('target_include_directories' == include[0])
+        assert([name, 'INTERFACE', f'"${{{name}_INCLUDE_DIRS}}"'] == \
+                                                                    include[1])
+
+        assert((f'{name}_LDFLAGS',) in shared)
+        ldflags = shared[(f'{name}_LDFLAGS',)]
+        assert([] == ldflags[1])
+        assert(1 == len(ldflags[0]))
+        ldflag = ldflags[0][0]
+        assert('target_link_libraries' == ldflag[0])
+        assert([name, 'INTERFACE', f'"${{{name}_LDFLAGS}}"'] == ldflag[1])
+
+        assert((f'{name}_CFLAGS_OTHER',) in shared)
+        cflags = shared[(f'{name}_CFLAGS_OTHER',)]
+        assert([] == cflags[1])
+        assert(1 == len(cflags[0]))
+        cflag = cflags[0][0]
+        assert('target_compile_options' == cflag[0])
+        assert([name, 'INTERFACE', f'"${{{name}_CFLAGS_OTHER}}"'] == cflag[1])
+
+    def test_pkg_config_generates_static_props(self):
+        name    = 'foo'
+        package = 'bar'
+        p = Pkg(name, package)
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        cmake = files[f'{name}.cmake']
+        commands = list(lex(cmake))
+        sh_lib_start, _ = find_command(commands, 'if', ['BUILD_SHARED_LIBS'])
+        stmts = parse(iter(commands[sh_lib_start:]))[0]
+
+        static = { tuple(stmt[0]): (stmt[1], stmt[2]) for stmt in stmts[2] }
+
+        assert((f'{name}_STATIC_INCLUDE_DIRS',) in static)
+        includes = static[(f'{name}_STATIC_INCLUDE_DIRS',)]
+        assert([] == includes[1])
+        assert(1 == len(includes[0]))
+        include = includes[0][0]
+        assert('target_include_directories' == include[0])
+        assert([name, 'INTERFACE', f'"${{{name}_STATIC_INCLUDE_DIRS}}"'] == \
+                                                                    include[1])
+
+        assert((f'{name}_STATIC_LDFLAGS',) in static)
+        ldflags = static[(f'{name}_STATIC_LDFLAGS',)]
+        assert([] == ldflags[1])
+        assert(1 == len(ldflags[0]))
+        ldflag = ldflags[0][0]
+        assert('target_link_libraries' == ldflag[0])
+        assert([name, 'INTERFACE', f'"${{{name}_STATIC_LDFLAGS}}"'] == \
+                                                                     ldflag[1])
+
+        assert((f'{name}_STATIC_CFLAGS_OTHER',) in static)
+        cflags = static[(f'{name}_STATIC_CFLAGS_OTHER',)]
+        assert([] == cflags[1])
+        assert(1 == len(cflags[0]))
+        cflag = cflags[0][0]
+        assert('target_compile_options' == cflag[0])
+        assert([name, 'INTERFACE', f'"${{{name}_STATIC_CFLAGS_OTHER}}"'] == \
+                                                                      cflag[1])
 

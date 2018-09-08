@@ -4,9 +4,14 @@ import argparse
 import os
 from typing import Callable, List, Set, TextIO, Tuple, Union
 
-from bdemeta.types import CMake, Group, Package, Target
+from bdemeta.types import CMake, Group, Package, Pkg, Target
 BdeTarget = Union[Group, Package]
 
+Writer = Callable[[str, Callable[[TextIO], None]], None]
+
+PROJECT = '''\
+project({target.name} CXX)
+'''
 LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
 
@@ -49,6 +54,39 @@ install(
 INSTALL_HEADERS_DESTINATION = '''\
     DESTINATION include
     COMPONENT development
+'''
+PKG_CONFIG = '''\
+pkg_check_modules({name} REQUIRED {package})
+
+add_library({name} INTERFACE)
+if(BUILD_SHARED_LIBS)
+    if({name}_INCLUDE_DIRS)
+        target_include_directories({name} INTERFACE
+                                   "${{{name}_INCLUDE_DIRS}}")
+    endif()
+    if({name}_LDFLAGS)
+        target_link_libraries({name} INTERFACE
+                              "${{{name}_LDFLAGS}}")
+    endif()
+    if({name}_CFLAGS_OTHER)
+        target_compile_options({name} INTERFACE
+                               "${{{name}_CFLAGS_OTHER}}")
+    endif()
+else()
+    if({name}_STATIC_INCLUDE_DIRS)
+        target_include_directories({name} INTERFACE
+                                   "${{{name}_STATIC_INCLUDE_DIRS}}")
+    endif()
+    if({name}_STATIC_LDFLAGS)
+        target_link_libraries({name} INTERFACE
+                              "${{{name}_STATIC_LDFLAGS}}")
+    endif()
+    if({name}_STATIC_CFLAGS_OTHER)
+        target_compile_options({name} INTERFACE
+                               "${{{name}_STATIC_CFLAGS_OTHER}}")
+    endif()
+endif()  # BUILD_SHARED_LIBS
+
 '''
 INSTALL_LIBRARY = '''\
 install(
@@ -101,11 +139,9 @@ def parse_args(args: List[str]) -> Tuple[Set[str], List[str]]:
     options, targets = parser.parse_known_args(args)
     return set(options.generate_test), targets
 
-def generate_target(target: BdeTarget,
-                    writer: Callable[[str, Callable[[TextIO], None]], None],
-                    tests:  bool) -> None:
+def generate_bde(target: BdeTarget, writer: Writer, tests:  bool) -> None:
     def write(out: TextIO) -> None:
-        out.write('''project({target.name} CXX)\n'''.format(**locals()))
+        out.write(PROJECT.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
             out.write('    {}\n'.format(component).replace('\\', '/'))
@@ -145,21 +181,35 @@ def generate_target(target: BdeTarget,
 
     writer(f'{target.name}.cmake', write)
 
+def generate_pkg(target: Pkg, writer: Writer) -> None:
+    def write(out: TextIO) -> None:
+        name    = target.name
+        package = target.package
+        out.write(PKG_CONFIG.format(**locals()))
+
+    writer(f'{target.name}.cmake', write)
+
 def generate(targets:      List[Target],
-             writer:       Callable[[str, Callable[[TextIO], None]], None],
+             writer:       Writer,
              test_targets: Set[str]) -> None:
+    uses_pkg_config = any(isinstance(t, Pkg) for t in targets)
     def write(out: TextIO) -> None:
         out.write(LISTS_PROLOGUE.format(**locals()))
         out.write(INSTALL_TARGETS)
+        if uses_pkg_config:
+            out.write('include(FindPkgConfig)\n')
 
         for target in reversed(targets):
             if isinstance(target, Group) or isinstance(target, Package):
-                generate_target(target, writer, target in test_targets)
+                generate_bde(target, writer, target in test_targets)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
             elif isinstance(target, CMake):
                 path = target.path()
                 out.write('add_subdirectory({path} {target.name})\n'.format(
                                                 **locals()).replace('\\', '/'))
+            elif isinstance(target, Pkg):
+                generate_pkg(target, writer)
+                out.write('include({target.name}.cmake)\n'.format(**locals()))
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))
 

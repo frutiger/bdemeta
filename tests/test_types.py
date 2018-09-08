@@ -3,7 +3,7 @@
 from os.path import join as pj
 from unittest import TestCase
 
-from bdemeta.types import Target, Package, Group, CMake
+from bdemeta.types import Target, Package, Group, CMake, Pkg
 
 class TestTarget(TestCase):
     def test_overrides_none(self):
@@ -120,4 +120,13 @@ class TestCMake(TestCase):
     def test_different_path(self):
         c = CMake('d', pj('path', 'c'))
         assert(pj('path', 'c') == c.path())
+
+class TestPkg(TestCase):
+    def test_name(self):
+        p = Pkg('p', None)
+        assert('p' == p.name)
+
+    def test_package_name(self):
+        p = Pkg(None, 'foo')
+        assert('foo' == p.package)
 
