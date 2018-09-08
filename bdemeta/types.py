@@ -7,13 +7,18 @@ from typing import Dict, Iterator, List, Optional, Sequence, Union
 Config = Dict[str, Union[List[Path], List[str], Dict[str, str]]]
 
 class Identification:
-    def __init__(self, type: str, path: Optional[Path] = None) -> None:
-        self.type = type
-        self.path = path
+    def __init__(self,
+                 type:    str,
+                 path:    Optional[Path] = None,
+                 package: Optional[str] = None) -> None:
+        self.type    = type
+        self.path    = path
+        self.package = package
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Identification):
-            return (self.type, self.path) == (other.type, other.path)
+            return (self.type, self.path, self.package) == \
+                                        (other.type, other.path, other.package)
         else:
             return False
 
@@ -90,4 +95,9 @@ class CMake(Target):
 
     def path(self) -> str:
         return self._path
+
+class Pkg(Target):
+    def __init__(self, name: str, package: str) -> None:
+        Target.__init__(self, name, [])
+        self.package = package
 

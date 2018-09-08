@@ -7,7 +7,7 @@ build: off
 test_script:
   - set PATH=C:\Python36
   - python -m pip install mypy
-  - python -m mypy -p bdemeta
+  - python -m mypy -p bdemeta -m tests/cmake_parser
   - python -m unittest discover
 deploy: off
 

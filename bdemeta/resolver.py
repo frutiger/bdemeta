@@ -95,6 +95,8 @@ class TargetResolver(Resolver[Target]):
         self._roots                     = cast(List[Path], config['roots'])
         self._virtuals: Dict[str, str]  = {}
         self._providers: Set[str]       = set()
+        self._pkg_configs               = cast(Dict[str, str],
+                                               config.get('pkg_configs', {}))
 
         providers = config.get('providers', {})
         assert isinstance(providers, dict)
@@ -150,6 +152,9 @@ class TargetResolver(Resolver[Target]):
             if name in self._virtuals:
                 return Identification('virtual')
 
+        if name in self._pkg_configs:
+            return Identification('pkg_config', None, self._pkg_configs[name])
+
         raise TargetNotFoundError(name)
 
     def dependencies(self, name: str) -> Set[str]:
@@ -194,6 +199,10 @@ class TargetResolver(Resolver[Target]):
 
         if identification.type == 'cmake':
             result = bdemeta.types.CMake(name, str(identification.path))
+
+        if identification.type == 'pkg_config':
+            assert isinstance(identification.package, str)
+            result = bdemeta.types.Pkg(name, identification.package)
 
         if identification.type == 'virtual':
             result = Target(name, deps)
