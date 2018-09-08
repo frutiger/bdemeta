@@ -79,7 +79,7 @@ In particular, `bdemeta` will search for targets by name within each `<root>`
 directory:
 
     * package groups in `<root>/groups/<name>`
-    * standalone pacakges in `<root>/adapters/<name>`
+    * standalone pacakges in `<root>/[adapters|nodeaddons|stanadlone]/<name>`
     * third party CMake packages in:
         * `<root>/thirdparty/CMakeLists.txt`
         * `<root>/CMakeLists.txt`
