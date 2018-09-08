@@ -9,8 +9,9 @@ Build and test BDE-style code.
 ## Synopsis
 
 `bdemeta walk TARGET [TARGET ...]`<br/>
+`bdemeta dot TARGET [TARGET ...]`<br/>
 `bdemeta cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`<br/>
-`bdemeta runtests [-v] [TEST ...]`:
+`bdemeta runtests [-v] [TEST ...]`
 
 ## Description
 
@@ -34,6 +35,9 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
 
   * `walk TARGET [TARGET ...]`:<br/>
     Walk and topologically sort dependencies
+
+  * `dot [TARGET ...]`:<br/>
+    Generate a directed graph in the DOT language
 
   * `cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`:<br/>
     Generate CMake files in the current directory

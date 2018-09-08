@@ -79,6 +79,9 @@ def main(args:   List[str] = sys.argv,
 {1} walk     <target> [<target>...]
   walk and topologically sort dependencies
 
+{1} dot      <target> [<target>...]
+  generate a directed graph in the DOT language
+
 {1} cmake    <target> [<target>...] [-t <target> ...]
   generate CMake files in the current directory
 
