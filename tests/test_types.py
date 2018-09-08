@@ -46,6 +46,10 @@ class TestPackage(TestCase):
         p = Package(pj('path', 'to', 'foo'), ['bar'], [{ 'source': 'baz'}])
         assert(['baz'] == list(p.sources()))
 
+    def test_no_sources(self):
+        p = Package(pj('path', 'to', 'foo'), ['bar'], [{ 'source': None }])
+        assert([] == list(p.sources()))
+
     def test_drivers(self):
         p = Package(pj('path', 'to', 'foo'), ['bar'], [{ 'driver': 'baz'}])
         assert(['baz'] == list(p.drivers()))

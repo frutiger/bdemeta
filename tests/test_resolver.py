@@ -161,6 +161,13 @@ class PackageResolverTest(TestCase):
                         },
                         'a.x': '',
                     },
+                    'g1+p7': {
+                        'package': {
+                            'g1+p7.dep': '',
+                            'g1+p7.mem': '',
+                        },
+                        'a.h': '',
+                    },
                 },
                 'g2': {
                     'g2p1': {
@@ -255,6 +262,14 @@ class PackageResolverTest(TestCase):
         assert([]                         == p.dependencies())
         assert([str(P('r')/'g1'/'g1+p6')] == list(p.includes()))
         assert([]                         == list(p.sources()))
+
+    def test_thirdparty_package_with_header(self):
+        r = PackageResolver(P('r')/'g1')
+        p = r.resolve('g1+p7', {})
+        assert('g1+p7'                          == p.name)
+        assert([]                               == p.dependencies())
+        assert([str(P('r')/'g1'/'g1+p7')]       == list(p.includes()))
+        assert([str(P('r')/'g1'/'g1+p7'/'a.h')] == list(p.headers()))
 
     def test_level_two_package_has_dependency(self):
         r = PackageResolver(P('r')/'g2')
@@ -365,6 +380,13 @@ class StandaloneResolverTest(TestCase):
                             'p2.mem': '',
                         },
                     },
+                    'p3': {
+                        'package': {
+                            'p3.dep': '',
+                            'p3.mem': '',
+                        },
+                        'p3.cmake': '',
+                    },
                 },
             },
         })
@@ -406,11 +428,19 @@ class StandaloneResolverTest(TestCase):
         p2 = r.resolve('p2', { 'p1': p1 })
         assert('p2' == p2.name)
 
+    def test_package_cmake_overrides(self):
+        r = TargetResolver(self.config)
+
+        p3 = r.resolve('p3', {})
+        assert('p3' == p3.name)
+        assert(str(P('r')/'adapters'/'p3'/'p3.cmake') == p3.overrides)
+
 class CMakeResolverTest(TestCase):
     def setUp(self):
         self.config = {
             'roots': [
                 P('r'),
+                P('t2'),
             ]
         }
         self._patcher = OsPatcher({
@@ -421,20 +451,57 @@ class CMakeResolverTest(TestCase):
                     },
                 },
             },
+            't2': {
+                'CMakeLists.txt': '',
+            },
         })
 
     def tearDown(self):
         self._patcher.reset()
 
-    def test_cmake_identification(self):
+    def test_thirdparty_cmake_identification(self):
         r = TargetResolver(self.config)
         assert(Identification('cmake', P('r')/'thirdparty'/'t1') == \
                                                               r.identify('t1'))
 
-    def test_cmake_path(self):
+    def test_thirdparty_cmake_path(self):
         r = TargetResolver(self.config)
         t = r.resolve('t1', {})
         assert(str(P('r')/'thirdparty'/'t1') == t.path())
+
+    def test_cmake_identification(self):
+        r = TargetResolver(self.config)
+        assert(Identification('cmake', P('t2')) == r.identify('t2'))
+
+    def test_cmake_path(self):
+        r = TargetResolver(self.config)
+        t = r.resolve('t2', {})
+        assert('t2' == t.path())
+
+class PkgConfigResolverTest(TestCase):
+    def setUp(self):
+        self.config = {
+            'roots': [
+                P('r'),
+            ],
+            'pkg_configs': {
+                'foo': 'bar',
+            },
+        }
+        self._patcher = OsPatcher({
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_pkg_identification(self):
+        r = TargetResolver(self.config)
+        assert(Identification('pkg_config', None, 'bar') == r.identify('foo'))
+
+    def test_pkg_name(self):
+        r = TargetResolver(self.config)
+        t = r.resolve('foo', {})
+        assert('bar' == t.package)
 
 class NotFoundErrorsTest(TestCase):
     def setUp(self):

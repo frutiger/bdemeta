@@ -30,11 +30,11 @@ def lookup_dependencies(name: str,
 class Resolver(Generic[Node]):
     @abc.abstractmethod
     def resolve(self, name: str, resolved_nodes: Dict[str, Node]) -> Node:
-        ...
+        ...  # pragma: no cover
 
     @abc.abstractmethod
     def dependencies(self, name:str) -> Set[str]:
-        ...
+        ...  # pragma: no cover
 
 def resolve(resolver: Resolver[Node], names: List[str]) -> List[Node]:
     store: Dict[str, Node] = {}

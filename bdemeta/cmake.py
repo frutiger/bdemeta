@@ -39,12 +39,12 @@ target_link_libraries(
     {target.name} PUBLIC
 '''
 LAZILY_BOUND_FLAG = '''\
-if (APPLE)
+if(APPLE)
     set_target_properties(
         {target.name} PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup"
     )
-endif ()  # APPLE
+endif()  # APPLE
 
 '''
 INSTALL_HEADERS_PROLOGUE = '''\

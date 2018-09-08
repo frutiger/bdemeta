@@ -191,6 +191,36 @@ class GenerateTargetTest(TestCase):
         assert('include(p1.cmake)' in files['CMakeLists.txt'].getvalue())
         assert('include(p2.cmake)' in files['CMakeLists.txt'].getvalue())
 
+    def test_empty_package_with_override(self):
+        p = Package('p', [], [])
+        p.overrides = 'override.cmake'
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        assert('CMakeLists.txt' in files)
+        assert(f'include({p.overrides})' in files['CMakeLists.txt'].getvalue())
+
+    def test_empty_package_lazily_bound(self):
+        p = Package('p', [], [])
+        p.lazily_bound = True
+
+        files = {}
+        generate([p], get_filestore_writer(files), {})
+
+        assert('p.cmake' in files)
+        commands = list(lex(files['p.cmake']))
+
+        apple_start, _ = find_command(commands, 'if', ['APPLE'])
+        stmts = parse(iter(commands[apple_start:]))[0]
+
+        _, props = find_command(stmts[1], 'set_target_properties')
+        assert(['p',
+                'PROPERTIES',
+                'LINK_FLAGS',
+                '"-undefined',
+                'dynamic_lookup"'] == props)
+
     def test_cmake_target(self):
         path = pjoin('foo', 'bar')
         c = CMake('bar', path)
