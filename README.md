@@ -60,11 +60,14 @@ called `.bdemeta.conf`.  The configuration is as follows:
             "<target1>: ["<target2>", "<target3>", ...],
             ...
         },
-        "runtime_libraries": ["<target4>", "<target5">, ...]
+        "runtime_libraries": ["<target4>", "<target5">, ...],
+        "pkg_configs": {
+            "<target6>": "<pkg1>",
+            ...
+        }
     }
 
-The meaning of `<root>` and providers and runtime libraries are explained
-below.
+The meaning of each block is explained below.
 
 ### Roots
 
@@ -107,6 +110,16 @@ The sample configuration indicates that any target depending (transitively or
 not) on `<target4>` or `<target5>` should be linked allowing undefined symbols.
 
 Note that the `runtime_libraries` block is optional.
+
+### Package Config
+
+A target may have its dependencies defined by the `pkg-config`, already
+available on the system.  The `pkg_configs` block is consulted to map a target
+name `<target6>` to a `pkg-config` package named `<pkg1>`.  This block
+is only consulted if the search through every root as described above has been
+exhausted.
+
+Note that the `pkg_configs` block is optional.
 
 ## License
 
