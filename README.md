@@ -1,6 +1,6 @@
-[![Build Status](https://img.shields.io/travis/frutiger/bdemeta/master.svg?style=flat-square)](https://travis-ci.org/frutiger/bdemeta)
-[![Build Status](https://ci.appveyor.com/api/projects/status/vyv9ytlkmnwotgqx/branch/master?svg=true)](https://ci.appveyor.com/project/frutiger/bdemeta)
-[![Coverage Status](https://coveralls.io/repos/github/frutiger/bdemeta/badge.svg?branch=master)](https://coveralls.io/github/frutiger/bdemeta?branch=master)
+[![Build Status](https://img.shields.io/travis/frutiger/bdemeta/master.svg?style=flat-square&logo=linux&logoColor=white)](https://travis-ci.org/frutiger/bdemeta)
+[![Build Status](https://img.shields.io/appveyor/ci/frutiger/bdemeta/master.svg?style=flat-square&logo=windows)](https://ci.appveyor.com/project/frutiger/bdemeta)
+[![Coverage Status](https://img.shields.io/coveralls/github/frutiger/bdemeta/master.svg?style=flat-square)](https://coveralls.io/github/frutiger/bdemeta?branch=master)
 
 # bdemeta
 
