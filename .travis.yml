@@ -7,6 +7,6 @@ install:
   - pip install coveralls
 script:
   - mypy -p bdemeta -m tests/cmake_parser
-  - coverage run --omit="tests/test_*","tests/**__init__.py" -m unittest discover
+  - coverage run --omit="tests/test_*","tests/**__init__.py" -m unittest
 after_success:
   - coveralls
