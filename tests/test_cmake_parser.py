@@ -1,8 +1,9 @@
 # tests.test_cmake_parser
 
+from io       import StringIO
 from unittest import TestCase
 
-from tests.cmake_parser import parse_if, parse
+from tests.cmake_parser import lex, find_command, parse_if, parse
 
 def mk_cmd(command, *args):
     return (command, list(args))
@@ -12,6 +13,46 @@ def call_parse_if(predicate, *cmds):
 
 def call_parse(*cmds):
     return parse(iter(cmds))
+
+class TestLex(TestCase):
+    def test_nested_command_error(self):
+        text = StringIO("if(if())")
+        error = False
+        try:
+            list(lex(text)) # consume the generator
+        except RuntimeError:
+            error = True
+        assert(error)
+
+    def test_unmatched_close_paren_error(self):
+        text = StringIO("if)")
+        error = False
+        try:
+            list(lex(text)) # consume the generator
+        except RuntimeError:
+            error = True
+        assert(error)
+
+class TestFindCommand(TestCase):
+    def test_command_not_found_error(self):
+        text = StringIO("if()")
+        commands = lex(text)
+        error = False
+        try:
+            find_command(commands, "add_library")
+        except RuntimeError:
+            error = True
+        assert(error)
+
+    def test_ambiguous_command_error(self):
+        text = StringIO("if()\nif()")
+        commands = lex(text)
+        error = False
+        try:
+            find_command(commands, "if")
+        except RuntimeError:
+            error = True
+        assert(error)
 
 class TestParseIf(TestCase):
     def test_empty_if(self):
@@ -52,6 +93,14 @@ class TestParseIf(TestCase):
                              baz,
                              mk_cmd('endif'))
         assert(('check', [foo, ([], [bar], [bam]), baz], []) == node)
+
+    def test_unmatched_endif_error(self):
+        error = False
+        try:
+            call_parse_if('check', mk_cmd('add_library'))
+        except RuntimeError:
+            error = True
+        assert(error)
 
 class TestParse(TestCase):
     def test_empty(self):
