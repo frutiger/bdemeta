@@ -2,10 +2,11 @@
 
 from io       import StringIO
 from pathlib  import Path as P
+from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from bdemeta.__main__ import InvalidArgumentsError, InvalidPathError, \
-                             NoConfigError, run, main
+                             NoConfigError, run, main, file_writer
 from bdemeta.cmake    import generate
 from bdemeta.resolver import resolve, TargetResolver
 from tests.patcher    import OsPatcher
@@ -302,4 +303,15 @@ class NoConfigMainTest(TestCase):
         main([__name__, 'walk', 'p1'], stdout, stderr)
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
+
+class FileWriterTest(TestCase):
+    def test_file_writer(self):
+        content = "hello world"
+        def write(f):
+            f.write(content)
+        with TemporaryDirectory() as d:
+            path = P(d)/'foo'
+            file_writer(path, write)
+            with open(path) as f:
+                assert(f.read() == content)
 
