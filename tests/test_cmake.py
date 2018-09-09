@@ -136,7 +136,9 @@ class GenerateTargetTest(TestCase):
         target = Package(path, deps, comps)
 
         files = {}
-        generate_bde(target, get_filestore_writer(files), is_test)
+        generate([target],
+                 get_filestore_writer(files),
+                 {target.name} if is_test else {})
 
         assert(f'{name}.cmake' in files)
         generated = files[f'{name}.cmake']

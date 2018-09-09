@@ -201,7 +201,7 @@ def generate(targets:      List[Target],
 
         for target in reversed(targets):
             if isinstance(target, Group) or isinstance(target, Package):
-                generate_bde(target, writer, target in test_targets)
+                generate_bde(target, writer, target.name in test_targets)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
             elif isinstance(target, CMake):
                 path = target.path()
