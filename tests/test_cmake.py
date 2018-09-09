@@ -146,6 +146,17 @@ class GenerateTargetTest(TestCase):
         cmake = list(lex(generated))
         self._check_package(cmake, name, path, deps, comps, is_test)
 
+    def test_base_target_causes_error(self):
+        target = Target('t', [])
+
+        files  = {}
+        caught = False
+        try:
+            generate([target], get_filestore_writer(files), {})
+        except RuntimeError:
+            caught = True
+        assert(caught)
+
     def test_empty_package_no_deps_no_test(self):
         self._test_package('target', pjoin('path', 'target'), [], [], False)
 
@@ -202,6 +213,18 @@ class GenerateTargetTest(TestCase):
 
         assert('CMakeLists.txt' in files)
         assert(f'include({p.overrides})' in files['CMakeLists.txt'].getvalue())
+
+    def test_empty_package_with_no_output_dep(self):
+        p1 = Package('p1', [],   [])
+        p2 = Package('p2', [p1], [])
+        p1.has_output = False
+
+        files = {}
+        generate([p1, p2], get_filestore_writer(files), {})
+
+        cmake = list(lex(files['p2.cmake']))
+        _, libs = find_command(cmake, 'target_link_libraries')
+        assert('p1' not in libs)
 
     def test_empty_package_lazily_bound(self):
         p = Package('p', [], [])

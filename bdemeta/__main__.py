@@ -26,21 +26,19 @@ class InvalidArgumentsError(RuntimeError):
 class InvalidPathError(RuntimeError):
     pass
 
+minus_one_rc = subprocess.run(['python',
+                               '-c',
+                               'import sys; sys.exit(-1)']).returncode
+
 def file_writer(name: str, writer: Callable[[TextIO], None]) -> None:
     with open(name, 'w') as f:
         writer(f)
 
 def test_runner(command: List[str]) -> RunResult:
-    # determine how '-1' will be returned by the OS
-    if sys.platform == 'win32':
-        minus_one = 2 ** 32 - 1
-    else:
-        minus_one = 2 ** 8 - 1
-
     try:
         subprocess.check_output(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        if e.returncode == minus_one:
+        if e.returncode == minus_one_rc:
             return RunResult.NO_SUCH_CASE
         else:
             return RunResult.FAILURE
@@ -139,6 +137,6 @@ def main(stdout:  TextIO    = sys.stdout,
         return -1
     return 0
 
-if __name__ == '__main__':  # pragma: no cover
-    main()                  # pragma: no cover
+if __name__ == '__main__':
+    main()
 

@@ -30,11 +30,14 @@ def lookup_dependencies(name: str,
 class Resolver(Generic[Node]):
     @abc.abstractmethod
     def resolve(self, name: str, resolved_nodes: Dict[str, Node]) -> Node:
-        ...  # pragma: no cover
+        '''Resolve a target with the specified 'name' which has its
+        dependencies already resolved and accessible by name in the specified
+        'resolved_nodes'.'''
 
     @abc.abstractmethod
     def dependencies(self, name:str) -> Set[str]:
-        ...  # pragma: no cover
+        '''Return the set of dependency names for a target with the specified
+        'name'.'''
 
 def resolve(resolver: Resolver[Node], names: List[str]) -> List[Node]:
     store: Dict[str, Node] = {}
@@ -172,10 +175,10 @@ class TargetResolver(Resolver[Target]):
     def _add_override(identification: Identification,
                       name: str,
                       target: Target) -> None:
-        if identification.path is not None:
-            overrides = identification.path/(name + '.cmake')
-            if overrides.is_file():
-                target.overrides = str(overrides)
+        assert(identification.path is not None)
+        overrides = identification.path/(name + '.cmake')
+        if overrides.is_file():
+            target.overrides = str(overrides)
 
     def resolve(self, name: str, seen: Dict[str, Target]) -> Target:
         deps = lookup_dependencies(name, self.dependencies, seen)

@@ -1,7 +1,6 @@
 # bdemeta.testing
 
 import enum
-import itertools
 import multiprocessing
 from typing import Callable, List, Set, TextIO, Tuple
 
@@ -36,13 +35,15 @@ def trim(value: str, max_length: int, trail: str='...') -> str:
 def run_one(args: Tuple[Runner, str]) -> Tuple[str, Set[int]]:
     runner, test = args
     errors = set()
-    for case in itertools.count(1):
+    case   = 1
+    while True:
         command = [test, str(case)]
         result  = runner(command)
         if result == RunResult.FAILURE:
             errors.add(case)
         elif result == RunResult.NO_SUCH_CASE:
             break
+        case += 1
     return test, errors
 
 def run_tests(stdout:  TextIO,

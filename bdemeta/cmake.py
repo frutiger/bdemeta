@@ -210,6 +210,9 @@ def generate(targets:      List[Target],
             elif isinstance(target, Pkg):
                 generate_pkg(target, writer)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
+            else:
+                raise RuntimeError('Unknown target type: ' + str(type(target)))
+
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))
 
