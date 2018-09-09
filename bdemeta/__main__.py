@@ -27,25 +27,26 @@ def file_writer(name: str, writer: Callable[[TextIO], None]) -> None:
         writer(f)
 
 def run(output: TextIO, writer: Writer, args: List[str]) -> int:
-    config_path = pathlib.Path('.bdemeta.conf')
-    try:
-        with config_path.open() as f:
-            config = json.load(f)
-    except FileNotFoundError:
-        raise NoConfigError(config_path)
-
-    config['roots'] = list(map(pathlib.Path, config['roots']))
-    for root in config['roots']:
-        if not root.is_dir():
-            raise InvalidPathError(root)
-
-    resolver = bdemeta.resolver.TargetResolver(config)
-
     if len(args) == 0:
         raise InvalidArgumentsError('No mode specified')
 
     mode = args[0]
     args = args[1:]
+
+    if mode in { 'walk', 'dot', 'cmake' }:
+        config_path = pathlib.Path('.bdemeta.conf')
+        try:
+            with config_path.open() as f:
+                config = json.load(f)
+        except FileNotFoundError:
+            raise NoConfigError(config_path)
+
+        config['roots'] = list(map(pathlib.Path, config['roots']))
+        for root in config['roots']:
+            if not root.is_dir():
+                raise InvalidPathError(root)
+
+        resolver = bdemeta.resolver.TargetResolver(config)
 
     if mode == 'walk':
         targets = bdemeta.resolver.resolve(resolver, args)

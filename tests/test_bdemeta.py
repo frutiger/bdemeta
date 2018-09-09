@@ -34,6 +34,14 @@ class NoConfigErrorTest(TestCase):
             caught = True
         assert(caught)
 
+    def test_args_error_if_config_unneeded(self):
+        caught = False
+        try:
+            run(StringIO(), None, [])
+        except InvalidArgumentsError as e:
+            caught = True
+        assert(caught)
+
 class InvalidArgumentsErrorTest(TestCase):
     def test_carries_one_attribute(self):
         e = InvalidArgumentsError('foo')
@@ -118,7 +126,7 @@ class NoRootTest(TestCase):
     def test_no_root_error(self):
         error = None
         try:
-            run(StringIO(), None, [])
+            run(StringIO(), None, ['walk'])
         except InvalidPathError as e:
             error = e
         assert(error is not None)
@@ -280,6 +288,13 @@ class NoConfigMainTest(TestCase):
 
     def tearDown(self):
         self._patcher.reset()
+
+    def test_help_text(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        main([__name__], stdout, stderr)
+        assert(not stdout.getvalue())
+        assert(stderr.getvalue())
 
     def test_no_config_error(self):
         stdout = StringIO()
