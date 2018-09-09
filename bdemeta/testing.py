@@ -1,69 +1,80 @@
 # bdemeta.testing
 
-import glob
+import enum
 import itertools
-import locale
 import multiprocessing
-import os
-import signal
-import subprocess
-import sys
-from typing import List, Set, Tuple
+from typing import Callable, List, Set, TextIO, Tuple
 
-def runner(test: str) -> Tuple[str, int, Set[int]]:
-    num_cases = 0
-    errors    = set()
+class RunResult(enum.Enum):
+    SUCCESS      = enum.auto()
+    FAILURE      = enum.auto()
+    NO_SUCH_CASE = enum.auto()
+
+Runner = Callable[[List[str]], RunResult]
+
+class MockRunner:
+    def __init__(self, behaviour: str) -> None:
+        self.commands: List[List[str]] = []
+        self._behaviour                = behaviour
+        self._run                      = 0
+
+    def __call__(self, command: List[str]) -> RunResult:
+        self.commands.append(command)
+        if self._run >= len(self._behaviour):
+            return RunResult.NO_SUCH_CASE
+        code = self._behaviour[self._run]
+        self._run += 1
+        return RunResult.SUCCESS if code == 's' else RunResult.FAILURE
+
+def trim(value: str, max_length: int, trail: str='...') -> str:
+    if len(trail) >= max_length:
+        return trail[:max_length]
+    if len(value) <= max_length:
+        return value
+    return value[:max_length - len(trail)] + trail
+
+def run_one(args: Tuple[Runner, str]) -> Tuple[str, Set[int]]:
+    runner, test = args
+    errors = set()
     for case in itertools.count(1):
-        num_cases += 1
-        command    = [test, str(case)]
-        try:
-            subprocess.check_output(command, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            if e.returncode == 255:
-                num_cases -= 1
-                break
-            else:
-                errors.add(case)
-    return test, num_cases, errors
+        command = [test, str(case)]
+        result  = runner(command)
+        if result == RunResult.FAILURE:
+            errors.add(case)
+        elif result == RunResult.NO_SUCH_CASE:
+            break
+    return test, errors
 
-def trimpad(name: str, length: int=40, ellipsis: str='...') -> str:
-    max_length = length - len(ellipsis)
-    if len(name) > length:
-        return name[max_length] + '...'
-    else:
-        return name[:length] + (' ' * (length - len(name)))
-
-def run_tests(tests: List[str]) -> int:
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    tests = tests or glob.glob(os.path.join('.', '*.t'))
+def run_tests(stdout:  TextIO,
+              stderr:  TextIO,
+              runner:  Runner,
+              columns: int,
+              tests:   List[str]) -> int:
+    status_format = '[{run_percentage:>4.1f}%] '       \
+                    '{run_drivers:4}/{num_drivers:4} ' \
+                    '[{test}]'
 
     num_drivers = len(tests) # all test drivers
     run_drivers = 0          # drivers run so far
-    bad_drivers = 0          # drivers with errors so far
-    num_cases   = 0          # cases run so far
-    bad_cases   = 0          # cases with errors so far
 
-    jobs       = multiprocessing.Pool().imap_unordered(runner, tests)
-    any_errors = False
-    all_errors = {}
-    for test, cases, errors in jobs:
-        run_drivers += 1
-        num_cases   += cases
-        if errors:
-            any_errors = True
-            all_errors[test] = errors
+    args   = [(runner, t) for t in tests]
+    jobs   = multiprocessing.Pool().imap_unordered(run_one, args)
+    errors = {}
+    for test, test_errors in jobs:
+        run_drivers    += 1
+        run_percentage  = 100 * run_drivers / num_drivers
+        if test_errors:
+            errors[test] = test_errors
 
-        trimmed     = trimpad(test)
-        drivers_pct = 100 * run_drivers / num_drivers
-        message = f'\r[{drivers_pct:>4.1f}%] '        \
-                  f'{run_drivers:4}/{num_drivers:4} ' \
-                  f'[{trimmed}]'
-        print(message, end='', file=sys.stderr)
-    print()
+        message  = '\r' + ' ' * columns + '\r'
+        message += trim(status_format.format(**locals()), columns)
+        print(message, end='', file=stderr)
+        stderr.flush()
+    print(file=stderr)
+    stderr.flush()
 
-    for test, errors in all_errors.items():
-        for error in errors:
-            print(f'FAIL TEST {test} CASE {error}')
-    return 1 if any_errors else 0
+    for test, test_errors in errors.items():
+        for error in test_errors:
+            print(f'FAIL TEST {test} CASE {error}', file=stdout)
+    return 1 if errors else 0
 

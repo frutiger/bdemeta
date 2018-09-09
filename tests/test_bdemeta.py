@@ -6,9 +6,10 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from bdemeta.__main__ import InvalidArgumentsError, InvalidPathError, \
-                             NoConfigError, run, main, file_writer
+                             NoConfigError, run, main, file_writer, test_runner
 from bdemeta.cmake    import generate
 from bdemeta.resolver import resolve, TargetResolver
+from bdemeta.testing  import run_tests, MockRunner, RunResult
 from tests.patcher    import OsPatcher
 
 import bdemeta
@@ -30,23 +31,47 @@ class NoConfigErrorTest(TestCase):
     def test_no_config_error(self):
         caught = False
         try:
-            run(StringIO(), None, ['walk', 'foo'])
+            run(None, None, None, None, None, ['walk', 'foo'])
         except NoConfigError as e:
             caught = True
         assert(caught)
 
+        stderr = StringIO()
+        main(None, stderr, None, None, None, [__name__, 'walk', 'foo'])
+        assert(stderr.getvalue())
+
     def test_args_error_if_config_unneeded(self):
         caught = False
         try:
-            run(StringIO(), None, [])
+            run(None, None, None, None, None, [])
         except InvalidArgumentsError as e:
             caught = True
         assert(caught)
 
-class InvalidArgumentsErrorTest(TestCase):
-    def test_carries_one_attribute(self):
-        e = InvalidArgumentsError('foo')
-        assert('foo' == e.args[0])
+        stderr = StringIO()
+        main(None, stderr, None, None, None, [__name__])
+        assert(stderr.getvalue())
+
+class InvalidPathErrorTest(TestCase):
+    def setUp(self):
+        self._patcher = OsPatcher({
+            '.bdemeta.conf': '{ "roots": ["unlikely_path_that_exists"] }',
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_invalid_path_error(self):
+        caught = False
+        try:
+            run(None, None, None, None, None, ['walk', 'foo'])
+        except InvalidPathError as e:
+            caught = True
+        assert(caught)
+
+        stderr = StringIO()
+        main(None, stderr, None, None, None, [__name__, 'walk', 'foo'])
+        assert(stderr.getvalue())
 
 class RunTest(TestCase):
     def setUp(self):
@@ -93,7 +118,7 @@ class RunTest(TestCase):
     def test_no_mode_error(self):
         message = None
         try:
-            run(StringIO(), None, [])
+            run(None, None, None, None, None, [])
         except InvalidArgumentsError as e:
             message = e.args[0]
         assert('No mode specified' == message)
@@ -101,14 +126,14 @@ class RunTest(TestCase):
     def test_unknown_mode_error(self):
         message = None
         try:
-            run(StringIO(), None, ['foo'])
+            run(None, None, None, None, None, ['foo'])
         except InvalidArgumentsError as e:
             message = e.args[0]
         assert('Unknown mode \'{}\''.format('foo') == message)
 
     def test_target_with_dependencies(self):
         f = StringIO()
-        run(f, None, ['walk', 'gr2'])
+        run(f, None, None, None, None, ['walk', 'gr2'])
 
         r  = TargetResolver(self._config)
         us = resolve(r, ['gr2'])
@@ -127,7 +152,7 @@ class NoRootTest(TestCase):
     def test_no_root_error(self):
         error = None
         try:
-            run(StringIO(), None, ['walk'])
+            run(None, None, None, None, None, ['walk'])
         except InvalidPathError as e:
             error = e
         assert(error is not None)
@@ -136,7 +161,7 @@ class NoRootTest(TestCase):
     def test_no_root_main_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main([__name__, 'walk', 'p1'], stdout, stderr)
+        main(stdout, stderr, None, None, None, [__name__, 'walk', 'p1'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
         assert('r' in stderr.getvalue())
@@ -168,7 +193,7 @@ class GraphTest(TestCase):
 
     def test_graph(self):
         f = StringIO()
-        run(f, None, ['dot', 'p2'])
+        run(f, None, None, None, None, ['dot', 'p2'])
         lines = f.getvalue().split('\n')
         assert('digraph G {'      == lines[0])
         assert('    "p2" -> "p1"' == lines[1])
@@ -204,7 +229,7 @@ class CMakeTest(TestCase):
         f1 = {}
         w1 = get_filestore_writer(f1)
 
-        run(output, w1, ['cmake', 'p'])
+        run(output, None, w1, None, None, ['cmake', 'p'])
 
         r  = TargetResolver(self._config)
         p  = resolve(r, 'p')
@@ -255,20 +280,20 @@ class MainTest(TestCase):
 
     def test_walk(self):
         stdout = StringIO()
-        main([None, 'walk', 'p2'], stdout)
+        main(stdout, None, None, None, None, [None, 'walk', 'p2'])
         assert('p2 p1\n' == stdout.getvalue())
 
     def test_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main([__name__, 'foo'], stdout, stderr)
+        main(stdout, stderr, None, None, None, [__name__, 'foo'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
 
     def test_cyclic_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main([__name__, 'walk', 'p3'], stdout, stderr)
+        main(stdout, stderr, None, None, None, [__name__, 'walk', 'p3'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
         assert('p3' in stderr.getvalue())
@@ -277,7 +302,7 @@ class MainTest(TestCase):
     def test_not_found_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main([__name__, 'walk', 'p5'], stdout, stderr)
+        main(stdout, stderr, None, None, None, [__name__, 'walk', 'p5'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
         assert('p5' in stderr.getvalue())
@@ -293,14 +318,14 @@ class NoConfigMainTest(TestCase):
     def test_help_text(self):
         stdout = StringIO()
         stderr = StringIO()
-        main([__name__], stdout, stderr)
+        main(stdout, stderr, None, None, None, [__name__])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
 
     def test_no_config_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main([__name__, 'walk', 'p1'], stdout, stderr)
+        main(stdout, stderr, None, None, None, [__name__, 'walk', 'p1'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
 
@@ -314,4 +339,38 @@ class FileWriterTest(TestCase):
             file_writer(path, write)
             with open(path) as f:
                 assert(f.read() == content)
+
+class RunTestTest(TestCase):
+    def test_running_tests(self):
+        stdout1 = StringIO()
+        stderr1 = StringIO()
+        runner1 = MockRunner('sfsf')
+        main(stdout1,
+             stderr1,
+             None,
+             runner1,
+             80,
+             [__name__, 'runtests', 'foo'])
+
+        stdout2 = StringIO()
+        stderr2 = StringIO()
+        runner2 = MockRunner('sfsf')
+        run_tests(stdout2, stderr2, runner2, 80, ['foo'])
+
+        assert(stdout1.getvalue() == stdout2.getvalue())
+        assert(stderr1.getvalue() == stderr2.getvalue())
+        assert(runner1.commands   == runner2.commands)
+
+class TestRunnerTest(TestCase):
+    def test_success(self):
+        result = test_runner(["python", "-c", "import sys; sys.exit(0)"])
+        assert(result == RunResult.SUCCESS)
+
+    def test_failure(self):
+        result = test_runner(["python", "-c", "import sys; sys.exit(1)"])
+        assert(result == RunResult.FAILURE)
+
+    def test_no_such_case(self):
+        result = test_runner(["python", "-c", "import sys; sys.exit(-1)"])
+        assert(result == RunResult.NO_SUCH_CASE)
 

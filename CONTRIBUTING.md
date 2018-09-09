@@ -19,8 +19,7 @@ To run the tests:
 ## Raising issues
 
 Please verify that the tests pass before raising an issue.  Failing tests on
-one of the supported platforms (Python 2.7, 3.3 and 3.4) is an issue in its own
-right.
+one Python 3.6 or newer is an issue in its own right.
 
 ## Creating pull requests
 

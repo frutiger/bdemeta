@@ -1,9 +1,12 @@
 # bdemeta
 
-import collections
+import glob
 import json
 import os.path
 import pathlib
+import shutil
+import signal
+import subprocess
 import sys
 from typing import Callable, List, TextIO
 
@@ -11,7 +14,8 @@ import bdemeta.cmake
 import bdemeta.graph
 import bdemeta.resolver
 import bdemeta.testing
-from bdemeta.cmake import Writer
+from bdemeta.cmake   import Writer
+from bdemeta.testing import Runner, RunResult
 
 class NoConfigError(RuntimeError):
     pass
@@ -26,7 +30,28 @@ def file_writer(name: str, writer: Callable[[TextIO], None]) -> None:
     with open(name, 'w') as f:
         writer(f)
 
-def run(output: TextIO, writer: Writer, args: List[str]) -> int:
+def test_runner(command: List[str]) -> RunResult:
+    # determine how '-1' will be returned by the OS
+    if sys.platform == 'win32':
+        minus_one = 2 ** 32 - 1
+    else:
+        minus_one = 2 ** 8 - 1
+
+    try:
+        subprocess.check_output(command, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        if e.returncode == minus_one:
+            return RunResult.NO_SUCH_CASE
+        else:
+            return RunResult.FAILURE
+    return RunResult.SUCCESS
+
+def run(stdout:  TextIO,
+        stderr:  TextIO,
+        writer:  Writer,
+        runner:  Runner,
+        columns: int,
+        args:    List[str]) -> int:
     if len(args) == 0:
         raise InvalidArgumentsError('No mode specified')
 
@@ -50,30 +75,38 @@ def run(output: TextIO, writer: Writer, args: List[str]) -> int:
 
     if mode == 'walk':
         targets = bdemeta.resolver.resolve(resolver, args)
-        print(' '.join(t.name for t in targets), file=output)
+        print(' '.join(t.name for t in targets), file=stdout)
     elif mode == 'dot':
         targets = bdemeta.resolver.resolve(resolver, args)
-        print('digraph G {', file=output)
+        print('digraph G {', file=stdout)
         for t in targets:
             for d in resolver.dependencies(t.name):
-                print(f'    "{t.name}" -> "{d}"', file=output)
-        print('}', file=output)
+                print(f'    "{t.name}" -> "{d}"', file=stdout)
+        print('}', file=stdout)
     elif mode == 'cmake':
         options, target_names = bdemeta.cmake.parse_args(args)
         targets = bdemeta.resolver.resolve(resolver, target_names)
         bdemeta.cmake.generate(targets, writer, options)
     elif mode == 'runtests':
-        return bdemeta.testing.run_tests(args)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        tests = args or glob.glob(os.path.join('.', '*.t'))
+        return bdemeta.testing.run_tests(stdout,
+                                         stderr,
+                                         runner,
+                                         columns,
+                                         tests)
     else:
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
     return 0
 
-def main(args:   List[str] = sys.argv,
-         stdout: TextIO    = sys.stdout,
-         stderr: TextIO    = sys.stderr,
-         writer: Writer    = file_writer) -> int:
+def main(stdout:  TextIO    = sys.stdout,
+         stderr:  TextIO    = sys.stderr,
+         writer:  Writer    = file_writer,
+         runner:  Runner    = test_runner,
+         columns: int       = shutil.get_terminal_size().columns,
+         args:    List[str] = sys.argv) -> int:
     try:
-        return run(stdout, writer, args[1:])
+        return run(stdout, stderr, writer, runner, columns, args[1:])
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 
