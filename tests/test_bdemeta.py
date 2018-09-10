@@ -1,12 +1,14 @@
 # tests.test_bdemeta
 
+import shutil
 from io       import StringIO
 from pathlib  import Path as P
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from bdemeta.__main__ import InvalidArgumentsError, InvalidPathError, \
-                             NoConfigError, run, main, file_writer, test_runner
+                             NoConfigError, run, main, file_writer,   \
+                             test_runner, get_columns
 from bdemeta.cmake    import generate
 from bdemeta.resolver import resolve, TargetResolver
 from bdemeta.testing  import run_tests, MockRunner, RunResult
@@ -327,13 +329,13 @@ class RunTestTest(TestCase):
              stderr1,
              None,
              runner1,
-             80,
+             lambda: 80,
              [__name__, 'runtests', 'foo'])
 
         stdout2 = StringIO()
         stderr2 = StringIO()
         runner2 = MockRunner('sfsf')
-        run_tests(stdout2, stderr2, runner2, 80, ['foo'])
+        run_tests(stdout2, stderr2, runner2, lambda: 80, ['foo'])
 
         assert(stdout1.getvalue() == stdout2.getvalue())
         assert(stderr1.getvalue() == stderr2.getvalue())
@@ -351,4 +353,8 @@ class TestRunnerTest(TestCase):
     def test_no_such_case(self):
         result = test_runner(["python", "-c", "import sys; sys.exit(-1)"])
         assert(result == RunResult.NO_SUCH_CASE)
+
+class TerminalSizeTest(TestCase):
+    def test_valid(self):
+        assert(get_columns() == shutil.get_terminal_size().columns)
 

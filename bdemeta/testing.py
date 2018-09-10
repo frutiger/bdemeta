@@ -46,11 +46,11 @@ def run_one(args: Tuple[Runner, str]) -> Tuple[str, Set[int]]:
         case += 1
     return test, errors
 
-def run_tests(stdout:  TextIO,
-              stderr:  TextIO,
-              runner:  Runner,
-              columns: int,
-              tests:   List[str]) -> int:
+def run_tests(stdout:      TextIO,
+              stderr:      TextIO,
+              runner:      Runner,
+              get_columns: Callable[[], int],
+              tests:       List[str]) -> int:
     status_format = '[{run_drivers}/{num_drivers}] {test}'
 
     num_drivers = len(tests) # all test drivers
@@ -64,6 +64,7 @@ def run_tests(stdout:  TextIO,
         if test_errors:
             errors[test] = test_errors
 
+        columns  = get_columns()
         message  = '\r' + ' ' * columns + '\r'
         message += trim(status_format.format(**locals()), columns)
         print(message, end='', file=stderr, flush=True)

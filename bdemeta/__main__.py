@@ -44,12 +44,15 @@ def test_runner(command: List[str]) -> RunResult:
             return RunResult.FAILURE
     return RunResult.SUCCESS
 
-def run(stdout:  TextIO,
-        stderr:  TextIO,
-        writer:  Writer,
-        runner:  Runner,
-        columns: int,
-        args:    List[str]) -> int:
+def get_columns() -> int:
+    return shutil.get_terminal_size().columns
+
+def run(stdout:      TextIO,
+        stderr:      TextIO,
+        writer:      Writer,
+        runner:      Runner,
+        get_columns: Callable[[], int],
+        args:        List[str]) -> int:
     if len(args) == 0:
         raise InvalidArgumentsError('No mode specified')
 
@@ -90,20 +93,20 @@ def run(stdout:  TextIO,
         return bdemeta.testing.run_tests(stdout,
                                          stderr,
                                          runner,
-                                         columns,
+                                         get_columns,
                                          tests)
     else:
         raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
     return 0
 
-def main(stdout:  TextIO    = sys.stdout,
-         stderr:  TextIO    = sys.stderr,
-         writer:  Writer    = file_writer,
-         runner:  Runner    = test_runner,
-         columns: int       = shutil.get_terminal_size().columns,
-         args:    List[str] = sys.argv) -> int:
+def main(stdout:      TextIO            = sys.stdout,
+         stderr:      TextIO            = sys.stderr,
+         writer:      Writer            = file_writer,
+         runner:      Runner            = test_runner,
+         get_columns: Callable[[], int] = get_columns,
+         args:        List[str]         = sys.argv) -> int:
     try:
-        return run(stdout, stderr, writer, runner, columns, args[1:])
+        return run(stdout, stderr, writer, runner, get_columns, args[1:])
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 

@@ -108,7 +108,7 @@ class TestRun(TestCase):
         stderr = io.StringIO()
         runner = MockRunner('ssss')
 
-        rc = run_tests(stdout, stderr, runner, 80, ["foo", "bar"])
+        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo", "bar"])
         assert(0 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
@@ -120,7 +120,7 @@ class TestRun(TestCase):
         stderr = io.StringIO()
         runner = MockRunner('sfsf')
 
-        rc = run_tests(stdout, stderr, runner, 80, ["foo", "bar"])
+        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo", "bar"])
         assert(1 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
