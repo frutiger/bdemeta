@@ -11,7 +11,7 @@ Build and test BDE-style code.
 `bdemeta walk TARGET [TARGET ...]`<br/>
 `bdemeta dot TARGET [TARGET ...]`<br/>
 `bdemeta cmake TARGET [TARGET ...]`<br/>
-`bdemeta runtests [-v] [TEST ...]`
+`bdemeta runtests [TEST ...]`
 
 ## Description
 
@@ -42,8 +42,8 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
   * `cmake TARGET [TARGET ...]`:<br/>
     Generate CMake files in the current directory
 
-  * `runtests [-v] [TEST ...]`:<br/>
-    Run unit tests
+  * `runtests [TEST ...]`:<br/>
+    Run specified or discovered unit tests
 
 ## Configuration
 

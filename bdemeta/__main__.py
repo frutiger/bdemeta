@@ -116,8 +116,8 @@ def main(stdout:  TextIO    = sys.stdout,
 {1} cmake    <target> [<target>...]
   generate CMake files in the current directory
 
-{1} runtests [-v] [<test>...]
-  run unit tests'''
+{1} runtests [<test>...]
+  run specified or discovered unit tests'''
 
         print(usage.format(e.args[0], os.path.basename(args[0])),
               file=stderr)
