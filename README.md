@@ -77,11 +77,11 @@ multiple BDE-style repositories, including your own.
 In particular, `bdemeta` will search for targets by name within each `<root>`
 directory:
 
-    * package groups in `<root>/groups/<name>`
-    * standalone pacakges in `<root>/[adapters|nodeaddons|stanadlone]/<name>`
-    * third party CMake packages in:
-        * `<root>/thirdparty/CMakeLists.txt`
-        * `<root>/CMakeLists.txt`
+  * package groups in `<root>/groups/<name>`
+  * standalone pacakges in `<root>/[adapters|nodeaddons|stanadlone]/<name>`
+  * third party CMake packages in:
+      * `<root>/thirdparty/CMakeLists.txt`
+      * `<root>/CMakeLists.txt`
 
 ### Target providers
 
@@ -127,11 +127,11 @@ transitive dependencies based on the configuration described above.
 
 For each BDE-type dependency, `bdemeta` generates:
 
-    * a CMake library target
-    * a CMake executable target for each test driver
-    * a CMake custom target comprising all the test drivers, named `<name>.t`
-    * a 'development' install target for the library & headers
-    * a 'runtime' install target for the library
+  * a CMake library target
+  * a CMake executable target for each test driver
+  * a CMake custom target comprising all the test drivers, named `<name>.t`
+  * a 'development' install target for the library & headers
+  * a 'runtime' install target for the library
 
 For each `PkgConfig`-type dependency, `bdemeta` generates a CMake interface
 target consisting of the discovered include directories, compile options and
