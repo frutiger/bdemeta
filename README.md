@@ -10,7 +10,7 @@ Build and test BDE-style code.
 
 `bdemeta walk TARGET [TARGET ...]`<br/>
 `bdemeta dot TARGET [TARGET ...]`<br/>
-`bdemeta cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`<br/>
+`bdemeta cmake TARGET [TARGET ...]`<br/>
 `bdemeta runtests [-v] [TEST ...]`
 
 ## Description
@@ -39,9 +39,8 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
   * `dot [TARGET ...]`:<br/>
     Generate a directed graph in the DOT language
 
-  * `cmake TARGET [TARGET ...] [-t TEST_TARGET ...]`:<br/>
+  * `cmake TARGET [TARGET ...]`:<br/>
     Generate CMake files in the current directory
-    Also generate test drivers for the specified `TEST_TARGET`s
 
   * `runtests [-v] [TEST ...]`:<br/>
     Run unit tests
@@ -120,6 +119,23 @@ is only consulted if the search through every root as described above has been
 exhausted.
 
 Note that the `pkg_configs` block is optional.
+
+## CMake
+
+For every target specified to the `cmake` subcommand, `bdemeta` walks all
+transitive dependencies based on the configuration described above.
+
+For each BDE-type dependency, `bdemeta` generates:
+
+    * a CMake library target
+    * a CMake executable target for each test driver
+    * a CMake custom target comprising all the test drivers, named `<name>.t`
+    * a 'development' install target for the library & headers
+    * a 'runtime' install target for the library
+
+For each `PkgConfig`-type dependency, `bdemeta` generates a CMake interface
+target consisting of the discovered include directories, compile options and
+link libraries.
 
 ## License
 

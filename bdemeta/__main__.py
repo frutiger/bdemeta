@@ -82,9 +82,8 @@ def run(stdout:  TextIO,
                 print(f'    "{t.name}" -> "{d}"', file=stdout)
         print('}', file=stdout)
     elif mode == 'cmake':
-        options, target_names = bdemeta.cmake.parse_args(args)
-        targets = bdemeta.resolver.resolve(resolver, target_names)
-        bdemeta.cmake.generate(targets, writer, options)
+        targets = bdemeta.resolver.resolve(resolver, args)
+        bdemeta.cmake.generate(targets, writer)
     elif mode == 'runtests':
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         tests = args or glob.glob(os.path.join('.', '*.t'))
@@ -114,7 +113,7 @@ def main(stdout:  TextIO    = sys.stdout,
 {1} dot      <target> [<target>...]
   generate a directed graph in the DOT language
 
-{1} cmake    <target> [<target>...] [-t <target> ...]
+{1} cmake    <target> [<target>...]
   generate CMake files in the current directory
 
 {1} runtests [-v] [<test>...]

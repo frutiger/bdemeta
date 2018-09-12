@@ -6,7 +6,7 @@ from unittest    import TestCase
 
 import itertools
 
-from bdemeta.cmake import parse_args, generate_bde, generate
+from bdemeta.cmake import generate
 from bdemeta.types import Target, Package, CMake, Pkg
 
 from tests.cmake_parser import lex, find_command, parse
@@ -23,32 +23,6 @@ def grouper(iterable, n, fillvalue=None):
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
-
-class ParseArgsTest(TestCase):
-    def test_one_target(self):
-        options, targets = parse_args(['foo'])
-        assert(set()   == options)
-        assert(['foo'] == targets)
-
-    def test_four_targets(self):
-        options, targets = parse_args(['foo', 'bar', 'bam', 'baz'])
-        assert(set()                        == options)
-        assert(['foo', 'bar', 'bam', 'baz'] == targets)
-
-    def test_generate_one_test(self):
-        options, targets = parse_args(['-t', 'foo'])
-        assert({'foo'} == options)
-        assert([]      == targets)
-
-    def test_generate_one_test_longform(self):
-        options, targets = parse_args(['--generate-test', 'foo'])
-        assert({'foo'} == options)
-        assert([]      == targets)
-
-    def test_generate_one_test_longform_equals(self):
-        options, targets = parse_args(['--generate-test=foo'])
-        assert({'foo'} == options)
-        assert([]      == targets)
 
 class GenerateTargetTest(TestCase):
     def _check_target_no_test(self, cmake, name, path, deps, components):
@@ -106,15 +80,17 @@ class GenerateTargetTest(TestCase):
 
     def _check_target_drivers(self, cmake, name, components):
         drivers = [c['driver'] for c in components if c['driver'] != None]
-        for driver, commands in zip(drivers, grouper(cmake, 2)):
-            exec_command, link_command = commands
-            assert('add_executable' == exec_command[0])
-            assert(splitext(driver)[0] == exec_command[1][0])
-            assert(driver              == exec_command[1][1])
+        for driver in drivers:
+            executable = splitext(driver)[0]
+            _, command = find_command(cmake, 'add_executable', [executable])
+            assert('EXCLUDE_FROM_ALL' == command[1])
+            assert(driver             == command[2])
 
-            assert('target_link_libraries' == link_command[0])
-            assert(splitext(driver)[0]     == link_command[1][0])
-            assert(name                    == link_command[1][1])
+            executable = splitext(driver)[0]
+            _, command = find_command(cmake,
+                                      'target_link_libraries',
+                                      [executable])
+            assert(name == command[1])
 
     def _check_target_deps(self, cmake, name, dependencies):
         _, command = find_command(cmake, 'target_link_libraries')
@@ -123,58 +99,48 @@ class GenerateTargetTest(TestCase):
         for index, dep in enumerate(dependencies):
             assert(dep == command[index + 2])
 
-    def _get_testing(self, cmake):
-        testing_start, _ = find_command(cmake, 'if', ['BUILD_TESTING'])
-        return parse(iter(cmake[testing_start+1:]))
-
-    def _check_package(self, cmake, name, path, deps, comps, is_test):
+    def _check_package(self, cmake, name, path, deps, comps):
         self._check_target_no_test(cmake, name, path, deps, comps)
-        if is_test:
-            self._check_target_drivers(self._get_testing(cmake), name, comps)
+        self._check_target_drivers(cmake, name, comps)
 
-    def _test_package(self, name, path, deps, comps, is_test):
+    def _test_package(self, name, path, deps, comps):
         target = Package(path, deps, comps)
 
         files = {}
-        generate([target],
-                 get_filestore_writer(files),
-                 {target.name} if is_test else {})
+        generate([target], get_filestore_writer(files))
 
         assert(f'{name}.cmake' in files)
         generated = files[f'{name}.cmake']
 
         cmake = list(lex(generated))
-        self._check_package(cmake, name, path, deps, comps, is_test)
+        self._check_package(cmake, name, path, deps, comps)
 
-    def test_base_target_causes_error(self):
-        target = Target('t', [])
+    def test_base_target_no_deps(self):
+        t = Target('t', [])
 
-        files  = {}
-        caught = False
-        try:
-            generate([target], get_filestore_writer(files), {})
-        except RuntimeError:
-            caught = True
-        assert(caught)
+        files = {}
+        generate([t], get_filestore_writer(files))
+
+        assert('CMakeLists.txt' in files)
 
     def test_empty_package_no_deps_no_test(self):
-        self._test_package('target', pjoin('path', 'target'), [], [], False)
+        self._test_package('target', pjoin('path', 'target'), [], [])
 
     def test_one_comp_package_no_deps_no_test(self):
         comps = [{ 'header': 'file.h',
                    'source': 'file.cpp',
                    'driver': 'file.t.cpp' }]
-        self._test_package('target', pjoin('path', 'target'), [], comps, False)
+        self._test_package('target', pjoin('path', 'target'), [], comps)
 
     def test_one_comp_package_no_deps_test(self):
         comps = [{ 'header': 'file.h',
                    'source': 'file.cpp',
                    'driver': 'file.t.cpp' }]
-        self._test_package('target', pjoin('path', 'target'), [], comps, True)
+        self._test_package('target', pjoin('path', 'target'), [], comps)
 
     def test_empty_package_one_dep_no_test(self):
         deps = [Target('foo', [])]
-        self._test_package('target', pjoin('path', 'target'), deps, [], False)
+        self._test_package('target', pjoin('path', 'target'), deps, [])
 
     def test_two_empty_packages_no_deps_no_test(self):
         deps1  = []
@@ -188,7 +154,7 @@ class GenerateTargetTest(TestCase):
         is_test = False
 
         files = {}
-        generate([p1, p2], get_filestore_writer(files), {})
+        generate([p1, p2], get_filestore_writer(files))
 
         assert('p1.cmake' in files)
         assert('p2.cmake' in files)
@@ -196,9 +162,9 @@ class GenerateTargetTest(TestCase):
         generated2 = files['p2.cmake']
 
         cmake1 = list(lex(generated1))
-        self._check_package(cmake1, 'p1', 'p1', deps1, comps1, is_test)
+        self._check_package(cmake1, 'p1', 'p1', deps1, comps1)
         cmake2 = list(lex(generated2))
-        self._check_package(cmake2, 'p2', 'p2', deps2, comps2, is_test)
+        self._check_package(cmake2, 'p2', 'p2', deps2, comps2)
 
         assert('CMakeLists.txt' in files)
         assert('include(p1.cmake)' in files['CMakeLists.txt'].getvalue())
@@ -209,7 +175,7 @@ class GenerateTargetTest(TestCase):
         p.overrides = 'override.cmake'
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         assert('CMakeLists.txt' in files)
         assert(f'include({p.overrides})' in files['CMakeLists.txt'].getvalue())
@@ -220,7 +186,7 @@ class GenerateTargetTest(TestCase):
         p1.has_output = False
 
         files = {}
-        generate([p1, p2], get_filestore_writer(files), {})
+        generate([p1, p2], get_filestore_writer(files))
 
         cmake = list(lex(files['p2.cmake']))
         _, libs = find_command(cmake, 'target_link_libraries')
@@ -231,7 +197,7 @@ class GenerateTargetTest(TestCase):
         p.lazily_bound = True
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         assert('p.cmake' in files)
         commands = list(lex(files['p.cmake']))
@@ -251,7 +217,7 @@ class GenerateTargetTest(TestCase):
         c = CMake('bar', path)
 
         files = {}
-        generate([c], get_filestore_writer(files), {})
+        generate([c], get_filestore_writer(files))
 
         assert('CMakeLists.txt' in files)
         cmake = files['CMakeLists.txt'].getvalue()
@@ -265,7 +231,7 @@ class GenerateTargetTest(TestCase):
         c = CMake('foo', 'bar')
 
         files = {}
-        generate([c], get_filestore_writer(files), {})
+        generate([c], get_filestore_writer(files))
 
         assert('CMakeLists.txt' in files)
         cmake = files['CMakeLists.txt'].getvalue()
@@ -276,7 +242,7 @@ class GenerateTargetTest(TestCase):
         p = Pkg('foo', 'bar')
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         assert('CMakeLists.txt' in files)
         cmake = files['CMakeLists.txt'].getvalue()
@@ -289,7 +255,7 @@ class GenerateTargetTest(TestCase):
         p = Pkg(name, package)
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         assert('CMakeLists.txt' in files)
         cmake = files['CMakeLists.txt'].getvalue()
@@ -303,7 +269,7 @@ class GenerateTargetTest(TestCase):
         p = Pkg(name, package)
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         cmake = files[f'{name}.cmake'].getvalue()
         assert(f'pkg_check_modules({name} REQUIRED {package})' in cmake)
@@ -314,7 +280,7 @@ class GenerateTargetTest(TestCase):
         p = Pkg(name, package)
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         cmake = list(lex(files[f'{name}.cmake']))
         _, command = find_command(cmake, 'add_library')
@@ -327,7 +293,7 @@ class GenerateTargetTest(TestCase):
         p = Pkg(name, package)
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         cmake = files[f'{name}.cmake']
         commands = list(lex(cmake))
@@ -367,7 +333,7 @@ class GenerateTargetTest(TestCase):
         p = Pkg(name, package)
 
         files = {}
-        generate([p], get_filestore_writer(files), {})
+        generate([p], get_filestore_writer(files))
 
         cmake = files[f'{name}.cmake']
         commands = list(lex(cmake))

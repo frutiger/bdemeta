@@ -9,14 +9,8 @@ BdeTarget = Union[Group, Package]
 
 Writer = Callable[[str, Callable[[TextIO], None]], None]
 
-PROJECT = '''\
-project({target.name} CXX)
-'''
 LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
-
-option(BUILD_TESTING "" OFF)
-include(CTest)
 
 '''
 LIBRARY_PROLOGUE = '''\
@@ -54,6 +48,7 @@ install(
 INSTALL_HEADERS_DESTINATION = '''\
     DESTINATION include
     COMPONENT development
+    EXCLUDE_FROM_ALL
 '''
 PKG_CONFIG = '''\
 pkg_check_modules({name} REQUIRED {package})
@@ -93,6 +88,7 @@ install(
     TARGETS {target.name}
     COMPONENT development
     DESTINATION lib
+    EXCLUDE_FROM_ALL
 )
 
 install(
@@ -100,23 +96,20 @@ install(
     COMPONENT runtime
     DESTINATION .
 )
+
+'''
+TEST_TARGET_PROLOGUE = '''\
+add_custom_target(
+    {target.name}.t
+    DEPENDS
 '''
 COMMAND_EPILOGUE = '''\
 )
 
 '''
-TESTING_PROLOGUE = '''\
-if(BUILD_TESTING)
-
-'''
 TESTING_DRIVER = '''\
-add_executable({name} {driver})
+add_executable({name} EXCLUDE_FROM_ALL {driver})
 target_link_libraries({name} {target.name})
-add_test({name} bdemeta runtests ./{name})
-
-'''
-TESTING_EPILOGUE = '''\
-endif()  # BUILD_TESTING
 
 '''
 INSTALL_TARGETS = '''\
@@ -132,16 +125,8 @@ add_custom_target(
 
 '''
 
-def parse_args(args: List[str]) -> Tuple[Set[str], List[str]]:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--generate-test', type=str,
-                                                 nargs='*', default=[])
-    options, targets = parser.parse_known_args(args)
-    return set(options.generate_test), targets
-
-def generate_bde(target: BdeTarget, writer: Writer, tests:  bool) -> None:
+def generate_bde(target: BdeTarget, writer: Writer) -> None:
     def write(out: TextIO) -> None:
-        out.write(PROJECT.format(**locals()))
         out.write(LIBRARY_PROLOGUE.format(**locals()))
         for component in target.sources():
             out.write('    {}\n'.format(component).replace('\\', '/'))
@@ -164,6 +149,17 @@ def generate_bde(target: BdeTarget, writer: Writer, tests:  bool) -> None:
         if target.lazily_bound:
             out.write(LAZILY_BOUND_FLAG.format(**locals()))
 
+        drivers = []
+        for driver in target.drivers():
+            name = os.path.splitext(os.path.basename(driver))[0]
+            out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
+            drivers.append(name)
+
+        out.write(TEST_TARGET_PROLOGUE.format(**locals()))
+        for driver in drivers:
+            out.write('    {}\n'.format(driver))
+        out.write(COMMAND_EPILOGUE)
+
         out.write(INSTALL_HEADERS_PROLOGUE)
         for header in target.headers():
             out.write('    {}\n'.format(header).replace('\\', '/'))
@@ -171,13 +167,6 @@ def generate_bde(target: BdeTarget, writer: Writer, tests:  bool) -> None:
         out.write(COMMAND_EPILOGUE)
 
         out.write(INSTALL_LIBRARY.format(**locals()))
-
-        if tests:
-            out.write(TESTING_PROLOGUE)
-            for driver in target.drivers():
-                name = os.path.splitext(os.path.basename(driver))[0]
-                out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
-            out.write(TESTING_EPILOGUE)
 
     writer(f'{target.name}.cmake', write)
 
@@ -189,9 +178,7 @@ def generate_pkg(target: Pkg, writer: Writer) -> None:
 
     writer(f'{target.name}.cmake', write)
 
-def generate(targets:      List[Target],
-             writer:       Writer,
-             test_targets: Set[str]) -> None:
+def generate(targets: List[Target], writer: Writer) -> None:
     uses_pkg_config = any(isinstance(t, Pkg) for t in targets)
     def write(out: TextIO) -> None:
         out.write(LISTS_PROLOGUE.format(**locals()))
@@ -201,7 +188,7 @@ def generate(targets:      List[Target],
 
         for target in reversed(targets):
             if isinstance(target, Group) or isinstance(target, Package):
-                generate_bde(target, writer, target.name in test_targets)
+                generate_bde(target, writer)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
             elif isinstance(target, CMake):
                 path = target.path()
@@ -210,8 +197,6 @@ def generate(targets:      List[Target],
             elif isinstance(target, Pkg):
                 generate_pkg(target, writer)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
-            else:
-                raise RuntimeError('Unknown target type: ' + str(type(target)))
 
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))

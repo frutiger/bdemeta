@@ -235,7 +235,7 @@ class CMakeTest(TestCase):
         p  = resolve(r, 'p')
         f2 = {}
         w2 = get_filestore_writer(f2)
-        generate(p, w2, {})
+        generate(p, w2)
 
         assert(f1.keys() == f2.keys())
         for k in f1:
