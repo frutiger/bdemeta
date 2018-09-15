@@ -51,9 +51,7 @@ def run_tests(stdout:  TextIO,
               runner:  Runner,
               columns: int,
               tests:   List[str]) -> int:
-    status_format = '[{run_percentage:>4.1f}%] '       \
-                    '{run_drivers:4}/{num_drivers:4} ' \
-                    '[{test}]'
+    status_format = '[{run_drivers}/{num_drivers}] {test}'
 
     num_drivers = len(tests) # all test drivers
     run_drivers = 0          # drivers run so far
@@ -63,7 +61,6 @@ def run_tests(stdout:  TextIO,
     errors = {}
     for test, test_errors in jobs:
         run_drivers    += 1
-        run_percentage  = 100 * run_drivers / num_drivers
         if test_errors:
             errors[test] = test_errors
 

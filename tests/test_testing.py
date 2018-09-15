@@ -112,8 +112,8 @@ class TestRun(TestCase):
         assert(0 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
-        assert('[foo]' in stderr.getvalue())
-        assert('[bar]' in stderr.getvalue())
+        assert('foo' in stderr.getvalue())
+        assert('bar' in stderr.getvalue())
 
     def test_two_drivers_mixed_successes(self):
         stdout = io.StringIO()
@@ -124,8 +124,8 @@ class TestRun(TestCase):
         assert(1 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
-        assert('[foo]' in stderr.getvalue())
-        assert('[bar]' in stderr.getvalue())
+        assert('foo' in stderr.getvalue())
+        assert('bar' in stderr.getvalue())
 
         failures = stdout.getvalue().split('\n')[:-1]
         assert(4 == len(failures))
