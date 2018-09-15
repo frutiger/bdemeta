@@ -112,7 +112,7 @@ class GenerateTargetTest(TestCase):
         self._check_target_drivers(cmake, name, comps)
         self._check_test_target(cmake, name, comps)
 
-    def _test_package(self, name, path, deps, comps):
+    def _test_package(self, name, path, deps, comps, has_tests):
         target = Package(path, deps, comps)
 
         files = {}
@@ -124,6 +124,13 @@ class GenerateTargetTest(TestCase):
         cmake = list(lex(generated))
         self._check_package(cmake, name, path, deps, comps)
 
+        cmake = list(lex(files['CMakeLists.txt']))
+        if has_tests:
+            find_command(cmake, 'add_custom_target', ['tests'])
+        else:
+            with self.assertRaises(LookupError):
+                find_command(cmake, 'add_custom_target', ['tests'])
+
     def test_base_target_no_deps(self):
         t = Target('t', [])
 
@@ -133,23 +140,23 @@ class GenerateTargetTest(TestCase):
         assert('CMakeLists.txt' in files)
 
     def test_empty_package_no_deps_no_test(self):
-        self._test_package('target', pjoin('path', 'target'), [], [])
+        self._test_package('target', pjoin('path', 'target'), [], [], False)
 
     def test_one_comp_package_no_deps_no_test(self):
         comps = [{ 'header': 'file.h',
                    'source': 'file.cpp',
-                   'driver': 'file.t.cpp' }]
-        self._test_package('target', pjoin('path', 'target'), [], comps)
+                   'driver': None }]
+        self._test_package('target', pjoin('path', 'target'), [], comps, False)
 
     def test_one_comp_package_no_deps_test(self):
         comps = [{ 'header': 'file.h',
                    'source': 'file.cpp',
                    'driver': 'file.t.cpp' }]
-        self._test_package('target', pjoin('path', 'target'), [], comps)
+        self._test_package('target', pjoin('path', 'target'), [], comps, True)
 
     def test_empty_package_one_dep_no_test(self):
         deps = [Target('foo', [])]
-        self._test_package('target', pjoin('path', 'target'), deps, [])
+        self._test_package('target', pjoin('path', 'target'), deps, [], False)
 
     def test_two_empty_packages_no_deps_no_test(self):
         deps1  = []

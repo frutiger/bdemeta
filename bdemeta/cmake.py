@@ -103,6 +103,11 @@ add_custom_target(
     {target.name}.t
     DEPENDS
 '''
+ALL_TESTS_PROLOGUE = '''\
+add_custom_target(
+    tests
+    DEPENDS
+'''
 COMMAND_EPILOGUE = '''\
 )
 
@@ -187,10 +192,13 @@ def generate(targets: List[Target], writer: Writer) -> None:
         if uses_pkg_config:
             out.write('include(FindPkgConfig)\n')
 
+        bde_targets = []
         for target in reversed(targets):
             if isinstance(target, Group) or isinstance(target, Package):
                 generate_bde(target, writer)
                 out.write('include({target.name}.cmake)\n'.format(**locals()))
+                if len(list(target.drivers())):
+                    bde_targets.append(target)
             elif isinstance(target, CMake):
                 path = target.path()
                 out.write('add_subdirectory({path} {target.name})\n'.format(
@@ -201,6 +209,12 @@ def generate(targets: List[Target], writer: Writer) -> None:
 
             if target.overrides:
                 out.write(f'include({target.overrides})\n'.replace('\\', '/'))
+
+        if bde_targets:
+            out.write(ALL_TESTS_PROLOGUE)
+            for target in bde_targets:
+                out.write(f'    {target.name}.t\n')
+            out.write(COMMAND_EPILOGUE)
 
     writer('CMakeLists.txt', write)
 
