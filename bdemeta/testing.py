@@ -66,10 +66,8 @@ def run_tests(stdout:  TextIO,
 
         message  = '\r' + ' ' * columns + '\r'
         message += trim(status_format.format(**locals()), columns)
-        print(message, end='', file=stderr)
-        stderr.flush()
-    print(file=stderr)
-    stderr.flush()
+        print(message, end='', file=stderr, flush=True)
+    print(file=stderr, flush=True)
 
     for test, test_errors in errors.items():
         for error in test_errors:
