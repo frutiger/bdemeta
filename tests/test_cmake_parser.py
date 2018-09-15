@@ -17,42 +17,26 @@ def call_parse(*cmds):
 class TestLex(TestCase):
     def test_nested_command_error(self):
         text = StringIO("if(if())")
-        error = False
-        try:
+        with self.assertRaises(RuntimeError):
             list(lex(text)) # consume the generator
-        except RuntimeError:
-            error = True
-        assert(error)
 
     def test_unmatched_close_paren_error(self):
         text = StringIO("if)")
-        error = False
-        try:
+        with self.assertRaises(RuntimeError):
             list(lex(text)) # consume the generator
-        except RuntimeError:
-            error = True
-        assert(error)
 
 class TestFindCommand(TestCase):
     def test_command_not_found_error(self):
         text = StringIO("if()")
         commands = lex(text)
-        error = False
-        try:
+        with self.assertRaises(RuntimeError):
             find_command(commands, "add_library")
-        except RuntimeError:
-            error = True
-        assert(error)
 
     def test_ambiguous_command_error(self):
         text = StringIO("if()\nif()")
         commands = lex(text)
-        error = False
-        try:
+        with self.assertRaises(RuntimeError):
             find_command(commands, "if")
-        except RuntimeError:
-            error = True
-        assert(error)
 
 class TestParseIf(TestCase):
     def test_empty_if(self):
@@ -95,12 +79,8 @@ class TestParseIf(TestCase):
         assert(('check', [foo, ([], [bar], [bam]), baz], []) == node)
 
     def test_unmatched_endif_error(self):
-        error = False
-        try:
+        with self.assertRaises(RuntimeError):
             call_parse_if('check', mk_cmd('add_library'))
-        except RuntimeError:
-            error = True
-        assert(error)
 
 class TestParse(TestCase):
     def test_empty(self):

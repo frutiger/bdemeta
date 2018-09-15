@@ -29,24 +29,16 @@ class NoConfigErrorTest(TestCase):
         self._patcher.reset()
 
     def test_no_config_error(self):
-        caught = False
-        try:
+        with self.assertRaises(NoConfigError):
             run(None, None, None, None, None, ['walk', 'foo'])
-        except NoConfigError as e:
-            caught = True
-        assert(caught)
 
         stderr = StringIO()
         main(None, stderr, None, None, None, [__name__, 'walk', 'foo'])
         assert(stderr.getvalue())
 
     def test_args_error_if_config_unneeded(self):
-        caught = False
-        try:
+        with self.assertRaises(InvalidArgumentsError):
             run(None, None, None, None, None, [])
-        except InvalidArgumentsError as e:
-            caught = True
-        assert(caught)
 
         stderr = StringIO()
         main(None, stderr, None, None, None, [__name__])
@@ -62,12 +54,8 @@ class InvalidPathErrorTest(TestCase):
         self._patcher.reset()
 
     def test_invalid_path_error(self):
-        caught = False
-        try:
+        with self.assertRaises(InvalidPathError):
             run(None, None, None, None, None, ['walk', 'foo'])
-        except InvalidPathError as e:
-            caught = True
-        assert(caught)
 
         stderr = StringIO()
         main(None, stderr, None, None, None, [__name__, 'walk', 'foo'])
@@ -116,20 +104,14 @@ class RunTest(TestCase):
         self._patcher.reset()
 
     def test_no_mode_error(self):
-        message = None
-        try:
+        with self.assertRaises(InvalidArgumentsError) as e:
             run(None, None, None, None, None, [])
-        except InvalidArgumentsError as e:
-            message = e.args[0]
-        assert('No mode specified' == message)
+        assert('No mode specified' == e.exception.args[0])
 
     def test_unknown_mode_error(self):
-        message = None
-        try:
+        with self.assertRaises(InvalidArgumentsError) as e:
             run(None, None, None, None, None, ['foo'])
-        except InvalidArgumentsError as e:
-            message = e.args[0]
-        assert('Unknown mode \'{}\''.format('foo') == message)
+        assert('Unknown mode \'{}\''.format('foo') == e.exception.args[0])
 
     def test_target_with_dependencies(self):
         f = StringIO()
@@ -150,13 +132,9 @@ class NoRootTest(TestCase):
         self._patcher.reset()
 
     def test_no_root_error(self):
-        error = None
-        try:
+        with self.assertRaises(InvalidPathError) as e:
             run(None, None, None, None, None, ['walk'])
-        except InvalidPathError as e:
-            error = e
-        assert(error is not None)
-        assert(P('r') == error.args[0])
+        assert(P('r') == e.exception.args[0])
 
     def test_no_root_main_error(self):
         stdout = StringIO()

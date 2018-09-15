@@ -56,11 +56,9 @@ class TsortTest(TestCase):
         graph = adjacencies({ 'a': ['b'],
                               'b': ['a'], })
         cycle = None
-        try:
+        with self.assertRaises(CyclicGraphError) as e:
             tsort(['a'], graph)
-        except CyclicGraphError as e:
-            cycle = e.cycle
-        assert(cycle == ['a', 'b', 'a'])
+        assert(e.exception.cycle == ['a', 'b', 'a'])
 
     def test_three_cycle_raises_error(self):
         #  /--> b --> c
@@ -70,11 +68,9 @@ class TsortTest(TestCase):
                               'b': ['c'],
                               'c': ['a'], })
         cycle = None
-        try:
+        with self.assertRaises(CyclicGraphError) as e:
             tsort(['a'], graph)
-        except CyclicGraphError as e:
-            cycle = e.cycle
-        assert(cycle == ['a', 'b', 'c', 'a'])
+        assert(e.exception.cycle == ['a', 'b', 'c', 'a'])
 
     def test_diamond(self):
         #  /--> b --> d

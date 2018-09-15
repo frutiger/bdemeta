@@ -519,12 +519,8 @@ class NotFoundErrorsTest(TestCase):
 
     def test_non_identification(self):
         r = TargetResolver(self.config)
-        caught = False
-        try:
+        with self.assertRaises(TargetNotFoundError):
             r.identify('foo')
-        except TargetNotFoundError:
-            caught = True
-        assert(caught)
 
 class LazilyBoundTest(TestCase):
     def setUp(self):
