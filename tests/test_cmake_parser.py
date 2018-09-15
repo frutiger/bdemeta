@@ -29,7 +29,7 @@ class TestFindCommand(TestCase):
     def test_command_not_found_error(self):
         text = StringIO("if()")
         commands = lex(text)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(LookupError):
             find_command(commands, "add_library")
 
     def test_ambiguous_command_error(self):

@@ -65,8 +65,7 @@ def find_command(commands: List[Command],
             candidates.append((index, item[1]))
 
     if len(candidates) == 0:
-        raise RuntimeError('Predicate ({}, {}) not found'.format(command,
-                                                                 args))
+        raise LookupError('Predicate ({}, {}) not found'.format(command, args))
     if len(candidates) > 1:
         raise RuntimeError('Ambiguous predicate ({}, {}) yielded {}'.format(
                                                                    command,
