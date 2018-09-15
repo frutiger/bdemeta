@@ -155,10 +155,11 @@ def generate_bde(target: BdeTarget, writer: Writer) -> None:
             out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
             drivers.append(name)
 
-        out.write(TEST_TARGET_PROLOGUE.format(**locals()))
-        for driver in drivers:
-            out.write('    {}\n'.format(driver))
-        out.write(COMMAND_EPILOGUE)
+        if drivers:
+            out.write(TEST_TARGET_PROLOGUE.format(**locals()))
+            for driver in drivers:
+                out.write('    {}\n'.format(driver))
+            out.write(COMMAND_EPILOGUE)
 
         out.write(INSTALL_HEADERS_PROLOGUE)
         for header in target.headers():

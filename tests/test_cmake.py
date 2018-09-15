@@ -92,6 +92,14 @@ class GenerateTargetTest(TestCase):
                                       [executable])
             assert(name == command[1])
 
+    def _check_test_target(self, cmake, name, components):
+        drivers = [c['driver'] for c in components if c['driver'] != None]
+        if len(drivers):
+            find_command(cmake, 'add_custom_target', [name + '.t'])
+        else:
+            with self.assertRaises(LookupError):
+                find_command(cmake, 'add_custom_target', [name + '.t'])
+
     def _check_target_deps(self, cmake, name, dependencies):
         _, command = find_command(cmake, 'target_link_libraries')
         assert(name     == command[0])
@@ -102,6 +110,7 @@ class GenerateTargetTest(TestCase):
     def _check_package(self, cmake, name, path, deps, comps):
         self._check_target_no_test(cmake, name, path, deps, comps)
         self._check_target_drivers(cmake, name, comps)
+        self._check_test_target(cmake, name, comps)
 
     def _test_package(self, name, path, deps, comps):
         target = Package(path, deps, comps)
