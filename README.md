@@ -36,7 +36,7 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
   * `walk TARGET [TARGET ...]`:<br/>
     Walk and topologically sort dependencies
 
-  * `dot [TARGET ...]`:<br/>
+  * `dot TARGET [TARGET ...]`:<br/>
     Generate a directed graph in the DOT language
 
   * `cmake TARGET [TARGET ...]`:<br/>
