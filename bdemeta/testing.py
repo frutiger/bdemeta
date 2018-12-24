@@ -56,18 +56,20 @@ def run_tests(stdout:      TextIO,
     num_drivers = len(tests) # all test drivers
     run_drivers = 0          # drivers run so far
 
-    args   = [(runner, t) for t in tests]
-    jobs   = multiprocessing.Pool().imap_unordered(run_one, args)
-    errors = {}
-    for test, test_errors in jobs:
-        run_drivers    += 1
-        if test_errors:
-            errors[test] = test_errors
+    with multiprocessing.Pool() as pool:
+        args   = [(runner, t) for t in tests]
+        jobs   = pool.imap_unordered(run_one, args)
+        errors = {}
 
-        columns  = get_columns()
-        message  = '\r' + ' ' * columns + '\r'
-        message += trim(status_format.format(**locals()), columns)
-        print(message, end='', file=stderr, flush=True)
+        for test, test_errors in jobs:
+            run_drivers += 1
+            if test_errors:
+                errors[test] = test_errors
+
+            columns  = get_columns()
+            message  = '\r' + ' ' * columns + '\r'
+            message += trim(status_format.format(**locals()), columns)
+            print(message, end='', file=stderr, flush=True)
     print(file=stderr, flush=True)
 
     for test, test_errors in errors.items():
