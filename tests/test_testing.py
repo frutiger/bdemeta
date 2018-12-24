@@ -103,6 +103,32 @@ class TestRunOne(TestCase):
         assert(4 in errors)
 
 class TestRun(TestCase):
+    def test_single_success(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        runner = MockRunner('s')
+
+        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo"])
+        assert(0 == rc)
+
+        assert('\n' not in stderr.getvalue()[:-1])
+        assert('foo' in stderr.getvalue())
+
+    def test_single_failure(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        runner = MockRunner('f')
+
+        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo"])
+        assert(1 == rc)
+
+        assert('\n' not in stderr.getvalue()[:-1])
+        assert('foo' in stderr.getvalue())
+
+        failures = stdout.getvalue().split('\n')[:-1]
+        assert(1 == len(failures))
+        assert('FAIL TEST foo CASE 1' in failures)
+
     def test_two_drivers_four_successes_each(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
