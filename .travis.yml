@@ -10,7 +10,7 @@ install:
   - pip install mypy
   - pip install coveralls
 script:
-  - mypy -p bdemeta -m tests/cmake_parser
+  - mypy -p bdemeta -m tests.cmake_parser
   - coverage run -m unittest
 after_success:
   - coveralls

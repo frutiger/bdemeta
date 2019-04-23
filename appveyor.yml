@@ -11,7 +11,7 @@ environment:
 build: off
 test_script:
   - "%PYTHON%\\python.exe -m pip install mypy"
-  - "%PYTHON%\\python.exe -m mypy -p bdemeta -m tests/cmake_parser"
+  - "%PYTHON%\\python.exe -m mypy -p bdemeta -m tests.cmake_parser"
   - "%PYTHON%\\python.exe -m unittest"
 deploy: off
 
