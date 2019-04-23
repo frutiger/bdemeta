@@ -95,7 +95,10 @@ class PackageResolver(Resolver[Package]):
 
 class TargetResolver(Resolver[Target]):
     def __init__(self, config: Config) -> None:
-        self._roots                     = cast(List[Path], config['roots'])
+        if 'bde_roots' in config:
+            self._bde_roots  = cast(List[Path], config['bde_roots'])
+        if 'cmake_dirs' in config:
+            self._cmake_dirs = cast(Dict[str, Path], config['cmake_dirs'])
         self._virtuals: Dict[str, str]  = {}
         self._providers: Set[str]       = set()
         self._pkg_configs               = cast(Dict[str, str],
@@ -130,16 +133,13 @@ class TargetResolver(Resolver[Target]):
         return None
 
     @staticmethod
-    def _is_cmake(root: Path, name: str) -> Optional[Path]:
-        if root.stem == name and (root/'CMakeLists.txt').is_file():
-            return root
-        path = root/'thirdparty'/name
-        if path.is_dir() and (path/'CMakeLists.txt').is_file():
-            return path
+    def _is_cmake(directory: Path, alias: str, name: str) -> Optional[Path]:
+        if alias == name and (directory/'CMakeLists.txt').is_file():
+            return directory
         return None
 
     def identify(self, name: str) -> Identification:
-        for root in self._roots:
+        for root in getattr(self, '_bde_roots', []):
             path = TargetResolver._is_group(root, name)
             if path is not None:
                 return Identification('group', path)
@@ -148,7 +148,8 @@ class TargetResolver(Resolver[Target]):
             if path is not None:
                 return Identification('package', path)
 
-            path = TargetResolver._is_cmake(root, name)
+        for alias, directory in getattr(self, '_cmake_dirs', {}).items():
+            path = TargetResolver._is_cmake(directory, alias, name)
             if path is not None:
                 return Identification('cmake', path)
 

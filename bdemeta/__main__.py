@@ -67,10 +67,20 @@ def run(stdout:      TextIO,
         except FileNotFoundError:
             raise NoConfigError(config_path)
 
-        config['roots'] = list(map(pathlib.Path, config['roots']))
-        for root in config['roots']:
-            if not root.is_dir():
-                raise InvalidPathError(root)
+        Path = pathlib.Path
+        for section in { 'cmake_dirs' }:
+            items = config.get(section, {}).items()
+            config[section] = { k: Path(v) for k, v in items }
+            for directory in config[section].values():
+                if not directory.is_dir():
+                    raise InvalidPathError(directory)
+
+        for section in { 'bde_roots' }:
+            items = config.get(section, [])
+            config[section] = [ Path(k) for k in items ]
+            for path in config[section]:
+                if not path.is_dir():
+                    raise InvalidPathError(path)
 
         resolver = bdemeta.resolver.TargetResolver(config)
 

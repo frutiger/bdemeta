@@ -51,10 +51,14 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
 called `.bdemeta.conf`.  The configuration is as follows:
 
     {
-        "roots": [
-            "<root>",
+        "bde_roots": [
+            "<bde_root>",
             ...
         ],
+        "cmake_dirs": {
+            "cmake_target": "cmake_subdir",
+            ...
+        },
         "providers": {
             "<target1>: ["<target2>", "<target3>", ...],
             ...
@@ -68,20 +72,26 @@ called `.bdemeta.conf`.  The configuration is as follows:
 
 The meaning of each block is explained below.
 
-### Roots
+### BDE Roots
 
 `bdemeta` will look for targets in directories specified by (possibly multiple)
-`<root>`s in the configuration.  This makes it easy to build code across
+`<bde_root>`s in the configuration.  This makes it easy to build code across
 multiple BDE-style repositories, including your own.
 
-In particular, `bdemeta` will search for targets by name within each `<root>`
-directory:
+In particular, `bdemeta` will search for targets by name within each
+`<bde_root>` directory:
 
   * package groups in `<root>/groups/<name>`
   * standalone pacakges in `<root>/[adapters|nodeaddons|stanadlone]/<name>`
-  * third party CMake packages in:
-      * `<root>/thirdparty/CMakeLists.txt`
-      * `<root>/CMakeLists.txt`
+
+### CMake Directories
+
+`bdemeta` will also look for targets in directories specified by (possibly
+multiple) `<cmake_target>`s in the configuration.  This makes it easy to
+integrate with code that is already configured to build with CMake.
+
+For any given `<cmake_target>`, `bdemeta` will search for a
+`<cmake_subdir>/CMakeLists.txt`.
 
 ### Target providers
 

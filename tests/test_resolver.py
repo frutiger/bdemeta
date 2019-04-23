@@ -112,9 +112,9 @@ class ResolveTest(TestCase):
 class PackageResolverTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
-            ]
+            ],
         }
         self._patcher = OsPatcher({
             'r': {
@@ -289,9 +289,9 @@ class PackageResolverTest(TestCase):
 class TargetResolverTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
-            ]
+            ],
         }
         self._patcher = OsPatcher({
             'r': {
@@ -361,9 +361,9 @@ class TargetResolverTest(TestCase):
 class StandaloneResolverTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
-            ]
+            ],
         }
         self._patcher = OsPatcher({
             'r': {
@@ -438,10 +438,10 @@ class StandaloneResolverTest(TestCase):
 class CMakeResolverTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
-                P('r'),
-                P('t2'),
-            ]
+            'cmake_dirs': {
+                't1': P('r')/'thirdparty'/'t1',
+                't2': P('t2')
+            },
         }
         self._patcher = OsPatcher({
             'r': {
@@ -481,9 +481,6 @@ class CMakeResolverTest(TestCase):
 class PkgConfigResolverTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
-                P('r'),
-            ],
             'pkg_configs': {
                 'foo': 'bar',
             },
@@ -506,9 +503,9 @@ class PkgConfigResolverTest(TestCase):
 class NotFoundErrorsTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
-            ]
+            ],
         }
         self._patcher = OsPatcher({
             'r': { },
@@ -525,7 +522,7 @@ class NotFoundErrorsTest(TestCase):
 class LazilyBoundTest(TestCase):
     def setUp(self):
         self.config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
             ],
             'providers': {
@@ -533,7 +530,7 @@ class LazilyBoundTest(TestCase):
             },
             'runtime_libraries': [
                 'bar'
-            ]
+            ],
         }
         self._patcher = OsPatcher({
             'r': {

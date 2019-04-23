@@ -46,10 +46,30 @@ class NoConfigErrorTest(TestCase):
         main(None, stderr, None, None, None, [__name__])
         assert(stderr.getvalue())
 
-class InvalidPathErrorTest(TestCase):
+class InvalidBdeRootPathTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{ "roots": ["unlikely_path_that_exists"] }',
+            '.bdemeta.conf': '{ "bde_roots": ["unlikely_path_that_exists"] }',
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_invalid_path_error(self):
+        with self.assertRaises(InvalidPathError):
+            run(None, None, None, None, None, ['walk', 'foo'])
+
+        stderr = StringIO()
+        main(None, stderr, None, None, None, [__name__, 'walk', 'foo'])
+        assert(stderr.getvalue())
+
+class InvalidCmakeDirPathTest(TestCase):
+    def setUp(self):
+        self._patcher = OsPatcher({
+            '.bdemeta.conf': '''{
+                "cmake_dirs": {"foo": "unlikely_path_that_exists",
+                               "bar": "unlikely_path_that_exists" }
+            }''',
         })
 
     def tearDown(self):
@@ -66,12 +86,12 @@ class InvalidPathErrorTest(TestCase):
 class RunTest(TestCase):
     def setUp(self):
         self._config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
             ]
         }
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            '.bdemeta.conf': '{"bde_roots": ["r"]}',
             'r': {
                 'groups': {
                     'gr1': {
@@ -124,32 +144,45 @@ class RunTest(TestCase):
 
         assert(' '.join(u.name for u in us) + '\n' == f.getvalue())
 
-class NoRootTest(TestCase):
+class CMakeProjectTest(TestCase):
     def setUp(self):
+        self._config = {
+            'cmake_dirs': {
+                'n': P('r'),
+            }
+        }
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            '.bdemeta.conf': '{"cmake_dirs": {"n": "r"}}',
+            'r': {
+                'CMakeLists.txt': '',
+            },
         })
 
     def tearDown(self):
         self._patcher.reset()
 
-    def test_no_root_error(self):
-        with self.assertRaises(InvalidPathError) as e:
-            run(None, None, None, None, None, ['walk'])
-        assert(P('r') == e.exception.args[0])
+    def test_generate_cmake(self):
+        output = StringIO()
 
-    def test_no_root_main_error(self):
-        stdout = StringIO()
-        stderr = StringIO()
-        main(stdout, stderr, None, None, None, [__name__, 'walk', 'p1'])
-        assert(not stdout.getvalue())
-        assert(stderr.getvalue())
-        assert('r' in stderr.getvalue())
+        f1 = {}
+        w1 = get_filestore_writer(f1)
+
+        run(output, None, w1, None, None, ['cmake', 'n'])
+
+        r  = TargetResolver(self._config)
+        p  = resolve(r, 'n')
+        f2 = {}
+        w2 = get_filestore_writer(f2)
+        generate(p, w2)
+
+        assert(f1.keys() == f2.keys())
+        for k in f1:
+            assert(f1[k].getvalue() == f2[k].getvalue())
 
 class GraphTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            '.bdemeta.conf': '{"bde_roots": ["r"]}',
             'r': {
                 'adapters': {
                     'p1': {
@@ -182,12 +215,12 @@ class GraphTest(TestCase):
 class CMakeTest(TestCase):
     def setUp(self):
         self._config = {
-            'roots': [
+            'bde_roots': [
                 P('r'),
             ]
         }
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            '.bdemeta.conf': '{"bde_roots": ["r"]}',
             'r': {
                 'adapters': {
                     'p': {
@@ -224,7 +257,7 @@ class CMakeTest(TestCase):
 class MainTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            '.bdemeta.conf': '{"bde_roots": ["r"]}',
             'r': {
                 'adapters': {
                     'p1': {
