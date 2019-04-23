@@ -152,8 +152,8 @@ class TargetResolver(Resolver[Target]):
             if path is not None:
                 return Identification('cmake', path)
 
-            if name in self._virtuals:
-                return Identification('virtual')
+        if name in self._virtuals:
+            return Identification('virtual')
 
         if name in self._pkg_configs:
             return Identification('pkg_config', None, self._pkg_configs[name])
