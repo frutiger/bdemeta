@@ -10,16 +10,18 @@ License Agreement</a>.  It asks you to authorize the transfer of copyright
 ownership of all contributions to this project to the original author of the
 project (Mashud Rahman).
 
-## Running tests
+## Tests, Typing and Coverage
 
-To run the tests:
+All changes must be accompanied by tests which cover the new functionality, and
+all code must be completely typed.  Run the following commands to verify:
 
-    $ python -m unittest discover -s tests
+    $ python3 -m unittest
+    $ mypy -p bdemeta -m tests.cmake_parser
 
 ## Raising issues
 
 Please verify that the tests pass before raising an issue.  Failing tests on
-one Python 3.6 or newer is an issue in its own right.
+Python 3.6 or newer is an issue in its own right.
 
 ## Creating pull requests
 
