@@ -1,6 +1,7 @@
 # tests.test_bdemeta
 
 import shutil
+import sys
 from io       import StringIO
 from pathlib  import Path as P
 from tempfile import TemporaryDirectory
@@ -343,15 +344,17 @@ class RunTestTest(TestCase):
 
 class TestRunnerTest(TestCase):
     def test_success(self):
-        result = test_runner(["python", "-c", "import sys; sys.exit(0)"])
+        result = test_runner([sys.executable, "-c", "import sys; sys.exit(0)"])
         assert(result == RunResult.SUCCESS)
 
     def test_failure(self):
-        result = test_runner(["python", "-c", "import sys; sys.exit(1)"])
+        result = test_runner([sys.executable, "-c", "import sys; sys.exit(1)"])
         assert(result == RunResult.FAILURE)
 
     def test_no_such_case(self):
-        result = test_runner(["python", "-c", "import sys; sys.exit(-1)"])
+        result = test_runner([sys.executable,
+                              "-c",
+                              "import sys; sys.exit(-1)"])
         assert(result == RunResult.NO_SUCH_CASE)
 
 class TerminalSizeTest(TestCase):

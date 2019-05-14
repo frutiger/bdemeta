@@ -26,7 +26,7 @@ class InvalidArgumentsError(RuntimeError):
 class InvalidPathError(RuntimeError):
     pass
 
-minus_one_rc = subprocess.run(['python',
+minus_one_rc = subprocess.run([sys.executable,
                                '-c',
                                'import sys; sys.exit(-1)']).returncode
 
