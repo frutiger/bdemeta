@@ -14,7 +14,6 @@ import bdemeta.cmake
 import bdemeta.graph
 import bdemeta.resolver
 import bdemeta.testing
-from bdemeta.cmake   import Writer
 from bdemeta.testing import Runner, RunResult
 
 class NoConfigError(RuntimeError):
@@ -29,10 +28,6 @@ class InvalidPathError(RuntimeError):
 minus_one_rc = subprocess.run([sys.executable,
                                '-c',
                                'import sys; sys.exit(-1)']).returncode
-
-def file_writer(name: str, writer: Callable[[TextIO], None]) -> None:
-    with open(name, 'w') as f:
-        writer(f)
 
 def test_runner(command: List[str]) -> RunResult:
     try:
@@ -49,7 +44,6 @@ def get_columns() -> int:
 
 def run(stdout:      TextIO,
         stderr:      TextIO,
-        writer:      Writer,
         runner:      Runner,
         get_columns: Callable[[], int],
         args:        List[str]) -> int:
@@ -86,7 +80,7 @@ def run(stdout:      TextIO,
         print('}', file=stdout)
     elif mode == 'cmake':
         targets = bdemeta.resolver.resolve(resolver, args)
-        bdemeta.cmake.generate(targets, writer)
+        bdemeta.cmake.generate(targets, stdout)
     elif mode == 'runtests':
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         tests = args or glob.glob(os.path.join('.', '*.t'))
@@ -101,12 +95,11 @@ def run(stdout:      TextIO,
 
 def main(stdout:      TextIO            = sys.stdout,
          stderr:      TextIO            = sys.stderr,
-         writer:      Writer            = file_writer,
          runner:      Runner            = test_runner,
          get_columns: Callable[[], int] = get_columns,
          args:        List[str]         = sys.argv) -> int:
     try:
-        return run(stdout, stderr, writer, runner, get_columns, args[1:])
+        return run(stdout, stderr, runner, get_columns, args[1:])
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 
@@ -117,7 +110,7 @@ def main(stdout:      TextIO            = sys.stdout,
   generate a directed graph in the DOT language
 
 {1} cmake    <target> [<target>...]
-  generate CMake files in the current directory
+  generate a CMake lists file
 
 {1} runtests [<test>...]
   run specified or discovered unit tests'''

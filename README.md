@@ -40,7 +40,7 @@ Platforms running Python 3.6 or newer are supported.  Install using `pip`:
     Generate a directed graph in the DOT language
 
   * `cmake TARGET [TARGET ...]`:<br/>
-    Generate CMake files in the current directory
+    Generate a CMake lists file
 
   * `runtests [TEST ...]`:<br/>
     Run specified or discovered unit tests

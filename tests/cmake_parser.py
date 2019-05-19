@@ -10,6 +10,7 @@ IfNode = Tuple[List[str], List[Any], List[Any]]  # type: ignore
 Node   = List[Union[Command, IfNode]]
 
 def lex(input: TextIO) -> Iterator[Command]:
+    input.seek(0)
     whitespace = re.compile('\s+')
 
     parsing_item    = False
@@ -54,16 +55,23 @@ def partial_match(lhs: Command, rhs: Command) -> bool:
 
     return all(map(lambda x: x[0] == x[1], zip(lhs[1], rhs[1])))
 
+def find_commands(commands: List[Command],
+                  command:  str,
+                  opt_args: None=None) -> List[Tuple[int, List[str]]]:
+    args: List[str] = opt_args if opt_args is not None else []
+
+    matches = []
+    for index, item in enumerate(commands):
+        if partial_match((command, args), item):
+            matches.append((index, item[1]))
+    return matches
+
 def find_command(commands: List[Command],
                  command:  str,
                  opt_args: None=None) -> Tuple[int, List[str]]:
     args: List[str] = opt_args if opt_args is not None else []
 
-    candidates = []
-    for index, item in enumerate(commands):
-        if partial_match((command, args), item):
-            candidates.append((index, item[1]))
-
+    candidates = find_commands(commands, command, opt_args)
     if len(candidates) == 0:
         raise LookupError('Predicate ({}, {}) not found'.format(command, args))
     if len(candidates) > 1:

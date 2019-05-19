@@ -9,14 +9,7 @@ import itertools
 from bdemeta.cmake import generate
 from bdemeta.types import Target, Package, CMake, Pkg
 
-from tests.cmake_parser import lex, find_command, parse
-
-def get_filestore_writer(files):
-    def write(path, writer):
-        files[path] = StringIO()
-        writer(files[path])
-        files[path].seek(0)
-    return write
+from tests.cmake_parser import lex, find_commands, find_command, parse
 
 def grouper(iterable, n, fillvalue=None):
     "Collect data into fixed-length chunks or blocks"
@@ -26,12 +19,12 @@ def grouper(iterable, n, fillvalue=None):
 
 class GenerateTargetTest(TestCase):
     def _check_target_no_test(self, cmake, name, path, deps, components):
-        _, command = find_command(cmake, 'add_library')
+        _, command = find_command(cmake, 'add_library', [name])
         assert(name == command[0])
         for index, component in enumerate(components):
             assert(component['source'] == command[index + 1])
 
-        _, command = find_command(cmake, 'target_include_directories')
+        _, command = find_command(cmake, 'target_include_directories', [name])
         assert(name     == command[0])
         assert('PUBLIC' == command[1])
 
@@ -46,15 +39,15 @@ class GenerateTargetTest(TestCase):
         for index, dep in enumerate(deps):
             assert(dep.name == command[index + 2])
 
-        _, command = find_command(cmake, 'install', ['FILES'])
-        assert('FILES'       == command[0])
-        headers = [c['header'] for c in components if c['header'] != None]
-        index = 1
-        for header in headers:
-            assert(header == command[index])
-            index += 1
-        assert('DESTINATION' == command[index + 0])
-        assert('include'     == command[index + 1])
+        for _, command in find_commands(cmake, 'install', ['FILES']):
+            assert('FILES'       == command[0])
+            headers = [c['header'] for c in components if c['header'] != None]
+            index = 1
+            for header in headers:
+                assert(header == command[index])
+                index += 1
+            assert('DESTINATION' == command[index + 0])
+            assert('include'     == command[index + 1])
 
         _, command = find_command(cmake, 'install', ['TARGETS',
                                                      name,
@@ -115,16 +108,13 @@ class GenerateTargetTest(TestCase):
     def _test_package(self, name, path, deps, comps, has_tests):
         target = Package(path, deps, comps)
 
-        files = {}
-        generate([target], get_filestore_writer(files))
+        out = StringIO()
+        generate([target], out)
 
-        assert(f'{name}.cmake' in files)
-        generated = files[f'{name}.cmake']
+        cmake = list(lex(out))
 
-        cmake = list(lex(generated))
         self._check_package(cmake, name, path, deps, comps)
 
-        cmake = list(lex(files['CMakeLists.txt']))
         if has_tests:
             find_command(cmake, 'add_custom_target', ['tests'])
         else:
@@ -134,10 +124,10 @@ class GenerateTargetTest(TestCase):
     def test_base_target_no_deps(self):
         t = Target('t', [])
 
-        files = {}
-        generate([t], get_filestore_writer(files))
+        out = StringIO()
+        generate([t], out)
 
-        assert('CMakeLists.txt' in files)
+        assert(out.getvalue())
 
     def test_empty_package_no_deps_no_test(self):
         self._test_package('target', pjoin('path', 'target'), [], [], False)
@@ -169,54 +159,42 @@ class GenerateTargetTest(TestCase):
 
         is_test = False
 
-        files = {}
-        generate([p1, p2], get_filestore_writer(files))
+        out = StringIO()
+        generate([p1, p2], out)
 
-        assert('p1.cmake' in files)
-        assert('p2.cmake' in files)
-        generated1 = files['p1.cmake']
-        generated2 = files['p2.cmake']
-
-        cmake1 = list(lex(generated1))
-        self._check_package(cmake1, 'p1', 'p1', deps1, comps1)
-        cmake2 = list(lex(generated2))
-        self._check_package(cmake2, 'p2', 'p2', deps2, comps2)
-
-        assert('CMakeLists.txt' in files)
-        assert('include(p1.cmake)' in files['CMakeLists.txt'].getvalue())
-        assert('include(p2.cmake)' in files['CMakeLists.txt'].getvalue())
+        cmake = list(lex(out))
+        self._check_package(cmake, 'p1', 'p1', deps1, comps1)
+        self._check_package(cmake, 'p2', 'p2', deps2, comps2)
 
     def test_empty_package_with_override(self):
         p = Package('p', [], [])
         p.overrides = 'override.cmake'
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        assert('CMakeLists.txt' in files)
-        assert(f'include({p.overrides})' in files['CMakeLists.txt'].getvalue())
+        assert(f'include({p.overrides})' in out.getvalue())
 
     def test_empty_package_with_no_output_dep(self):
         p1 = Package('p1', [],   [])
         p2 = Package('p2', [p1], [])
         p1.has_output = False
 
-        files = {}
-        generate([p1, p2], get_filestore_writer(files))
+        out = StringIO()
+        generate([p1, p2], out)
 
-        cmake = list(lex(files['p2.cmake']))
-        _, libs = find_command(cmake, 'target_link_libraries')
+        cmake = list(lex(out))
+        _, libs = find_command(cmake, 'target_link_libraries', ['p2'])
         assert('p1' not in libs)
 
     def test_empty_package_lazily_bound(self):
         p = Package('p', [], [])
         p.lazily_bound = True
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        assert('p.cmake' in files)
-        commands = list(lex(files['p.cmake']))
+        commands = list(lex(out))
 
         apple_start, _ = find_command(commands, 'if', ['APPLE'])
         stmts = parse(iter(commands[apple_start:]))[0]
@@ -232,62 +210,49 @@ class GenerateTargetTest(TestCase):
         path = pjoin('foo', 'bar')
         c = CMake('bar', path)
 
-        files = {}
-        generate([c], get_filestore_writer(files))
-
-        assert('CMakeLists.txt' in files)
-        cmake = files['CMakeLists.txt'].getvalue()
+        out = StringIO()
+        generate([c], out)
 
         # Note: CMake supports '/' for path separators on Windows (in addition
         # to Unix), so for simplicity we use '/' universally
         upath = path.replace('\\', '/')
-        assert(f'add_subdirectory({upath} {c.name})' in cmake)
+        assert(f'add_subdirectory({upath} {c.name})' in out.getvalue())
 
     def test_no_pkg_config_no_include(self):
         c = CMake('foo', 'bar')
 
-        files = {}
-        generate([c], get_filestore_writer(files))
+        out = StringIO()
+        generate([c], out)
 
-        assert('CMakeLists.txt' in files)
-        cmake = files['CMakeLists.txt'].getvalue()
-
-        assert('include(FindPkgConfig)' not in cmake)
+        assert('include(FindPkgConfig)' not in out.getvalue())
 
     def test_pkg_config_has_include(self):
         p = Pkg('foo', 'bar')
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        assert('CMakeLists.txt' in files)
-        cmake = files['CMakeLists.txt'].getvalue()
-
-        assert('include(FindPkgConfig)' in cmake)
+        assert('include(FindPkgConfig)' in out.getvalue())
 
     def test_pkg_config_generates_cmake(self):
         name    = 'foo'
         package = 'bar'
         p = Pkg(name, package)
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        assert('CMakeLists.txt' in files)
-        cmake = files['CMakeLists.txt'].getvalue()
-
-        assert(f'{name}.cmake' in files)
-        assert(f'include({name}.cmake)' in cmake)
+        assert(out.getvalue())
 
     def test_pkg_config_generates_search(self):
         name    = 'foo'
         package = 'bar'
         p = Pkg(name, package)
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        cmake = files[f'{name}.cmake'].getvalue()
+        cmake = out.getvalue()
         assert(f'pkg_check_modules({name} REQUIRED {package})' in cmake)
 
     def test_pkg_config_generates_interface_lib(self):
@@ -295,10 +260,10 @@ class GenerateTargetTest(TestCase):
         package = 'bar'
         p = Pkg(name, package)
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        cmake = list(lex(files[f'{name}.cmake']))
+        cmake = list(lex(out))
         _, command = find_command(cmake, 'add_library')
         assert(name == command[0])
         assert('INTERFACE' == command[1])
@@ -308,11 +273,10 @@ class GenerateTargetTest(TestCase):
         package = 'bar'
         p = Pkg(name, package)
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        cmake = files[f'{name}.cmake']
-        commands = list(lex(cmake))
+        commands = list(lex(out))
         sh_lib_start, _ = find_command(commands, 'if', ['BUILD_SHARED_LIBS'])
         stmts = parse(iter(commands[sh_lib_start:]))[0]
 
@@ -348,11 +312,10 @@ class GenerateTargetTest(TestCase):
         package = 'bar'
         p = Pkg(name, package)
 
-        files = {}
-        generate([p], get_filestore_writer(files))
+        out = StringIO()
+        generate([p], out)
 
-        cmake = files[f'{name}.cmake']
-        commands = list(lex(cmake))
+        commands = list(lex(out))
         sh_lib_start, _ = find_command(commands, 'if', ['BUILD_SHARED_LIBS'])
         stmts = parse(iter(commands[sh_lib_start:]))[0]
 
