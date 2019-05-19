@@ -32,10 +32,10 @@ class NoConfigErrorTest(TestCase):
 
     def test_no_config_error(self):
         with self.assertRaises(NoConfigError):
-            run(None, None, None, None, ['walk', 'foo'])
+            run(None, None, None, None, ['walk', 'bdemeta.json', 't'])
 
         stderr = StringIO()
-        main(None, stderr, None, None, [__name__, 'walk', 'foo'])
+        main(None, stderr, None, None, [__name__, 'walk', 'bdemeta.json', 't'])
         assert(stderr.getvalue())
 
     def test_args_error_if_config_unneeded(self):
@@ -49,7 +49,7 @@ class NoConfigErrorTest(TestCase):
 class InvalidPathErrorTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{ "roots": ["unlikely_path_that_exists"] }',
+            'bdemeta.json': '{ "roots": ["unlikely_path_that_exists"] }',
         })
 
     def tearDown(self):
@@ -57,10 +57,10 @@ class InvalidPathErrorTest(TestCase):
 
     def test_invalid_path_error(self):
         with self.assertRaises(InvalidPathError):
-            run(None, None, None, None, ['walk', 'foo'])
+            run(None, None, None, None, ['walk', 'bdemeta.json', 't'])
 
         stderr = StringIO()
-        main(None, stderr, None, None, [__name__, 'walk', 'foo'])
+        main(None, stderr, None, None, [__name__, 'walk', 'bdemeta.json', 't'])
         assert(stderr.getvalue())
 
 class RunTest(TestCase):
@@ -71,7 +71,7 @@ class RunTest(TestCase):
             ]
         }
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            'bdemeta.json': '{"roots": ["r"]}',
             'r': {
                 'groups': {
                     'gr1': {
@@ -115,9 +115,14 @@ class RunTest(TestCase):
             run(None, None, None, None, ['foo'])
         assert('Unknown mode \'{}\''.format('foo') == e.exception.args[0])
 
+    def test_no_config_error(self):
+        with self.assertRaises(InvalidArgumentsError) as e:
+            run(None, None, None, None, ['walk'])
+        assert('No config specified' == e.exception.args[0])
+
     def test_target_with_dependencies(self):
         f = StringIO()
-        run(f, None, None, None, ['walk', 'gr2'])
+        run(f, None, None, None, ['walk', 'bdemeta.json', 'gr2'])
 
         r  = TargetResolver(self._config)
         us = resolve(r, ['gr2'])
@@ -127,7 +132,7 @@ class RunTest(TestCase):
 class NoRootTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            'bdemeta.json': '{"roots": ["r"]}',
         })
 
     def tearDown(self):
@@ -135,13 +140,17 @@ class NoRootTest(TestCase):
 
     def test_no_root_error(self):
         with self.assertRaises(InvalidPathError) as e:
-            run(None, None, None, None, ['walk'])
+            run(None, None, None, None, ['walk', 'bdemeta.json'])
         assert(P('r') == e.exception.args[0])
 
     def test_no_root_main_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main(stdout, stderr, None, None, [__name__, 'walk', 'p1'])
+        main(stdout,
+             stderr,
+             None,
+             None,
+             [__name__, 'walk', 'bdemeta.json', 'p1'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
         assert('r' in stderr.getvalue())
@@ -149,7 +158,7 @@ class NoRootTest(TestCase):
 class GraphTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            'bdemeta.json': '{"roots": ["r"]}',
             'r': {
                 'adapters': {
                     'p1': {
@@ -173,7 +182,7 @@ class GraphTest(TestCase):
 
     def test_graph(self):
         f = StringIO()
-        run(f, None, None, None, ['dot', 'p2'])
+        run(f, None, None, None, ['dot', 'bdemeta.json', 'p2'])
         lines = f.getvalue().split('\n')
         assert('digraph G {'      == lines[0])
         assert('    "p2" -> "p1"' == lines[1])
@@ -187,7 +196,7 @@ class CMakeTest(TestCase):
             ]
         }
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            'bdemeta.json': '{"roots": ["r"]}',
             'r': {
                 'adapters': {
                     'p': {
@@ -206,7 +215,7 @@ class CMakeTest(TestCase):
     def test_generate_cmake(self):
         output1 = StringIO()
 
-        run(output1, None, output1, None, ['cmake', 'p'])
+        run(output1, None, output1, None, ['cmake', 'bdemeta.json', 'p'])
 
         r       = TargetResolver(self._config)
         p       = resolve(r, 'p')
@@ -218,7 +227,7 @@ class CMakeTest(TestCase):
 class MainTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            '.bdemeta.conf': '{"roots": ["r"]}',
+            'bdemeta.json': '{"roots": ["r"]}',
             'r': {
                 'adapters': {
                     'p1': {
@@ -254,7 +263,7 @@ class MainTest(TestCase):
 
     def test_walk(self):
         stdout = StringIO()
-        main(stdout, None, None, None, [None, 'walk', 'p2'])
+        main(stdout, None, None, None, [None, 'walk', 'bdemeta.json', 'p2'])
         assert('p2 p1\n' == stdout.getvalue())
 
     def test_error(self):
@@ -267,7 +276,11 @@ class MainTest(TestCase):
     def test_cyclic_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main(stdout, stderr, None, None, [__name__, 'walk', 'p3'])
+        main(stdout,
+             stderr,
+             None,
+             None,
+             [__name__, 'walk', 'bdemeta.json', 'p3'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
         assert('p3' in stderr.getvalue())
@@ -276,7 +289,11 @@ class MainTest(TestCase):
     def test_not_found_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main(stdout, stderr, None, None, [__name__, 'walk', 'p5'])
+        main(stdout,
+             stderr,
+             None,
+             None,
+             [__name__, 'walk', 'bdemeta.json', 'p5'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
         assert('p5' in stderr.getvalue())
@@ -299,7 +316,11 @@ class NoConfigMainTest(TestCase):
     def test_no_config_error(self):
         stdout = StringIO()
         stderr = StringIO()
-        main(stdout, stderr, None, None, [__name__, 'walk', 'p1'])
+        main(stdout,
+             stderr,
+             None,
+             None,
+             [__name__, 'walk', 'bdemeta.json', 'p1'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
 

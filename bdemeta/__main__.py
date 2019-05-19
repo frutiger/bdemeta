@@ -54,7 +54,10 @@ def run(stdout:      TextIO,
     args = args[1:]
 
     if mode in { 'walk', 'dot', 'cmake' }:
-        config_path = pathlib.Path('.bdemeta.conf')
+        if len(args) == 0:
+            raise InvalidArgumentsError('No config specified')
+        config_path = pathlib.Path(args[0])
+        args        = args[1:]
         try:
             with config_path.open() as f:
                 config = json.load(f)
@@ -103,13 +106,13 @@ def main(stdout:      TextIO            = sys.stdout,
     except InvalidArgumentsError as e:
         usage = '''{0}. Usage:
 
-{1} walk     <target> [<target>...]
+{1} walk     <config> <target> [<target>...]
   walk and topologically sort dependencies
 
-{1} dot      <target> [<target>...]
+{1} dot      <config> <target> [<target>...]
   generate a directed graph in the DOT language
 
-{1} cmake    <target> [<target>...]
+{1} cmake    <config> <target> [<target>...]
   generate a CMake lists file
 
 {1} runtests [<test>...]
