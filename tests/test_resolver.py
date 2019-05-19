@@ -363,11 +363,14 @@ class StandaloneResolverTest(TestCase):
         self.config = {
             'roots': [
                 P('r'),
-            ]
+            ],
+            'standalones': [
+                'adapters',
+            ],
         }
         self._patcher = OsPatcher({
             'r': {
-                'adapters': {
+                'standalones': {
                     'p1': {
                         'package': {
                             'p1.dep': '',
@@ -388,16 +391,29 @@ class StandaloneResolverTest(TestCase):
                         'p3.cmake': '',
                     },
                 },
+                'adapters': {
+                    'p4': {
+                        'package': {
+                            'p4.dep': '',
+                            'p4.mem': 'p4c1 p4c2',
+                        },
+                    },
+                },
             },
         })
 
     def tearDown(self):
         self._patcher.reset()
 
-    def test_adapter_identification(self):
+    def test_standalone_identification(self):
         r = TargetResolver(self.config)
-        assert(Identification('package', P('r')/'adapters'/'p1') == \
+        assert(Identification('package', P('r')/'standalones'/'p1') == \
                                                               r.identify('p1'))
+
+    def test_custom_standalone_identification(self):
+        r = TargetResolver(self.config)
+        assert(Identification('package', P('r')/'adapters'/'p4') == \
+                                                              r.identify('p4'))
 
     def test_standalone_with_one_dependency(self):
         r = TargetResolver(self.config)
@@ -415,8 +431,8 @@ class StandaloneResolverTest(TestCase):
         p1 = r.resolve('p1', {})
         assert('p1' == p1.name)
 
-        c1 = P('r')/'adapters'/'p1'/'p1c1.cpp'
-        c2 = P('r')/'adapters'/'p1'/'p1c2.cpp'
+        c1 = P('r')/'standalones'/'p1'/'p1c1.cpp'
+        c2 = P('r')/'standalones'/'p1'/'p1c2.cpp'
         assert([str(c1), str(c2)] == list(sorted(p1.sources())))
 
     def test_level_two_group_resolution(self):
@@ -433,7 +449,7 @@ class StandaloneResolverTest(TestCase):
 
         p3 = r.resolve('p3', {})
         assert('p3' == p3.name)
-        assert(str(P('r')/'adapters'/'p3'/'p3.cmake') == p3.overrides)
+        assert(str(P('r')/'standalones'/'p3'/'p3.cmake') == p3.overrides)
 
 class CMakeResolverTest(TestCase):
     def setUp(self):
@@ -537,7 +553,7 @@ class LazilyBoundTest(TestCase):
         }
         self._patcher = OsPatcher({
             'r': {
-                'adapters': {
+                'standalones': {
                     'p1': {
                         'package': {
                             'p1.dep': '',

@@ -96,6 +96,9 @@ class PackageResolver(Resolver[Package]):
 class TargetResolver(Resolver[Target]):
     def __init__(self, config: Config) -> None:
         self._roots                     = cast(List[Path], config['roots'])
+        self._standalones               = cast(Set[str],
+                                               set(config.get('standalones', [])))
+        self._standalones |= {'standalones'}
         self._virtuals: Dict[str, str]  = {}
         self._providers: Set[str]       = set()
         self._pkg_configs               = cast(Dict[str, str],
@@ -121,9 +124,8 @@ class TargetResolver(Resolver[Target]):
             return path
         return None
 
-    @staticmethod
-    def _is_standalone(root: Path, name: str) -> Optional[Path]:
-        for category in {'adapters', 'nodeaddons', 'standalone'}:
+    def _is_standalone(self, root: Path, name: str) -> Optional[Path]:
+        for category in self._standalones:
             path = root/category/name
             if path.is_dir() and (path/'package').is_dir():
                 return path
@@ -144,7 +146,7 @@ class TargetResolver(Resolver[Target]):
             if path is not None:
                 return Identification('group', path)
 
-            path = TargetResolver._is_standalone(root, name)
+            path = self._is_standalone(root, name)
             if path is not None:
                 return Identification('package', path)
 

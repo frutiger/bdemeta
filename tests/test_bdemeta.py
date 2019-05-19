@@ -160,7 +160,7 @@ class GraphTest(TestCase):
         self._patcher = OsPatcher({
             'bdemeta.json': '{"roots": ["r"]}',
             'r': {
-                'adapters': {
+                'standalones': {
                     'p1': {
                         'package': {
                             'p1.dep': '',
@@ -198,7 +198,7 @@ class CMakeTest(TestCase):
         self._patcher = OsPatcher({
             'bdemeta.json': '{"roots": ["r"]}',
             'r': {
-                'adapters': {
+                'standalones': {
                     'p': {
                         'package': {
                             'p.dep': '',
@@ -229,7 +229,7 @@ class MainTest(TestCase):
         self._patcher = OsPatcher({
             'bdemeta.json': '{"roots": ["r"]}',
             'r': {
-                'adapters': {
+                'standalones': {
                     'p1': {
                         'package': {
                             'p1.dep': '',

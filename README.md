@@ -56,6 +56,10 @@ follows:
             "<root>",
             ...
         ],
+        "standalones": [
+            "<standalone>",
+            ...
+        ],
         "providers": {
             "<target1>: ["<target2>", "<target3>", ...],
             ...
@@ -79,10 +83,13 @@ In particular, `bdemeta` will search for targets by name within each `<root>`
 directory:
 
   * package groups in `<root>/groups/<name>`
-  * standalone pacakges in `<root>/[adapters|nodeaddons|stanadlone]/<name>`
+  * standalone packages in `<root>/standalones/<name>`
   * third party CMake packages in:
       * `<root>/thirdparty/CMakeLists.txt`
       * `<root>/CMakeLists.txt`
+
+The set of directories searched for standalone packages can be extended by
+specifying multiple `<standalone>` directories in the configuration.
 
 ### Target providers
 
