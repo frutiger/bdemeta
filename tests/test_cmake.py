@@ -129,6 +129,17 @@ class GenerateTargetTest(TestCase):
 
         assert(out.getvalue())
 
+    def test_cmake_prologue(self):
+        t = Target('t', [])
+
+        out = StringIO()
+        generate([t], out)
+
+        cmake = list(lex(out))
+
+        find_command(cmake, 'cmake_minimum_required')
+        find_command(cmake, 'project')
+
     def test_empty_package_no_deps_no_test(self):
         self._test_package('target', pjoin('path', 'target'), [], [], False)
 

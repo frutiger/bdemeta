@@ -9,6 +9,7 @@ BdeTarget = Union[Group, Package]
 
 LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
+project(bdemeta-generated-{targets[0].name})
 
 '''
 LIBRARY_PROLOGUE = '''\
