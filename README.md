@@ -77,7 +77,9 @@ The meaning of each block is explained below.
 
 `bdemeta` will look for targets in directories specified by (possibly multiple)
 `<root>`s in the configuration.  This makes it easy to build code across
-multiple BDE-style repositories, including your own.
+multiple BDE-style repositories, including your own.  Relative `<root>`s are
+considered relative to the path of the configuration file, not relative to the
+current working directory.
 
 In particular, `bdemeta` will search for targets by name within each `<root>`
 directory:

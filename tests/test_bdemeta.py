@@ -1,5 +1,6 @@
 # tests.test_bdemeta
 
+import json
 import shutil
 import sys
 from io       import StringIO
@@ -362,4 +363,99 @@ class TestRunnerTest(TestCase):
 class TerminalSizeTest(TestCase):
     def test_valid(self):
         assert(get_columns() == shutil.get_terminal_size().columns)
+
+class RelativePathTest(TestCase):
+    def setUp(self):
+        self._config = {
+            'roots': [
+                P('r'),
+            ]
+        }
+        self._patcher = OsPatcher({
+            'dir': {
+                'bdemeta.json': '{"roots": ["../r"]}',
+            },
+            'r': {
+                'groups': {
+                    'gr1': {
+                        'group': {
+                            'gr1.dep': '',
+                            'gr1.mem': 'gr1p1 gr1p2',
+                        },
+                        'gr1p1': {
+                            'package': {
+                                'gr1p1.dep': '',
+                                'gr1p1.mem': '',
+                            },
+                        },
+                        'gr1p2': {
+                            'package': {
+                                'gr1p2.dep': '',
+                                'gr1p2.mem': '',
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_target(self):
+        f = StringIO()
+        run(f, None, None, None, ['walk', 'dir/bdemeta.json', 'gr1'])
+
+        r  = TargetResolver(self._config)
+        us = resolve(r, ['gr1'])
+
+        assert(' '.join(u.name for u in us) + '\n' == f.getvalue())
+
+class AbsolutePathTest(TestCase):
+    def setUp(self):
+        root = P(P().resolve().anchor)/'r'
+        self._config = {
+            'roots': [
+                root,
+            ]
+        }
+        self._patcher = OsPatcher({
+            'dir': {
+                'bdemeta.json': json.dumps({ 'roots': [str(root)] }),
+            },
+            'r': {
+                'groups': {
+                    'gr1': {
+                        'group': {
+                            'gr1.dep': '',
+                            'gr1.mem': 'gr1p1 gr1p2',
+                        },
+                        'gr1p1': {
+                            'package': {
+                                'gr1p1.dep': '',
+                                'gr1p1.mem': '',
+                            },
+                        },
+                        'gr1p2': {
+                            'package': {
+                                'gr1p2.dep': '',
+                                'gr1p2.mem': '',
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_target(self):
+        f = StringIO()
+        run(f, None, None, None, ['walk', 'dir/bdemeta.json', 'gr1'])
+
+        r  = TargetResolver(self._config)
+        us = resolve(r, ['gr1'])
+
+        assert(' '.join(u.name for u in us) + '\n' == f.getvalue())
 

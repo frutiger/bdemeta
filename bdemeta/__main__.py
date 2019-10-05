@@ -57,6 +57,7 @@ def run(stdout:      TextIO,
         if len(args) == 0:
             raise InvalidArgumentsError('No config specified')
         config_path = pathlib.Path(args[0])
+        config_dir  = config_path.parent
         args        = args[1:]
         try:
             with config_path.open() as f:
@@ -64,7 +65,15 @@ def run(stdout:      TextIO,
         except FileNotFoundError:
             raise NoConfigError(config_path)
 
-        config['roots'] = list(map(pathlib.Path, config['roots']))
+        result = []
+        for root in config['roots']:
+            path = pathlib.Path(root)
+            if path.is_absolute():
+                result.append(path)
+            else:
+                result.append(config_dir/path)
+        config['roots'] = result
+
         for root in config['roots']:
             if not root.is_dir():
                 raise InvalidPathError(root)
