@@ -89,15 +89,18 @@ class Group(Target):
                 yield driver
 
 class CMake(Target):
-    def __init__(self, name: str, path: str) -> None:
-        Target.__init__(self, name, [])
+    def __init__(self, name: str, path: str, deps: Sequence[Target]) -> None:
+        Target.__init__(self, name, deps)
         self._path = path
 
     def path(self) -> str:
         return self._path
 
 class Pkg(Target):
-    def __init__(self, name: str, package: str) -> None:
-        Target.__init__(self, name, [])
+    def __init__(self,
+                 name: str,
+                 package: str,
+                 deps: Sequence[Target]) -> None:
+        Target.__init__(self, name, deps)
         self.package = package
 

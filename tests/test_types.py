@@ -129,23 +129,33 @@ class TestGroup(TestCase):
 
 class TestCMake(TestCase):
     def test_name(self):
-        c = CMake('c', pj('path', 'c'))
+        c = CMake('c', pj('path', 'c'), [])
         assert('c' == c.name)
 
     def test_path(self):
-        c = CMake('c', pj('path', 'c'))
+        c = CMake('c', pj('path', 'c'), [])
         assert(pj('path', 'c') == c.path())
 
     def test_different_path(self):
-        c = CMake('d', pj('path', 'c'))
+        c = CMake('d', pj('path', 'c'), [])
         assert(pj('path', 'c') == c.path())
+
+    def test_dependencies(self):
+        c1 = CMake('c1', pj('path', 'c1'), [])
+        c2 = CMake('c2', pj('path', 'c2'), [c1])
+        assert(c1 in c2.dependencies())
 
 class TestPkg(TestCase):
     def test_name(self):
-        p = Pkg('p', None)
+        p = Pkg('p', None, [])
         assert('p' == p.name)
 
     def test_package_name(self):
-        p = Pkg(None, 'foo')
+        p = Pkg(None, 'foo', [])
         assert('foo' == p.package)
+
+    def test_dependencies(self):
+        p1 = Pkg('p1', 'p1', [])
+        p2 = Pkg('p2', 'p2', [p1])
+        assert(p1 in p2.dependencies())
 

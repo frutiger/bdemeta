@@ -219,7 +219,7 @@ class GenerateTargetTest(TestCase):
 
     def test_cmake_target(self):
         path = pjoin('foo', 'bar')
-        c = CMake('bar', path)
+        c = CMake('bar', path, [])
 
         out = StringIO()
         generate([c], out)
@@ -230,7 +230,7 @@ class GenerateTargetTest(TestCase):
         assert(f'add_subdirectory({upath} {c.name})' in out.getvalue())
 
     def test_no_pkg_config_no_include(self):
-        c = CMake('foo', 'bar')
+        c = CMake('foo', 'bar', [])
 
         out = StringIO()
         generate([c], out)
@@ -238,7 +238,7 @@ class GenerateTargetTest(TestCase):
         assert('include(FindPkgConfig)' not in out.getvalue())
 
     def test_pkg_config_has_include(self):
-        p = Pkg('foo', 'bar')
+        p = Pkg('foo', 'bar', [])
 
         out = StringIO()
         generate([p], out)
@@ -248,7 +248,7 @@ class GenerateTargetTest(TestCase):
     def test_pkg_config_generates_cmake(self):
         name    = 'foo'
         package = 'bar'
-        p = Pkg(name, package)
+        p = Pkg(name, package, [])
 
         out = StringIO()
         generate([p], out)
@@ -258,7 +258,7 @@ class GenerateTargetTest(TestCase):
     def test_pkg_config_generates_search(self):
         name    = 'foo'
         package = 'bar'
-        p = Pkg(name, package)
+        p = Pkg(name, package, [])
 
         out = StringIO()
         generate([p], out)
@@ -269,7 +269,7 @@ class GenerateTargetTest(TestCase):
     def test_pkg_config_generates_interface_lib(self):
         name    = 'foo'
         package = 'bar'
-        p = Pkg(name, package)
+        p = Pkg(name, package, [])
 
         out = StringIO()
         generate([p], out)
@@ -282,7 +282,7 @@ class GenerateTargetTest(TestCase):
     def test_pkg_config_generates_shared_props(self):
         name    = 'foo'
         package = 'bar'
-        p = Pkg(name, package)
+        p = Pkg(name, package, [])
 
         out = StringIO()
         generate([p], out)
@@ -321,7 +321,7 @@ class GenerateTargetTest(TestCase):
     def test_pkg_config_generates_static_props(self):
         name    = 'foo'
         package = 'bar'
-        p = Pkg(name, package)
+        p = Pkg(name, package, [])
 
         out = StringIO()
         generate([p], out)

@@ -103,6 +103,9 @@ class TargetResolver(Resolver[Target]):
         self._providers: Set[str]       = set()
         self._pkg_configs               = cast(Dict[str, str],
                                                config.get('pkg_configs', {}))
+        self._extra_dependencies        = cast(Dict[str, List[str]],
+                                               config.get('extra_dependencies',
+                                                          {}))
 
         providers = config.get('providers', {})
         assert isinstance(providers, dict)
@@ -171,6 +174,7 @@ class TargetResolver(Resolver[Target]):
         if target.type == 'group' or target.type == 'package':
             assert isinstance(target.path, Path)
             result |= bde_items(target.path/target.type/(name + '.dep'))
+        result |= set(self._extra_dependencies.get(name, []))
         return result
 
     @staticmethod
@@ -203,11 +207,11 @@ class TargetResolver(Resolver[Target]):
             TargetResolver._add_override(identification, name, result)
 
         if identification.type == 'cmake':
-            result = bdemeta.types.CMake(name, str(identification.path))
+            result = bdemeta.types.CMake(name, str(identification.path), deps)
 
         if identification.type == 'pkg_config':
             assert isinstance(identification.package, str)
-            result = bdemeta.types.Pkg(name, identification.package)
+            result = bdemeta.types.Pkg(name, identification.package, deps)
 
         if identification.type == 'virtual':
             result = Target(name, deps)

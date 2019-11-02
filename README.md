@@ -68,6 +68,10 @@ follows:
         "pkg_configs": {
             "<target6>": "<pkg1>",
             ...
+        },
+        "extra_dependencies": {
+            "<target7>": ["<target8>", "<target9>", ...],
+            ...
         }
     }
 
@@ -129,6 +133,14 @@ is only consulted if the search through every root as described above has been
 exhausted.
 
 Note that the `pkg_configs` block is optional.
+
+### Extra Dependencies
+
+Often a CMake target or a `PkgConfig` target may require additional
+dependencies that `bdemeta` is expected to resolve.  Since `bdemeta` does not
+parse CMake files, it needs to be informed about such dependencies.  The
+`extra_dependencies` block introduces a dependency from `<target7>` onto
+`<target8>`, `<target9>`, etc.
 
 ## CMake
 
