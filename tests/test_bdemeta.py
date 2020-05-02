@@ -300,13 +300,6 @@ class MainTest(TestCase):
         assert('p5' in stderr.getvalue())
 
 class NoConfigMainTest(TestCase):
-    def setUp(self):
-        self._patcher = OsPatcher({
-        })
-
-    def tearDown(self):
-        self._patcher.reset()
-
     def test_help_text(self):
         stdout = StringIO()
         stderr = StringIO()
