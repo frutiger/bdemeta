@@ -319,6 +319,14 @@ class NoConfigMainTest(TestCase):
         assert(stderr.getvalue())
 
 class RunTestTest(TestCase):
+    def setUp(self):
+        self._patcher = OsPatcher({
+            'foo': '',
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
     def test_running_tests(self):
         stdout1 = StringIO()
         stderr1 = StringIO()
@@ -332,7 +340,7 @@ class RunTestTest(TestCase):
         stdout2 = StringIO()
         stderr2 = StringIO()
         runner2 = MockRunner('sfsf')
-        run_tests(stdout2, stderr2, runner2, lambda: 80, ['foo'])
+        run_tests(stdout2, stderr2, runner2, lambda: 80, [('foo', 'foo')])
 
         assert(stdout1.getvalue() == stdout2.getvalue())
         assert(stderr1.getvalue() == stderr2.getvalue())

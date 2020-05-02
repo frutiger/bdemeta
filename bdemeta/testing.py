@@ -32,8 +32,8 @@ def trim(value: str, max_length: int, trail: str='...') -> str:
         return value
     return value[:max_length - len(trail)] + trail
 
-def run_one(args: Tuple[Runner, str]) -> Tuple[str, Set[int]]:
-    runner, test = args
+def run_one(args: Tuple[Runner, str, str]) -> Tuple[str, Set[int]]:
+    runner, name, test = args
     errors = set()
     case   = 1
     while True:
@@ -44,20 +44,20 @@ def run_one(args: Tuple[Runner, str]) -> Tuple[str, Set[int]]:
         elif result == RunResult.NO_SUCH_CASE:
             break
         case += 1
-    return test, errors
+    return name, errors
 
 def run_tests(stdout:      TextIO,
               stderr:      TextIO,
               runner:      Runner,
               get_columns: Callable[[], int],
-              tests:       List[str]) -> int:
+              tests:       List[Tuple[str, str]]) -> int:
     status_format = '[{run_drivers}/{num_drivers}] {test}'
 
     num_drivers = len(tests) # all test drivers
     run_drivers = 0          # drivers run so far
 
     with multiprocessing.Pool() as pool:
-        args   = [(runner, t) for t in tests]
+        args   = [(runner, t[0], t[1]) for t in tests]
         jobs   = pool.imap_unordered(run_one, args)
         errors = {}
 

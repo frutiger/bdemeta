@@ -60,7 +60,7 @@ class TestTrim(TestCase):
 class TestRunOne(TestCase):
     def test_driver_with_no_cases(self):
         runner = MockRunner('')
-        test, errors = run_one((runner, 'foo'))
+        test, errors = run_one((runner, 'foo', 'foo'))
         assert('foo' == test)
         assert(1 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -68,7 +68,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_four_successes(self):
         runner = MockRunner('ssss')
-        test, errors = run_one((runner, 'foo'))
+        test, errors = run_one((runner, 'foo', 'foo'))
         assert('foo' == test)
         assert(5 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -80,7 +80,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_one_failure(self):
         runner = MockRunner('f')
-        test, errors = run_one((runner, 'foo'))
+        test, errors = run_one((runner, 'foo', 'foo'))
         assert('foo' == test)
         assert(2 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -90,7 +90,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_mixed_successes_failures(self):
         runner = MockRunner('sfsf')
-        test, errors = run_one((runner, 'foo'))
+        test, errors = run_one((runner, 'foo', 'foo'))
         assert('foo' == test)
         assert(5 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -108,7 +108,7 @@ class TestRun(TestCase):
         stderr = io.StringIO()
         runner = MockRunner('s')
 
-        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo"])
+        rc = run_tests(stdout, stderr, runner, lambda: 80, [["foo", "foo"]])
         assert(0 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
@@ -119,7 +119,7 @@ class TestRun(TestCase):
         stderr = io.StringIO()
         runner = MockRunner('f')
 
-        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo"])
+        rc = run_tests(stdout, stderr, runner, lambda: 80, [["foo", "foo"]])
         assert(1 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
@@ -134,7 +134,11 @@ class TestRun(TestCase):
         stderr = io.StringIO()
         runner = MockRunner('ssss')
 
-        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo", "bar"])
+        rc = run_tests(stdout,
+                       stderr,
+                       runner,
+                       lambda: 80,
+                       [["foo", "foo"], ["bar", "bar"]])
         assert(0 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])
@@ -146,7 +150,11 @@ class TestRun(TestCase):
         stderr = io.StringIO()
         runner = MockRunner('sfsf')
 
-        rc = run_tests(stdout, stderr, runner, lambda: 80, ["foo", "bar"])
+        rc = run_tests(stdout,
+                       stderr,
+                       runner,
+                       lambda: 80,
+                       [["foo", "foo"], ["bar", "bar"]])
         assert(1 == rc)
 
         assert('\n' not in stderr.getvalue()[:-1])

@@ -94,8 +94,12 @@ def run(stdout:      TextIO,
         targets = bdemeta.resolver.resolve(resolver, args)
         bdemeta.cmake.generate(targets, stdout)
     elif mode == 'runtests':
+        patterns = args or ['*.t']
+        tests = []
+        for pattern in patterns:
+            for test in pathlib.Path('.').glob(pattern):
+                tests.append((str(test), str(test.resolve())))
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        tests = args or glob.glob(os.path.join('.', '*.t'))
         return bdemeta.testing.run_tests(stdout,
                                          stderr,
                                          runner,
