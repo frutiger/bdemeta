@@ -9,6 +9,9 @@ class OsPatcher(object):
     def __init__(self, root):
         self._root = root
 
+        self._parents = {}
+        self._buildParents(None, [root])
+
         self._real_open = io.open
         io.open = self._open
 
@@ -27,26 +30,29 @@ class OsPatcher(object):
         pathlib._NormalAccessor.stat = self._real_stat
         pathlib.is_dir = self._real_isdir
 
+    def _buildParents(self, dir, children):
+        for child in children:
+            self._parents[id(child)] = dir
+            if isinstance(child, dict):
+                self._buildParents(child, child.values())
+
     def _traverse(self, path):
         parts = list(reversed(path.parts))
-        dir   = self._root
-        route = []
-        while len(parts) > 1:
+        entry = self._root
+
+        while len(parts) > 0 and entry is not None:
             part = parts.pop()
             if part == pathlib.Path().resolve().anchor:
-                dir   = self._root
-                route = []
+                entry   = self._root
             elif part == '.':
                 pass
             elif part == '..':
-                dir = route.pop()
+                entry = self._parents[id(entry)]
             else:
-                route.append(dir)
-                dir = dir.get(part, {})
-        result = dir.get(parts.pop(), None)
-        if result is None:
+                entry = entry.get(part, None)
+        if entry is None:
             raise FileNotFoundError(2, 'No such file or directory', str(path))
-        return result
+        return entry
 
     def _open(self, path, *args, **kwargs):
         return io.StringIO(self._traverse(pathlib.Path(path)))
