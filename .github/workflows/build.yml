@@ -1,0 +1,38 @@
+name: CI
+on: push
+jobs:
+  ci:
+    name: CI
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        python:
+          - 3.7
+          - 3.8
+          - 3.9
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v2
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install prerequisites
+        run:
+          python -m pip install mypy coverage
+      - name: Type check
+        run:
+          python -m mypy -p bdemeta -m tests.cmake_parser
+      - name: Run unit tests
+        run:
+          python -m coverage run -m unittest
+      - name: Generate coverage
+        run:
+          python -m coverage xml
+      - name: Send to codecov
+        uses: codecov/codecov-action@v1
+
