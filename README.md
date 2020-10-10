@@ -8,9 +8,9 @@ Build and test BDE-style code.
 
 ## Synopsis
 
-`bdemeta walk CONFIG TARGET [TARGET ...]`<br/>
-`bdemeta dot CONFIG TARGET [TARGET ...]`<br/>
-`bdemeta cmake CONFIG TARGET [TARGET ...]`<br/>
+`bdemeta walk [-t] CONFIG TARGET [TARGET ...]`<br/>
+`bdemeta dot [-t] CONFIG TARGET [TARGET ...]`<br/>
+`bdemeta cmake [-t] CONFIG TARGET [TARGET ...]`<br/>
 `bdemeta runtests [TEST ...]`
 
 ## Description
@@ -33,13 +33,13 @@ Platforms running Python 3.7 or newer are supported.  Install using `pip`:
 
 `bdemeta` runs in one of four modes as given by the first positional argument:
 
-  * `walk CONFIG TARGET [TARGET ...]`:<br/>
+  * `walk [-t] CONFIG TARGET [TARGET ...]`:<br/>
     Walk and topologically sort dependencies
 
-  * `dot CONFIG TARGET [TARGET ...]`:<br/>
+  * `dot [-t] CONFIG TARGET [TARGET ...]`:<br/>
     Generate a directed graph in the DOT language
 
-  * `cmake CONFIG TARGET [TARGET ...]`:<br/>
+  * `cmake [-t] CONFIG TARGET [TARGET ...]`:<br/>
     Generate a CMake lists file
 
   * `runtests [TEST ...]`:<br/>
@@ -96,6 +96,12 @@ directory:
 
 The set of directories searched for standalone packages can be extended by
 specifying multiple `<standalone>` directories in the configuration.
+
+#### Test-only dependencies
+
+Supplying `-t` (or `--test-deps`) to the `walk`, `dot` or `cmake` modes will
+include `<target>.t.dep` when calculating dependencies of a BDE-style package
+group or package.
 
 ### Target providers
 

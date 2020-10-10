@@ -320,6 +320,13 @@ class TargetResolverTest(TestCase):
                             'gr2.mem': '',
                         },
                     },
+                    'gr3': {
+                        'group': {
+                            'gr3.dep': '',
+                            'gr3.t.dep': 'gr1',
+                            'gr3.mem': '',
+                        },
+                    },
                 },
             },
         })
@@ -335,6 +342,18 @@ class TargetResolverTest(TestCase):
     def test_group_with_one_dependency(self):
         r = TargetResolver(self.config)
         assert(set(['gr1']) == r.dependencies('gr2'))
+
+    def test_group_with_one_dependency_incl_tests_unchanged(self):
+        r = TargetResolver(self.config)
+        assert(set(['gr1']) == r.dependencies('gr2'))
+        r = TargetResolver(self.config, True)
+        assert(set(['gr1']) == r.dependencies('gr2'))
+
+    def test_group_with_one_dependency_incl_tests(self):
+        r = TargetResolver(self.config)
+        assert(set() == r.dependencies('gr3'))
+        r = TargetResolver(self.config, True)
+        assert(set(['gr1']) == r.dependencies('gr3'))
 
     def test_level_one_group_resolution(self):
         r = TargetResolver(self.config)

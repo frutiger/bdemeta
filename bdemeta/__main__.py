@@ -58,6 +58,10 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(formatter_class=CustomFormatter)
 
     resolving_parser = argparse.ArgumentParser(add_help=False)
+    resolving_parser.add_argument('-t', '--test-deps',
+                                  action='store_true',
+                                  dest='incl_test_deps',
+                                  help='include test dependencies')
     resolving_parser.add_argument('config', metavar='<config>',
                                   help='configuration file')
     resolving_parser.add_argument('targets', nargs='+', metavar='<target>',
@@ -108,7 +112,8 @@ def run(stdout:      TextIO,
             if not root.is_dir():
                 raise InvalidPathError(root)
 
-        resolver = bdemeta.resolver.TargetResolver(config)
+        resolver = bdemeta.resolver.TargetResolver(config,
+                                                   args.incl_test_deps)
 
     if args.mode == 'walk':
         targets = bdemeta.resolver.resolve(resolver, args.targets)

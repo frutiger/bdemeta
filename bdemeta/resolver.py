@@ -94,7 +94,7 @@ class PackageResolver(Resolver[Package]):
         return Package(str(path), deps, components)
 
 class TargetResolver(Resolver[Target]):
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, incl_test_deps: bool=False) -> None:
         self._roots                     = cast(List[Path], config['roots'])
         self._standalones               = cast(Set[str],
                                                set(config.get('standalones', [])))
@@ -106,6 +106,7 @@ class TargetResolver(Resolver[Target]):
         self._extra_dependencies        = cast(Dict[str, List[str]],
                                                config.get('extra_dependencies',
                                                           {}))
+        self._incl_test_deps            = incl_test_deps
 
         providers = config.get('providers', {})
         assert isinstance(providers, dict)
@@ -174,6 +175,10 @@ class TargetResolver(Resolver[Target]):
         if target.type == 'group' or target.type == 'package':
             assert isinstance(target.path, Path)
             result |= bde_items(target.path/target.type/(name + '.dep'))
+            if self._incl_test_deps:
+                test_deps_path = target.path/target.type/(name + '.t.dep')
+                if test_deps_path.is_file():
+                    result |= bde_items(test_deps_path)
         result |= set(self._extra_dependencies.get(name, []))
         return result
 
