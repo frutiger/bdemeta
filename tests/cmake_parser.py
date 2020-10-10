@@ -18,7 +18,7 @@ def lex(input: TextIO) -> Iterator[Command]:
     command, args   = '', []
     while True:
         char = input.read(1)
-        if char is '':
+        if char == '':
             break
         if whitespace.match(char):
             if parsing_item:
