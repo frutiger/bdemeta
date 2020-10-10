@@ -9,7 +9,8 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from bdemeta.__main__ import InvalidArgumentsError, InvalidPathError, \
-                             NoConfigError, run, main, test_runner, get_columns
+                             NoConfigError, run, main, test_runner, \
+                             get_columns, get_parser
 from bdemeta.cmake    import generate
 from bdemeta.resolver import resolve, TargetResolver
 from bdemeta.testing  import run_tests, MockRunner, RunResult
@@ -23,29 +24,6 @@ def get_filestore_writer(files):
         writer(files[path])
         files[path].seek(0)
     return write
-
-class NoConfigErrorTest(TestCase):
-    def setUp(self):
-        self._patcher = OsPatcher({})
-
-    def tearDown(self):
-        self._patcher.reset()
-
-    def test_no_config_error(self):
-        with self.assertRaises(NoConfigError):
-            run(None, None, None, None, ['walk', 'bdemeta.json', 't'])
-
-        stderr = StringIO()
-        main(None, stderr, None, None, [__name__, 'walk', 'bdemeta.json', 't'])
-        assert(stderr.getvalue())
-
-    def test_args_error_if_config_unneeded(self):
-        with self.assertRaises(InvalidArgumentsError):
-            run(None, None, None, None, [])
-
-        stderr = StringIO()
-        main(None, stderr, None, None, [__name__])
-        assert(stderr.getvalue())
 
 class InvalidPathErrorTest(TestCase):
     def setUp(self):
@@ -106,21 +84,6 @@ class RunTest(TestCase):
     def tearDown(self):
         self._patcher.reset()
 
-    def test_no_mode_error(self):
-        with self.assertRaises(InvalidArgumentsError) as e:
-            run(None, None, None, None, [])
-        assert('No mode specified' == e.exception.args[0])
-
-    def test_unknown_mode_error(self):
-        with self.assertRaises(InvalidArgumentsError) as e:
-            run(None, None, None, None, ['foo'])
-        assert('Unknown mode \'{}\''.format('foo') == e.exception.args[0])
-
-    def test_no_config_error(self):
-        with self.assertRaises(InvalidArgumentsError) as e:
-            run(None, None, None, None, ['walk'])
-        assert('No config specified' == e.exception.args[0])
-
     def test_target_with_dependencies(self):
         f = StringIO()
         run(f, None, None, None, ['walk', 'bdemeta.json', 'gr2'])
@@ -141,7 +104,7 @@ class NoRootTest(TestCase):
 
     def test_no_root_error(self):
         with self.assertRaises(InvalidPathError) as e:
-            run(None, None, None, None, ['walk', 'bdemeta.json'])
+            run(None, None, None, None, ['walk', 'bdemeta.json', 'foo'])
         assert(P('r') == e.exception.args[0])
 
     def test_no_root_main_error(self):
@@ -262,17 +225,14 @@ class MainTest(TestCase):
     def tearDown(self):
         self._patcher.reset()
 
+    def test_help(self):
+        stdout = StringIO()
+        get_parser().print_help(stdout)
+
     def test_walk(self):
         stdout = StringIO()
         main(stdout, None, None, None, [None, 'walk', 'bdemeta.json', 'p2'])
         assert('p2 p1\n' == stdout.getvalue())
-
-    def test_error(self):
-        stdout = StringIO()
-        stderr = StringIO()
-        main(stdout, stderr, None, None, [__name__, 'foo'])
-        assert(not stdout.getvalue())
-        assert(stderr.getvalue())
 
     def test_cyclic_error(self):
         stdout = StringIO()
@@ -300,13 +260,6 @@ class MainTest(TestCase):
         assert('p5' in stderr.getvalue())
 
 class NoConfigMainTest(TestCase):
-    def test_help_text(self):
-        stdout = StringIO()
-        stderr = StringIO()
-        main(stdout, stderr, None, None, [__name__])
-        assert(not stdout.getvalue())
-        assert(stderr.getvalue())
-
     def test_no_config_error(self):
         stdout = StringIO()
         stderr = StringIO()

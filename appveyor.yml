@@ -5,7 +5,6 @@ clone_depth: 1
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python36"
     - PYTHON: "C:\\Python37"
 
 build: off

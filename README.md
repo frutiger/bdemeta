@@ -25,7 +25,7 @@ structures](#roots).
 
 ## Installation
 
-Platforms running Python 3.6 or newer are supported.  Install using `pip`:
+Platforms running Python 3.7 or newer are supported.  Install using `pip`:
 
     $ pip install git+https://github.com/frutiger/bdemeta
 

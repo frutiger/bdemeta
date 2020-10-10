@@ -1,5 +1,6 @@
 # bdemeta
 
+import argparse
 import glob
 import json
 import os.path
@@ -42,23 +43,52 @@ def test_runner(command: List[str]) -> RunResult:
 def get_columns() -> int:
     return shutil.get_terminal_size().columns
 
+class CustomFormatter(argparse.RawDescriptionHelpFormatter):
+    def _format_action(self, action: argparse.Action) -> str:
+        result = super()._format_action(action)
+        if action.nargs == argparse.PARSER:
+            # since we aren't showing the subcommand group, de-indent by 2
+            # spaces
+            lines = result.split('\n')
+            lines = [line[2:] for line in lines]
+            result = '\n'.join(lines)
+        return result
+
+def get_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(formatter_class=CustomFormatter)
+
+    resolving_parser = argparse.ArgumentParser(add_help=False)
+    resolving_parser.add_argument('config', metavar='<config>',
+                                  help='configuration file')
+    resolving_parser.add_argument('targets', nargs='+', metavar='<target>',
+                                  help='build target')
+
+    subparser = parser.add_subparsers(dest='mode', required=True,
+                                      metavar='<mode>', title=argparse.SUPPRESS)
+    subparser.add_parser('walk', parents=[resolving_parser],
+                         help='walk and topologically sort dependencies')
+    subparser.add_parser('dot', parents=[resolving_parser],
+                         help='generate a directed graph in the DOT language')
+    subparser.add_parser('cmake', parents=[resolving_parser],
+                         help='generate a CMake lists file')
+    runtest_parser = subparser.add_parser('runtests',
+                                          help='run specified or discovered ' \
+                                               'unit tests')
+    runtest_parser.add_argument('tests', nargs='*', metavar='<test>',
+                                help='test driver glob pattern')
+
+    return parser
+
 def run(stdout:      TextIO,
         stderr:      TextIO,
         runner:      Runner,
         get_columns: Callable[[], int],
-        args:        List[str]) -> int:
-    if len(args) == 0:
-        raise InvalidArgumentsError('No mode specified')
+        raw_args:    List[str]) -> int:
+    args = get_parser().parse_args(raw_args)
 
-    mode = args[0]
-    args = args[1:]
-
-    if mode in { 'walk', 'dot', 'cmake' }:
-        if len(args) == 0:
-            raise InvalidArgumentsError('No config specified')
-        config_path = pathlib.Path(args[0])
+    if args.mode in { 'walk', 'dot', 'cmake' }:
+        config_path = pathlib.Path(args.config)
         config_dir  = config_path.parent
-        args        = args[1:]
         try:
             with config_path.open() as f:
                 config = json.load(f)
@@ -80,21 +110,25 @@ def run(stdout:      TextIO,
 
         resolver = bdemeta.resolver.TargetResolver(config)
 
-    if mode == 'walk':
-        targets = bdemeta.resolver.resolve(resolver, args)
+    if args.mode == 'walk':
+        targets = bdemeta.resolver.resolve(resolver, args.targets)
         print(' '.join(t.name for t in targets), file=stdout)
-    elif mode == 'dot':
-        targets = bdemeta.resolver.resolve(resolver, args)
+        return 0
+    elif args.mode == 'dot':
+        targets = bdemeta.resolver.resolve(resolver, args.targets)
         print('digraph G {', file=stdout)
         for t in targets:
             for d in resolver.dependencies(t.name):
                 print(f'    "{t.name}" -> "{d}"', file=stdout)
         print('}', file=stdout)
-    elif mode == 'cmake':
-        targets = bdemeta.resolver.resolve(resolver, args)
+        return 0
+    elif args.mode == 'cmake':
+        targets = bdemeta.resolver.resolve(resolver, args.targets)
         bdemeta.cmake.generate(targets, stdout)
-    elif mode == 'runtests':
-        patterns = args or ['*.t']
+        return 0
+    else:
+        assert(args.mode == 'runtests')
+        patterns = args.tests or ['*.t']
         tests = []
         for pattern in patterns:
             for test in pathlib.Path('.').glob(pattern):
@@ -105,9 +139,6 @@ def run(stdout:      TextIO,
                                          runner,
                                          get_columns,
                                          tests)
-    else:
-        raise InvalidArgumentsError('Unknown mode \'{}\''.format(mode))
-    return 0
 
 def main(stdout:      TextIO            = sys.stdout,
          stderr:      TextIO            = sys.stderr,
@@ -116,24 +147,6 @@ def main(stdout:      TextIO            = sys.stdout,
          args:        List[str]         = sys.argv) -> int:
     try:
         return run(stdout, stderr, runner, get_columns, args[1:])
-    except InvalidArgumentsError as e:
-        usage = '''{0}. Usage:
-
-{1} walk     <config> <target> [<target>...]
-  walk and topologically sort dependencies
-
-{1} dot      <config> <target> [<target>...]
-  generate a directed graph in the DOT language
-
-{1} cmake    <config> <target> [<target>...]
-  generate a CMake lists file
-
-{1} runtests [<test>...]
-  run specified or discovered unit tests'''
-
-        print(usage.format(e.args[0], os.path.basename(args[0])),
-              file=stderr)
-        return -1
     except NoConfigError as e:
         print(f'Could not find config at: {e.args[0]}', file=stderr)
     except InvalidPathError as e:
