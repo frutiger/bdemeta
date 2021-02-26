@@ -66,10 +66,13 @@ def run_tests(stdout:      TextIO,
             if test_errors:
                 errors[test] = test_errors
 
-            columns  = get_columns()
-            message  = '\r' + ' ' * columns + '\r'
-            message += trim(status_format.format(**locals()), columns)
-            print(message, end='', file=stderr, flush=True)
+            columns = get_columns()
+            message = trim(status_format.format(**locals()), columns)
+            if stderr.isatty():
+                print('\r' + ' ' * columns + '\r', end='', file=stderr)
+                print(message, end='', file=stderr, flush=True)
+            else:
+                print(message, file=stderr, flush=True)
     print(file=stderr, flush=True)
 
     for test, test_errors in errors.items():

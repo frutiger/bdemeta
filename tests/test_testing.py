@@ -2,6 +2,7 @@
 
 import io
 from unittest import TestCase
+from unittest import mock
 
 from bdemeta.testing import trim, run_one, RunResult, run_tests, MockRunner
 
@@ -111,7 +112,6 @@ class TestRun(TestCase):
         rc = run_tests(stdout, stderr, runner, lambda: 80, [["foo", "foo"]])
         assert(0 == rc)
 
-        assert('\n' not in stderr.getvalue()[:-1])
         assert('foo' in stderr.getvalue())
 
     def test_single_failure(self):
@@ -122,7 +122,6 @@ class TestRun(TestCase):
         rc = run_tests(stdout, stderr, runner, lambda: 80, [["foo", "foo"]])
         assert(1 == rc)
 
-        assert('\n' not in stderr.getvalue()[:-1])
         assert('foo' in stderr.getvalue())
 
         failures = stdout.getvalue().split('\n')[:-1]
@@ -141,7 +140,6 @@ class TestRun(TestCase):
                        [["foo", "foo"], ["bar", "bar"]])
         assert(0 == rc)
 
-        assert('\n' not in stderr.getvalue()[:-1])
         assert('foo' in stderr.getvalue())
         assert('bar' in stderr.getvalue())
 
@@ -157,7 +155,6 @@ class TestRun(TestCase):
                        [["foo", "foo"], ["bar", "bar"]])
         assert(1 == rc)
 
-        assert('\n' not in stderr.getvalue()[:-1])
         assert('foo' in stderr.getvalue())
         assert('bar' in stderr.getvalue())
 
@@ -168,3 +165,12 @@ class TestRun(TestCase):
         assert('FAIL TEST bar CASE 2' in failures)
         assert('FAIL TEST bar CASE 4' in failures)
 
+    def test_tty_has_no_newlines(self):
+        stdout = io.StringIO()
+        stderr = mock.Mock(wraps=io.StringIO())
+        stderr.isatty.return_value = True
+        runner = MockRunner('s')
+
+        rc = run_tests(stdout, stderr, runner, lambda: 80, [["foo", "foo"]])
+        assert(0 == rc)
+        assert('\n' not in stderr.getvalue()[:-1])
