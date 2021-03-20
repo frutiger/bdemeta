@@ -5,6 +5,25 @@ import os
 import pathlib
 import stat
 
+class DirEntry:
+    def __init__(self, name, is_dir):
+        self.name    = name
+        self._is_dir = is_dir
+
+    def is_dir(self):
+        return self._is_dir
+
+class ScandirIterator:
+    def __init__(self, data):
+        self._entries = (DirEntry(name, type(value) == dict) for \
+                                                   name, value in data.items())
+
+    def __enter__(self):
+        return self._entries
+
+    def __exit__(self, *exc_details):
+        pass
+
 class OsPatcher(object):
     def __init__(self, root):
         self._root = root
@@ -18,6 +37,9 @@ class OsPatcher(object):
         self._real_listdir = pathlib._NormalAccessor.listdir
         pathlib._NormalAccessor.listdir = self._listdir
 
+        self._real_scandir = pathlib._NormalAccessor.scandir
+        pathlib._NormalAccessor.scandir = self._scandir
+
         self._real_stat = pathlib._NormalAccessor.stat
         pathlib._NormalAccessor.stat = self._stat
 
@@ -27,6 +49,7 @@ class OsPatcher(object):
     def reset(self):
         io.open = self._real_open
         pathlib._NormalAccessor.listdir = self._real_listdir
+        pathlib._NormalAccessor.scandir = self._real_scandir
         pathlib._NormalAccessor.stat = self._real_stat
         pathlib.is_dir = self._real_isdir
 
@@ -59,6 +82,12 @@ class OsPatcher(object):
 
     def _listdir(self, path):
         return self._traverse(path).keys()
+
+    def _scandir(self, path):
+        data = self._traverse(path)
+        if type(data) != dict:
+            raise NotADirectoryError(f'{path} is not a directory')
+        return ScandirIterator(data)
 
     def _stat(self, path):
         data = self._traverse(path)

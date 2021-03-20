@@ -36,10 +36,15 @@ class InvalidPathErrorTest(TestCase):
 
     def test_invalid_path_error(self):
         with self.assertRaises(InvalidPathError):
-            run(None, None, None, None, ['walk', 'bdemeta.json', 't'])
+            run(None, None, None, None, '', ['walk', 'bdemeta.json', 't'])
 
         stderr = StringIO()
-        main(None, stderr, None, None, [__name__, 'walk', 'bdemeta.json', 't'])
+        main(None,
+             stderr,
+             None,
+             None,
+             '',
+             [__name__, 'walk', 'bdemeta.json', 't'])
         assert(stderr.getvalue())
 
 class RunTest(TestCase):
@@ -86,7 +91,7 @@ class RunTest(TestCase):
 
     def test_target_with_dependencies(self):
         f = StringIO()
-        run(f, None, None, None, ['walk', 'bdemeta.json', 'gr2'])
+        run(f, None, None, None, '', ['walk', 'bdemeta.json', 'gr2'])
 
         r  = TargetResolver(self._config)
         us = resolve(r, ['gr2'])
@@ -104,7 +109,7 @@ class NoRootTest(TestCase):
 
     def test_no_root_error(self):
         with self.assertRaises(InvalidPathError) as e:
-            run(None, None, None, None, ['walk', 'bdemeta.json', 'foo'])
+            run(None, None, None, None, '', ['walk', 'bdemeta.json', 'foo'])
         assert(P('r') == e.exception.args[0])
 
     def test_no_root_main_error(self):
@@ -114,6 +119,7 @@ class NoRootTest(TestCase):
              stderr,
              None,
              None,
+             '',
              [__name__, 'walk', 'bdemeta.json', 'p1'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
@@ -146,7 +152,7 @@ class GraphTest(TestCase):
 
     def test_graph(self):
         f = StringIO()
-        run(f, None, None, None, ['dot', 'bdemeta.json', 'p2'])
+        run(f, None, None, None, '', ['dot', 'bdemeta.json', 'p2'])
         lines = f.getvalue().split('\n')
         assert('digraph G {'      == lines[0])
         assert('    "p2" -> "p1"' == lines[1])
@@ -179,7 +185,7 @@ class CMakeTest(TestCase):
     def test_generate_cmake(self):
         output1 = StringIO()
 
-        run(output1, None, output1, None, ['cmake', 'bdemeta.json', 'p'])
+        run(output1, None, output1, None, '', ['cmake', 'bdemeta.json', 'p'])
 
         r       = TargetResolver(self._config)
         p       = resolve(r, 'p')
@@ -231,7 +237,12 @@ class MainTest(TestCase):
 
     def test_walk(self):
         stdout = StringIO()
-        main(stdout, None, None, None, [None, 'walk', 'bdemeta.json', 'p2'])
+        main(stdout,
+             None,
+             None,
+             None,
+             '',
+             [None, 'walk', 'bdemeta.json', 'p2'])
         assert('p2 p1\n' == stdout.getvalue())
 
     def test_cyclic_error(self):
@@ -241,6 +252,7 @@ class MainTest(TestCase):
              stderr,
              None,
              None,
+             '',
              [__name__, 'walk', 'bdemeta.json', 'p3'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
@@ -254,6 +266,7 @@ class MainTest(TestCase):
              stderr,
              None,
              None,
+             '',
              [__name__, 'walk', 'bdemeta.json', 'p5'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
@@ -267,6 +280,7 @@ class NoConfigMainTest(TestCase):
              stderr,
              None,
              None,
+             '',
              [__name__, 'walk', 'bdemeta.json', 'p1'])
         assert(not stdout.getvalue())
         assert(stderr.getvalue())
@@ -274,7 +288,7 @@ class NoConfigMainTest(TestCase):
 class RunTestTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            'foo': '',
+            'foo.t': '',
         })
 
     def tearDown(self):
@@ -288,13 +302,39 @@ class RunTestTest(TestCase):
              stderr1,
              runner1,
              lambda: 80,
-             [__name__, 'runtests', 'foo'])
+             '',
+             [__name__, 'runtests', 'foo.t'])
 
         stdout2 = StringIO()
         stderr2 = StringIO()
         runner2 = MockRunner('sfsf')
-        run_tests(stdout2, stderr2, runner2, lambda: 80, [('foo', 'foo')])
+        run_tests(stdout2, stderr2, runner2, lambda: 80, [('foo.t', 'foo.t')])
 
+        assert(stdout1.getvalue() == stdout2.getvalue())
+        assert(stderr1.getvalue() == stderr2.getvalue())
+        assert(runner1.commands   == runner2.commands)
+
+    def test_running_all_tests(self):
+        stdout1 = StringIO()
+        stderr1 = StringIO()
+        runner1 = MockRunner('sfsf')
+        main(stdout1,
+             stderr1,
+             runner1,
+             lambda: 80,
+             '',
+             [__name__, 'runtests'])
+
+        stdout2 = StringIO()
+        stderr2 = StringIO()
+        runner2 = MockRunner('sfsf')
+        run_tests(stdout2,
+                  stderr2,
+                  runner2,
+                  lambda: 80,
+                  [('foo.t', 'foo.t')])
+
+        assert(stdout1.getvalue() == stdout2.getvalue())
         assert(stdout1.getvalue() == stdout2.getvalue())
         assert(stderr1.getvalue() == stderr2.getvalue())
         assert(runner1.commands   == runner2.commands)
@@ -358,7 +398,7 @@ class RelativePathTest(TestCase):
 
     def test_target(self):
         f = StringIO()
-        run(f, None, None, None, ['walk', 'dir/bdemeta.json', 'gr1'])
+        run(f, None, None, None, '', ['walk', 'dir/bdemeta.json', 'gr1'])
 
         r  = TargetResolver(self._config)
         us = resolve(r, ['gr1'])
@@ -406,7 +446,7 @@ class AbsolutePathTest(TestCase):
 
     def test_target(self):
         f = StringIO()
-        run(f, None, None, None, ['walk', 'dir/bdemeta.json', 'gr1'])
+        run(f, None, None, None, '', ['walk', 'dir/bdemeta.json', 'gr1'])
 
         r  = TargetResolver(self._config)
         us = resolve(r, ['gr1'])

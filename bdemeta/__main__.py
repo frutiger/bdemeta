@@ -30,6 +30,8 @@ minus_one_rc = subprocess.run([sys.executable,
                                '-c',
                                'import sys; sys.exit(-1)']).returncode
 
+exec_suffix = '.exe' if sys.platform == 'win32' else ''
+
 def test_runner(command: List[str]) -> RunResult:
     try:
         subprocess.check_output(command, stderr=subprocess.STDOUT)
@@ -87,6 +89,7 @@ def run(stdout:      TextIO,
         stderr:      TextIO,
         runner:      Runner,
         get_columns: Callable[[], int],
+        exec_suffix: str,
         raw_args:    List[str]) -> int:
     args = get_parser().parse_args(raw_args)
 
@@ -133,7 +136,10 @@ def run(stdout:      TextIO,
         return 0
     else:
         assert(args.mode == 'runtests')
-        patterns = args.tests or ['*.t']
+        if args.tests:
+            patterns = args.tests
+        else:
+            patterns = [f'*.t{exec_suffix}']
         tests = []
         for pattern in patterns:
             for test in pathlib.Path('.').glob(pattern):
@@ -149,9 +155,10 @@ def main(stdout:      TextIO            = sys.stdout,
          stderr:      TextIO            = sys.stderr,
          runner:      Runner            = test_runner,
          get_columns: Callable[[], int] = get_columns,
+         exec_suffix: str               = exec_suffix,
          args:        List[str]         = sys.argv) -> int:
     try:
-        return run(stdout, stderr, runner, get_columns, args[1:])
+        return run(stdout, stderr, runner, get_columns, exec_suffix, args[1:])
     except NoConfigError as e:
         print(f'Could not find config at: {e.args[0]}', file=stderr)
     except InvalidPathError as e:
