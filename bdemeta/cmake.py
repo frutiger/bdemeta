@@ -111,9 +111,44 @@ COMMAND_EPILOGUE = '''\
 )
 
 '''
-TESTING_DRIVER = '''\
-add_executable({name} EXCLUDE_FROM_ALL {driver})
-target_link_libraries({name} {target.name})
+TEST_DRIVER = '''\
+add_executable(
+    {name}
+    EXCLUDE_FROM_ALL
+    {driver}
+)
+
+target_link_libraries(
+    {name}
+    {target.name}
+)
+
+'''
+PLUGIN_TEST_DRIVER = '''\
+add_library(
+    {name} SHARED
+    EXCLUDE_FROM_ALL
+    {driver}
+)
+
+target_link_libraries(
+    {name}
+    {target.name}
+)
+
+if(APPLE)
+    set_target_properties(
+        {name} PROPERTIES
+        LINK_FLAGS "-undefined dynamic_lookup"
+    )
+endif()  # APPLE
+
+if(WIN32)
+    target_link_options(
+        {name}
+        LINKER:/EXPORT:main
+    )
+endif()  # WIN32
 
 '''
 INSTALL_TARGETS = '''\
@@ -155,7 +190,10 @@ def generate_bde(target: BdeTarget, out: TextIO) -> None:
     drivers = []
     for driver in target.drivers():
         name = os.path.splitext(os.path.basename(driver))[0]
-        out.write(TESTING_DRIVER.format(**locals()).replace('\\', '/'))
+        if target.plugin_tests:
+            out.write(PLUGIN_TEST_DRIVER.format(**locals()).replace('\\', '/'))
+        else:
+            out.write(TEST_DRIVER.format(**locals()).replace('\\', '/'))
         drivers.append(name)
 
     if drivers:

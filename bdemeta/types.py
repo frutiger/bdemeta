@@ -29,6 +29,7 @@ class Target:
         self.has_output               = True
         self.lazily_bound             = False
         self.overrides: Optional[str] = None
+        self.plugin_tests             = False
 
     def dependencies(self) -> Sequence['Target']:
         return self._dependencies

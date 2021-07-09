@@ -155,6 +155,38 @@ class GenerateTargetTest(TestCase):
                    'driver': 'file.t.cpp' }]
         self._test_package('target', pjoin('path', 'target'), [], comps, True)
 
+    def test_one_comp_package_no_deps_plugin_test(self):
+        comps = [{ 'header': 'file.h',
+                   'source': 'file.cpp',
+                   'driver': 'file.t.cpp' }]
+        target = Package(pjoin('path', 'target'), [], comps)
+        target.plugin_tests = True
+
+        out = StringIO()
+        generate([target], out)
+
+        cmake = list(lex(out))
+
+        find_command(cmake, 'add_library', ['file.t', 'SHARED'])
+        find_command(cmake, 'target_link_libraries', ['file.t', 'target'])
+
+        apple_start, _ = find_command(cmake, 'if', ['APPLE'])
+        stmts = parse(iter(cmake[apple_start:]))[0]
+        _, props = find_command(stmts[1], 'set_target_properties')
+
+        assert(['file.t',
+                'PROPERTIES',
+                'LINK_FLAGS',
+                '"-undefined',
+                'dynamic_lookup"'] == props)
+
+        win32_start, _ = find_command(cmake, 'if', ['WIN32'])
+        stmts = parse(iter(cmake[win32_start:]))[0]
+
+        _, props = find_command(stmts[1], 'target_link_options')
+        assert(['file.t',
+                'LINKER:/EXPORT:main'] == props)
+
     def test_empty_package_one_dep_no_test(self):
         deps = [Target('foo', [])]
         self._test_package('target', pjoin('path', 'target'), deps, [], False)

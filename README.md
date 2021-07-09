@@ -71,7 +71,8 @@ follows:
         "extra_dependencies": {
             "<target7>": ["<target8>", "<target9>", ...],
             ...
-        }
+        },
+        "plugin_tests": ["<target10>", "<target11>", ...]
     }
 
 The meaning of each block is explained below.
@@ -146,6 +147,18 @@ dependencies that `bdemeta` is expected to resolve.  Since `bdemeta` does not
 parse CMake files, it needs to be informed about such dependencies.  The
 `extra_dependencies` block introduces a dependency from `<target7>` onto
 `<target8>`, `<target9>`, etc.
+
+### Plugin Tests
+
+Code that is intended to be loaded as a shared library or plugin into another
+program will often need symbols to provided by the hosting program.  In order
+to facilitate testing of such libraries, these targets can be declared to
+require "plugin tests".
+
+`<target10>`, `<target11>`, etc. will have test drivers generated as shared
+libraries instead of standalone executables (assuming they are BDE-style
+targets).  Some separate hosting program will be required to load and execute
+these tests.
 
 ## CMake
 

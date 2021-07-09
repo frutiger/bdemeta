@@ -99,14 +99,16 @@ class TargetResolver(Resolver[Target]):
         self._standalones               = cast(Set[str],
                                                set(config.get('standalones', [])))
         self._standalones |= {'standalones'}
-        self._virtuals: Dict[str, str]  = {}
-        self._providers: Set[str]       = set()
-        self._pkg_configs               = cast(Dict[str, str],
-                                               config.get('pkg_configs', {}))
-        self._extra_dependencies        = cast(Dict[str, List[str]],
-                                               config.get('extra_dependencies',
-                                                          {}))
-        self._incl_test_deps            = incl_test_deps
+        self._virtuals: Dict[str, str] = {}
+        self._providers: Set[str]      = set()
+        self._pkg_configs              = cast(Dict[str, str],
+                                              config.get('pkg_configs', {}))
+        self._extra_dependencies       = cast(Dict[str, List[str]],
+                                              config.get('extra_dependencies',
+                                                         {}))
+        self._plugin_tests             = cast(Set[str],
+                                              set(config.get('plugin_tests', [])))
+        self._incl_test_deps           = incl_test_deps
 
         providers = config.get('providers', {})
         assert isinstance(providers, dict)
@@ -226,6 +228,9 @@ class TargetResolver(Resolver[Target]):
 
         if any(d.name in self._runtime_libraries for d in deps):
             result.lazily_bound = True
+
+        if name in self._plugin_tests:
+            result.plugin_tests = True
 
         return result
 

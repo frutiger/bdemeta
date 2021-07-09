@@ -599,3 +599,63 @@ class LazilyBoundTest(TestCase):
         p2  = r.resolve('p2',  { 'bar': bar, 'p1': p1 })
         assert(p2.lazily_bound)
 
+class PluginTestsTest(TestCase):
+    def setUp(self):
+        self.config = {
+            'roots': [
+                P('r'),
+            ],
+            'plugin_tests': [
+                'gr2'
+            ]
+        }
+        self._patcher = OsPatcher({
+            'r': {
+                'groups': {
+                    'gr1': {
+                        'group': {
+                            'gr1.dep': '',
+                            'gr1.mem': 'gr1p1',
+                        },
+                        'gr1p1': {
+                            'package': {
+                                'gr1p1.dep': '',
+                                'gr1p1.mem': 'gr1p1_c1',
+                            },
+                            'gr1p1_c1.cpp': '',
+                            'gr1p1_c1.h': '',
+                            'gr1p1_c1.t.cpp': '',
+                        },
+                    },
+                    'gr2': {
+                        'group': {
+                            'gr2.dep': '',
+                            'gr2.mem': 'gr2p1',
+                        },
+                        'gr2p1': {
+                            'package': {
+                                'gr2p1.dep': '',
+                                'gr2p1.mem': 'gr2p1_c1',
+                            },
+                            'gr2p1_c1.cpp': '',
+                            'gr2p1_c1.h': '',
+                            'gr2p1_c1.t.cpp': '',
+                        },
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_non_plugin_tests(self):
+        r   = TargetResolver(self.config)
+        gr1 = r.resolve('gr1',  {})
+        assert(not gr1.plugin_tests)
+
+    def test_plugin_tests(self):
+        r   = TargetResolver(self.config)
+        gr2 = r.resolve('gr2',  {})
+        assert(gr2.plugin_tests)
+

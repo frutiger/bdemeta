@@ -22,10 +22,8 @@ def lex(input: TextIO) -> Iterator[Command]:
             break
         if whitespace.match(char):
             if parsing_item:
-                if parsing_command:
-                    args.append('')
-                else:
-                    command += char
+                assert(parsing_command)
+                args.append('')
             parsing_item = False
         elif char == '(':
             if parsing_command:
@@ -42,6 +40,9 @@ def lex(input: TextIO) -> Iterator[Command]:
             command, args   = '', []
             parsing_item    = False
             parsing_command = False
+        elif char == '#':
+            while char != '\n':
+                char = input.read(1)
         else:
             if parsing_command:
                 args[-1] += char
