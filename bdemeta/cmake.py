@@ -145,8 +145,8 @@ endif()  # APPLE
 
 if(WIN32)
     target_link_options(
-        {name}
-        LINKER:/EXPORT:main
+        {name} PUBLIC
+        /EXPORT:main
     )
 endif()  # WIN32
 

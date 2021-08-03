@@ -184,8 +184,7 @@ class GenerateTargetTest(TestCase):
         stmts = parse(iter(cmake[win32_start:]))[0]
 
         _, props = find_command(stmts[1], 'target_link_options')
-        assert(['file.t',
-                'LINKER:/EXPORT:main'] == props)
+        assert(['file.t', 'PUBLIC', '/EXPORT:main'] == props)
 
     def test_empty_package_one_dep_no_test(self):
         deps = [Target('foo', [])]
