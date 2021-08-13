@@ -18,8 +18,17 @@ def grouper(iterable, n, fillvalue=None):
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 class GenerateTargetTest(TestCase):
-    def _check_target_no_test(self, cmake, name, path, deps, components):
-        _, command = find_command(cmake, 'add_library', [name])
+    def _check_target_no_test(self,
+                              cmake,
+                              name,
+                              path,
+                              deps,
+                              components,
+                              is_executable):
+        if is_executable:
+            _, command = find_command(cmake, 'add_executable', [name])
+        else:
+            _, command = find_command(cmake, 'add_library', [name])
         assert(name == command[0])
         for index, component in enumerate(components):
             assert(component['source'] == command[index + 1])
@@ -100,20 +109,20 @@ class GenerateTargetTest(TestCase):
         for index, dep in enumerate(dependencies):
             assert(dep == command[index + 2])
 
-    def _check_package(self, cmake, name, path, deps, comps):
-        self._check_target_no_test(cmake, name, path, deps, comps)
+    def _check_package(self, cmake, name, path, deps, comps, is_executable):
+        self._check_target_no_test(cmake, name, path, deps, comps, is_executable)
         self._check_target_drivers(cmake, name, comps)
         self._check_test_target(cmake, name, comps)
 
-    def _test_package(self, name, path, deps, comps, has_tests):
-        target = Package(path, deps, comps)
+    def _test_package(self, name, path, deps, comps, has_tests, is_executable):
+        target = Package(path, deps, comps, executable=is_executable)
 
         out = StringIO()
         generate([target], out)
 
         cmake = list(lex(out))
 
-        self._check_package(cmake, name, path, deps, comps)
+        self._check_package(cmake, name, path, deps, comps, is_executable)
 
         if has_tests:
             find_command(cmake, 'add_custom_target', ['tests'])
@@ -141,19 +150,19 @@ class GenerateTargetTest(TestCase):
         find_command(cmake, 'project')
 
     def test_empty_package_no_deps_no_test(self):
-        self._test_package('target', pjoin('path', 'target'), [], [], False)
+        self._test_package('target', pjoin('path', 'target'), [], [], False, False)
 
     def test_one_comp_package_no_deps_no_test(self):
         comps = [{ 'header': 'file.h',
                    'source': 'file.cpp',
                    'driver': None }]
-        self._test_package('target', pjoin('path', 'target'), [], comps, False)
+        self._test_package('target', pjoin('path', 'target'), [], comps, False, False)
 
     def test_one_comp_package_no_deps_test(self):
         comps = [{ 'header': 'file.h',
                    'source': 'file.cpp',
                    'driver': 'file.t.cpp' }]
-        self._test_package('target', pjoin('path', 'target'), [], comps, True)
+        self._test_package('target', pjoin('path', 'target'), [], comps, True, False)
 
     def test_one_comp_package_no_deps_plugin_test(self):
         comps = [{ 'header': 'file.h',
@@ -188,7 +197,7 @@ class GenerateTargetTest(TestCase):
 
     def test_empty_package_one_dep_no_test(self):
         deps = [Target('foo', [])]
-        self._test_package('target', pjoin('path', 'target'), deps, [], False)
+        self._test_package('target', pjoin('path', 'target'), deps, [], False, False)
 
     def test_two_empty_packages_no_deps_no_test(self):
         deps1  = []
@@ -205,8 +214,14 @@ class GenerateTargetTest(TestCase):
         generate([p1, p2], out)
 
         cmake = list(lex(out))
-        self._check_package(cmake, 'p1', 'p1', deps1, comps1)
-        self._check_package(cmake, 'p2', 'p2', deps2, comps2)
+        self._check_package(cmake, 'p1', 'p1', deps1, comps1, False)
+        self._check_package(cmake, 'p2', 'p2', deps2, comps2, False)
+
+    def test_one_comp_package_executable(self):
+        comps = [{ 'header': 'app.h',
+                   'source': 'app.m.cpp',
+                   'driver': None }]
+        self._test_package('target', pjoin('path', 'target'), [], comps, False, True)
 
     def test_empty_package_with_override(self):
         p = Package('p', [], [])

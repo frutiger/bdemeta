@@ -16,6 +16,10 @@ LIBRARY_PROLOGUE = '''\
 add_library(
     {target.name}
 '''
+EXECUTABLE_PROLOGUE = '''\
+add_executable(
+    {target.name}
+'''
 DEFINE_SYMBOL = '''\
 set_target_properties(
     {target.name} PROPERTIES
@@ -165,7 +169,10 @@ add_custom_target(
 '''
 
 def generate_bde(target: BdeTarget, out: TextIO) -> None:
-    out.write(LIBRARY_PROLOGUE.format(**locals()))
+    if target.executable:
+        out.write(EXECUTABLE_PROLOGUE.format(**locals()))
+    else:
+        out.write(LIBRARY_PROLOGUE.format(**locals()))
     for component in target.sources():
         out.write('    {}\n'.format(component).replace('\\', '/'))
     out.write(COMMAND_EPILOGUE)

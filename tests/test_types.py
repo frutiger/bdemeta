@@ -63,6 +63,14 @@ class TestPackage(TestCase):
         p = Package(path, ['bar'], 'baz')
         assert([path] == list(p.includes()))
 
+    def test_not_executable(self):
+        p = Package(pj('path', 'to', 'foo'), ['bar'], [])
+        assert(False == p.executable)
+
+    def test_executable(self):
+        p = Package(pj('path', 'to', 'foo'), ['bar'], [], executable=True)
+        assert(True == p.executable)
+
 class TestGroup(TestCase):
     def test_name(self):
         g = Group(pj('path', 'g'), [], [])

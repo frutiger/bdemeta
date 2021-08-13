@@ -168,6 +168,13 @@ class PackageResolverTest(TestCase):
                         },
                         'a.h': '',
                     },
+                    'g1p8': {
+                        'package': {
+                            'g1p8.dep': '',
+                            'g1p8.mem': '',
+                        },
+                        'g1p8.m.cpp': '',
+                    },
                 },
                 'g2': {
                     'g2p1': {
@@ -270,6 +277,16 @@ class PackageResolverTest(TestCase):
         assert([]                               == p.dependencies())
         assert([str(P('r')/'g1'/'g1+p7')]       == list(p.includes()))
         assert([str(P('r')/'g1'/'g1+p7'/'a.h')] == list(p.headers()))
+
+    def test_one_executable_component(self):
+        r = PackageResolver(P('r')/'g1')
+        p = r.resolve('g1p8', {})
+        assert('g1p8'                                 == p.name)
+        assert([]                                     == p.dependencies())
+        assert([str(P('r')/'g1'/'g1p8')]              == list(p.includes()))
+        assert([str(P('r')/'g1'/'g1p8'/'g1p8.m.cpp')] == list(p.sources()))
+        assert([]                                     == list(p.drivers()))
+        assert(True                                   == p.executable)
 
     def test_level_two_package_has_dependency(self):
         r = PackageResolver(P('r')/'g2')

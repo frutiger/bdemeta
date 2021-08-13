@@ -30,6 +30,7 @@ class Target:
         self.lazily_bound             = False
         self.overrides: Optional[str] = None
         self.plugin_tests             = False
+        self.executable               = False
 
     def dependencies(self) -> Sequence['Target']:
         return self._dependencies
@@ -38,10 +39,12 @@ class Package(Target):
     def __init__(self,
                  path: str,
                  dependencies: Sequence[Target],
-                 components: List[Dict[str, Optional[str]]]) -> None:
+                 components: List[Dict[str, Optional[str]]],
+                 *, executable: bool = False) -> None:
         Target.__init__(self, os.path.basename(path), dependencies)
         self._path       = path
         self._components = components
+        self.executable  = executable
 
     def includes(self) -> Iterator[str]:
         yield self._path

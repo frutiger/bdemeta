@@ -7,7 +7,7 @@ from typing import (Callable, cast, Dict, Generic, List, Mapping, Optional,
 Node = TypeVar('Node')
 
 import bdemeta.graph
-from bdemeta.types import CMake, Config, Group, Identification, Package, Target
+from bdemeta.types import Config, Group, Identification, Package, Target
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -46,6 +46,9 @@ def resolve(resolver: Resolver[Node], names: List[str]) -> List[Node]:
         store[t] = resolver.resolve(t, store)
     return [store[t] for t in targets]
 
+def is_executable(path: Path) -> bool:
+    return (path/(path.name + '.m.cpp')).is_file()
+
 def build_components(path: Path) -> List[Dict[str, Optional[str]]]:
     name = path.name
     components = []
@@ -74,6 +77,14 @@ def build_components(path: Path) -> List[Dict[str, Optional[str]]]:
                 'source': str(source),
                 'driver': str(driver) if driver.is_file() else None,
             })
+
+        if is_executable(path):
+            components.append({
+                'header': None,
+                'source': str(path/(name + '.m.cpp')),
+                'driver': None,
+            })
+
     return components
 
 class PackageResolver(Resolver[Package]):
@@ -91,7 +102,10 @@ class PackageResolver(Resolver[Package]):
         deps       = lookup_dependencies(name,
                                          self.dependencies,
                                          resolved_packages)
-        return Package(str(path), deps, components)
+        return Package(str(path),
+                       deps,
+                       components,
+                       executable=is_executable(path))
 
 class TargetResolver(Resolver[Target]):
     def __init__(self, config: Config, incl_test_deps: bool=False) -> None:
@@ -210,7 +224,10 @@ class TargetResolver(Resolver[Target]):
         if identification.type == 'package':
             assert isinstance(identification.path, Path)
             components = build_components(identification.path)
-            result = Package(str(identification.path), deps, components)
+            result = Package(str(identification.path),
+                             deps,
+                             components,
+                             executable=is_executable(identification.path))
             TargetResolver._add_override(identification, name, result)
 
         if identification.type == 'cmake':
