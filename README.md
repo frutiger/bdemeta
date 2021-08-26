@@ -41,7 +41,7 @@ Platforms running Python 3.7 or newer are supported.  Install using `pip`:
   * `cmake [-t] CONFIG TARGET [TARGET ...]`:<br/>
     Generate a CMake lists file
 
-  * `runtests [TEST ...]`:<br/>
+  * `runtests [-e EXECUTOR] [TEST ...]`:<br/>
     Run specified or discovered unit tests
 
 ## Configuration
@@ -176,6 +176,19 @@ For each BDE-type dependency, `bdemeta` generates:
 For each `PkgConfig`-type dependency, `bdemeta` generates a CMake interface
 target consisting of the discovered include directories, compile options and
 link libraries.
+
+## Running Tests
+
+The `runtests` subcommand is provided as a helper utility to iterate through
+multiple test drivers in parallel supporting BDE-style test case status codes.
+In particular, each driver takes the test case number to run as the first
+command-line argument and exits with `0` upon success, `-1` if there is no such
+test case and greater than `0` upon failure.
+
+By default, test drivers are executed by the system.  If a custom
+executor is specified with the `-e` flag, that is invoked instead, supplying
+the test driver and test case as trailing arguments.  The status codes from the
+custom executor must match the rules described in the previous paragraph.
 
 ## License
 

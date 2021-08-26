@@ -5,6 +5,7 @@ import glob
 import json
 import os.path
 import pathlib
+import shlex
 import shutil
 import signal
 import subprocess
@@ -80,6 +81,8 @@ def get_parser() -> argparse.ArgumentParser:
     runtest_parser = subparser.add_parser('runtests',
                                           help='run specified or discovered ' \
                                                'unit tests')
+    runtest_parser.add_argument('-e', '--executor', metavar='<executor>',
+                                help='custom test executor')
     runtest_parser.add_argument('tests', nargs='*', metavar='<test>',
                                 help='test driver glob pattern')
 
@@ -144,10 +147,17 @@ def run(stdout:      TextIO,
         for pattern in patterns:
             for test in pathlib.Path('.').glob(pattern):
                 tests.append((str(test), str(test.resolve())))
+
+        if args.executor:
+            executor = shlex.split(args.executor)
+        else:
+            executor = []
+
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         return bdemeta.testing.run_tests(stdout,
                                          stderr,
                                          runner,
+                                         executor,
                                          get_columns,
                                          tests)
 

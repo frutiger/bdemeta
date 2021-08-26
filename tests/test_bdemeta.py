@@ -308,7 +308,41 @@ class RunTestTest(TestCase):
         stdout2 = StringIO()
         stderr2 = StringIO()
         runner2 = MockRunner('sfsf')
-        run_tests(stdout2, stderr2, runner2, lambda: 80, [('foo.t', 'foo.t')])
+        run_tests(stdout2,
+                  stderr2,
+                  runner2,
+                  [],
+                  lambda: 80,
+                  [('foo.t', 'foo.t')])
+
+        assert(stdout1.getvalue() == stdout2.getvalue())
+        assert(stderr1.getvalue() == stderr2.getvalue())
+        assert(runner1.commands   == runner2.commands)
+
+    def test_running_tests_with_executor(self):
+        stdout1 = StringIO()
+        stderr1 = StringIO()
+        runner1 = MockRunner('sfsf')
+        main(stdout1,
+             stderr1,
+             runner1,
+             lambda: 80,
+             '',
+             [__name__,
+              'runtests',
+              '-e',
+              f'{sys.executable} -c "import sys; sys.exit(0)"',
+              'foo.t'])
+
+        stdout2 = StringIO()
+        stderr2 = StringIO()
+        runner2 = MockRunner('sfsf')
+        run_tests(stdout2,
+                  stderr2,
+                  runner2,
+                  [sys.executable, '-c', 'import sys; sys.exit(0)'],
+                  lambda: 80,
+                  [('foo.t', str(P('foo.t').absolute()))])
 
         assert(stdout1.getvalue() == stdout2.getvalue())
         assert(stderr1.getvalue() == stderr2.getvalue())
@@ -331,6 +365,7 @@ class RunTestTest(TestCase):
         run_tests(stdout2,
                   stderr2,
                   runner2,
+                  [],
                   lambda: 80,
                   [('foo.t', 'foo.t')])
 
