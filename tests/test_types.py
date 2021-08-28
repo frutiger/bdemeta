@@ -3,7 +3,8 @@
 from os.path import join as pj
 from unittest import TestCase
 
-from bdemeta.types import Target, Package, Group, CMake, Pkg, Identification
+from bdemeta.types import (Target, Application, Package, Group, CMake, Pkg,
+                           Identification)
 
 class TestIdentification(TestCase):
     def test_equal_ids(self):
@@ -62,6 +63,44 @@ class TestPackage(TestCase):
         path = pj('path', 'to', 'foo')
         p = Package(path, ['bar'], 'baz')
         assert([path] == list(p.includes()))
+
+class TestApplication(TestCase):
+    def test_name(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [])
+        assert('foo' == a.name)
+
+    def test_dependencies(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [])
+        assert(['bar'] == a.dependencies())
+
+    def test_headers(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [{ 'header': 'baz'}])
+        assert(['baz'] == list(a.headers()))
+
+    def test_no_headers(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [{ 'header': None }])
+        assert([] == list(a.headers()))
+
+    def test_sources(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [{ 'source': 'baz'}])
+        assert(['baz'] == list(a.sources()))
+
+    def test_no_sources(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [{ 'source': None }])
+        assert([] == list(a.sources()))
+
+    def test_drivers(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [{ 'driver': 'baz'}])
+        assert(['baz'] == list(a.drivers()))
+
+    def test_no_drivers(self):
+        a = Application(pj('path', 'to', 'foo'), ['bar'], [{ 'driver': None }])
+        assert([] == list(a.drivers()))
+
+    def test_includes(self):
+        path = pj('path', 'to', 'foo')
+        a = Application(path, ['bar'], 'baz')
+        assert([path] == list(a.includes()))
 
 class TestGroup(TestCase):
     def test_name(self):

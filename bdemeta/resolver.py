@@ -7,7 +7,8 @@ from typing import (Callable, cast, Dict, Generic, List, Mapping, Optional,
 Node = TypeVar('Node')
 
 import bdemeta.graph
-from bdemeta.types import CMake, Config, Group, Identification, Package, Target
+from bdemeta.types import (Application, CMake, Config, Group, Identification,
+                           Package, Target)
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -137,6 +138,13 @@ class TargetResolver(Resolver[Target]):
                 return path
         return None
 
+    def _is_application(Self, root: Path, name: str) -> Optional[Path]:
+        path = root/'applications'/name
+        if path.is_dir() and (path/'package').is_dir() \
+                         and (path/f'{name}.m.cpp').is_file():
+            return path
+        return None
+
     @staticmethod
     def _is_cmake(root: Path, name: str) -> Optional[Path]:
         if root.stem == name and (root/'CMakeLists.txt').is_file():
@@ -156,6 +164,10 @@ class TargetResolver(Resolver[Target]):
             if path is not None:
                 return Identification('package', path)
 
+            path = self._is_application(root, name)
+            if path is not None:
+                return Identification('application', path)
+
             path = TargetResolver._is_cmake(root, name)
             if path is not None:
                 return Identification('cmake', path)
@@ -174,11 +186,16 @@ class TargetResolver(Resolver[Target]):
         result = set()
         if name in self._virtuals:
             result.add(self._virtuals[name])
-        if target.type == 'group' or target.type == 'package':
+        if target.type in {'application', 'group', 'package'}:
+            if target.type == 'application':
+                meta_directory = 'package'
+            else:
+                meta_directory = target.type
+
             assert isinstance(target.path, Path)
-            result |= bde_items(target.path/target.type/(name + '.dep'))
+            result |= bde_items(target.path/meta_directory/(name + '.dep'))
             if self._incl_test_deps:
-                test_deps_path = target.path/target.type/(name + '.t.dep')
+                test_deps_path = target.path/meta_directory/(name + '.t.dep')
                 if test_deps_path.is_file():
                     result |= bde_items(test_deps_path)
         result |= set(self._extra_dependencies.get(name, []))
@@ -211,6 +228,19 @@ class TargetResolver(Resolver[Target]):
             assert isinstance(identification.path, Path)
             components = build_components(identification.path)
             result = Package(str(identification.path), deps, components)
+            TargetResolver._add_override(identification, name, result)
+
+        if identification.type == 'application':
+            assert isinstance(identification.path, Path)
+            components = build_components(identification.path)
+            main_file = str(identification.path/f'{name}.m.cpp')
+            if main_file not in {c['source'] for c in components}:
+                components.append({
+                    'header': None,
+                    'source': main_file,
+                    'driver': None,
+                })
+            result = Application(str(identification.path), deps, components)
             TargetResolver._add_override(identification, name, result)
 
         if identification.type == 'cmake':

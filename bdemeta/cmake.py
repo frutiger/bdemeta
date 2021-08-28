@@ -4,7 +4,7 @@ import argparse
 import os
 from typing import Callable, List, Set, TextIO, Tuple, Union
 
-from bdemeta.types import CMake, Group, Package, Pkg, Target
+from bdemeta.types import Application, CMake, Group, Package, Pkg, Target
 BdeTarget = Union[Group, Package]
 
 LISTS_PROLOGUE = '''\
@@ -14,6 +14,10 @@ project(bdemeta-generated-{targets[0].name})
 '''
 LIBRARY_PROLOGUE = '''\
 add_library(
+    {target.name}
+'''
+APPLICATION_PROLOGUE = '''\
+add_executable(
     {target.name}
 '''
 DEFINE_SYMBOL = '''\
@@ -165,7 +169,11 @@ add_custom_target(
 '''
 
 def generate_bde(target: BdeTarget, out: TextIO) -> None:
-    out.write(LIBRARY_PROLOGUE.format(**locals()))
+    if isinstance(target, Application):
+        out.write(APPLICATION_PROLOGUE.format(**locals()))
+    else:
+        out.write(LIBRARY_PROLOGUE.format(**locals()))
+
     for component in target.sources():
         out.write('    {}\n'.format(component).replace('\\', '/'))
     out.write(COMMAND_EPILOGUE)

@@ -377,6 +377,86 @@ class TargetResolverTest(TestCase):
         gr2 = r.resolve('gr2', { 'gr1': gr1 })
         assert('gr2' == gr2.name)
 
+class ApplicationResolverTest(TestCase):
+    def setUp(self):
+        self.config = {
+            'roots': [
+                P('r'),
+            ]
+        }
+        self._patcher = OsPatcher({
+            'r': {
+                'applications': {
+                    'app1': {
+                        'package': {
+                            'app1.mem': 'app1.m',
+                            'app1.dep': 'gr1'
+                        },
+                        'app1.m.cpp': ''
+                    },
+                    'app2': {
+                        'package': {
+                            'app2.mem': '',
+                            'app2.dep': 'gr1'
+                        },
+                        'app2.m.cpp': ''
+                    },
+                },
+                'groups': {
+                    'gr1': {
+                        'group': {
+                            'gr1.dep': '',
+                            'gr1.mem': 'gr1p1 gr1p2',
+                        },
+                        'gr1p1': {
+                            'package': {
+                                'gr1p1.dep': '',
+                                'gr1p1.mem': '',
+                            },
+                        },
+                        'gr1p2': {
+                            'package': {
+                                'gr1p2.dep': '',
+                                'gr1p2.mem': '',
+                            },
+                        },
+                    },
+                },
+            },
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_application_identification(self):
+        r = TargetResolver(self.config)
+        assert(Identification('application', P('r')/'applications'/'app1') == \
+                                                            r.identify('app1'))
+
+    def test_application_with_one_dependency(self):
+        r = TargetResolver(self.config)
+        assert(set(['gr1']) == r.dependencies('app1'))
+
+    def test_application_resolution_explicit_member(self):
+        r = TargetResolver(self.config)
+
+        gr1 = r.resolve('gr1', {})
+        app1 = r.resolve('app1', { 'gr1': gr1 })
+        assert('app1' == app1.name)
+        assert(gr1 in app1.dependencies())
+        main_file = P('r')/'applications'/'app1'/'app1.m.cpp'
+        assert(str(main_file) in app1.sources())
+
+    def test_application_resolution_implicit_member(self):
+        r = TargetResolver(self.config)
+
+        gr1 = r.resolve('gr1', {})
+        app2 = r.resolve('app2', { 'gr1': gr1 })
+        assert('app2' == app2.name)
+        assert(gr1 in app2.dependencies())
+        main_file = P('r')/'applications'/'app2'/'app2.m.cpp'
+        assert(str(main_file) in app2.sources())
+
 class StandaloneResolverTest(TestCase):
     def setUp(self):
         self.config = {

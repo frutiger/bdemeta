@@ -61,6 +61,13 @@ class Package(Target):
             if component['driver'] is not None:
                 yield component['driver']
 
+class Application(Package):
+    def __init__(self,
+                 path: str,
+                 dependencies: Sequence[Target],
+                 components: List[Dict[str, Optional[str]]]) -> None:
+        Package.__init__(self, path, dependencies, components)
+
 class Group(Target):
     def __init__(self,
                  path: str,

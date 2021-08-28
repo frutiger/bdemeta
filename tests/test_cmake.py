@@ -7,7 +7,7 @@ from unittest    import TestCase
 import itertools
 
 from bdemeta.cmake import generate
-from bdemeta.types import Target, Package, CMake, Pkg
+from bdemeta.types import Application, CMake, Package, Pkg, Target
 
 from tests.cmake_parser import lex, find_commands, find_command, parse
 
@@ -148,6 +148,24 @@ class GenerateTargetTest(TestCase):
                    'source': 'file.cpp',
                    'driver': None }]
         self._test_package('target', pjoin('path', 'target'), [], comps, False)
+
+    def test_application(self):
+        name  = 'app'
+        path  = pjoin('path', 'app')
+        deps = [Target('foo', [])]
+        comps = [{ 'header': None,
+                   'source': 'file.m.cpp',
+                   'driver': None }]
+
+        target = Application(path, deps, comps)
+
+        out = StringIO()
+        generate([target], out)
+
+        cmake = list(lex(out))
+
+        find_command(cmake, 'add_executable', [name, f'file.m.cpp'])
+        find_command(cmake, 'target_link_libraries', [name, 'PUBLIC', 'foo'])
 
     def test_one_comp_package_no_deps_test(self):
         comps = [{ 'header': 'file.h',

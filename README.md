@@ -90,6 +90,9 @@ directory:
 
   * package groups in `<root>/groups/<name>`
   * standalone packages in `<root>/standalones/<name>`
+  * applications in `<root>/applications/<name>` (these must contain at least
+    one `main` file named `<name>.m.cpp`, but may contain additional components
+    if listed in `<root>/applications/<name>/package/<name>.mem`)
   * third party CMake packages in:
       * `<root>/thirdparty/CMakeLists.txt`
       * `<root>/CMakeLists.txt`
@@ -165,13 +168,17 @@ these tests.
 For every target specified to the `cmake` subcommand, `bdemeta` walks all
 transitive dependencies based on the configuration described above.
 
-For each BDE-type dependency, `bdemeta` generates:
+For each BDE-type group or package dependency, `bdemeta` generates:
 
   * a CMake library target
   * a CMake executable target for each test driver
   * a CMake custom target comprising all the test drivers, named `<name>.t`
   * a 'development' install target for the library & headers
   * a 'runtime' install target for the library
+
+For each BDE-type application dependency, `bdemeta` generates a CMake
+executable target, comprising the `<name>.m.cpp` main file in addition to any
+components listed in `<name>.mem`.
 
 For each `PkgConfig`-type dependency, `bdemeta` generates a CMake interface
 target consisting of the discovered include directories, compile options and
