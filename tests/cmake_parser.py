@@ -54,7 +54,14 @@ def partial_match(lhs: Command, rhs: Command) -> bool:
     if lhs[0] != rhs[0]:
         return False
 
-    return all(map(lambda x: x[0] == x[1], zip(lhs[1], rhs[1])))
+    if len(lhs[1]) > len(rhs[1]):
+        return False
+
+    for index, lhs_item in enumerate(lhs[1]):
+        if lhs_item != rhs[1][index]:
+            return False
+
+    return True
 
 def find_commands(commands: List[Command],
                   command:  str,

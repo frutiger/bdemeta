@@ -32,6 +32,17 @@ class TestFindCommand(TestCase):
         with self.assertRaises(LookupError):
             find_command(commands, "add_library")
 
+    def test_shorter_search_succeeds(self):
+        text = StringIO("command(ARG1 ARG2 ARG3)")
+        commands = lex(text)
+        find_command(commands, "command", ["ARG1", "ARG2"])
+
+    def test_longer_search_fails(self):
+        text = StringIO("command(ARG1)")
+        commands = lex(text)
+        with self.assertRaises(LookupError):
+            find_command(commands, "command", ["ARG1", "ARG2"])
+
     def test_ambiguous_command_error(self):
         text = StringIO("if()\nif()")
         commands = lex(text)
