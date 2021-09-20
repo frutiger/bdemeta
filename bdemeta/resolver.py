@@ -8,7 +8,7 @@ Node = TypeVar('Node')
 
 import bdemeta.graph
 from bdemeta.types import (Application, CMake, Config, Group, Identification,
-                           Package, Target)
+                           Package, Pkg, Target)
 
 class TargetNotFoundError(RuntimeError):
     pass
@@ -244,11 +244,11 @@ class TargetResolver(Resolver[Target]):
             TargetResolver._add_override(identification, name, result)
 
         if identification.type == 'cmake':
-            result = bdemeta.types.CMake(name, str(identification.path), deps)
+            result = CMake(name, str(identification.path), deps)
 
         if identification.type == 'pkg_config':
             assert isinstance(identification.package, str)
-            result = bdemeta.types.Pkg(name, identification.package, deps)
+            result = Pkg(name, identification.package, deps)
 
         if identification.type == 'virtual':
             result = Target(name, deps)
