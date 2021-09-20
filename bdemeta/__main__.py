@@ -1,9 +1,7 @@
 # bdemeta
 
 import argparse
-import glob
 import json
-import os.path
 import pathlib
 import shlex
 import shutil
