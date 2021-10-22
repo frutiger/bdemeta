@@ -86,6 +86,31 @@ def get_parser() -> argparse.ArgumentParser:
 
     return parser
 
+def make_resolver(config_path_str: str,
+                  incl_test_deps: bool) -> bdemeta.resolver.TargetResolver:
+    config_path = pathlib.Path(config_path_str)
+    config_dir  = config_path.parent
+    try:
+        with config_path.open() as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        raise NoConfigError(config_path)
+
+    result = []
+    for root in config['roots']:
+        path = pathlib.Path(root)
+        if path.is_absolute():
+            result.append(path)
+        else:
+            result.append(config_dir/path)
+    config['roots'] = result
+
+    for root in config['roots']:
+        if not root.is_dir():
+            raise InvalidPathError(root)
+
+    return bdemeta.resolver.TargetResolver(config, incl_test_deps)
+
 def run(stdout:      TextIO,
         stderr:      TextIO,
         runner:      Runner,
@@ -94,36 +119,13 @@ def run(stdout:      TextIO,
         raw_args:    List[str]) -> int:
     args = get_parser().parse_args(raw_args)
 
-    if args.mode in { 'walk', 'dot', 'cmake' }:
-        config_path = pathlib.Path(args.config)
-        config_dir  = config_path.parent
-        try:
-            with config_path.open() as f:
-                config = json.load(f)
-        except FileNotFoundError:
-            raise NoConfigError(config_path)
-
-        result = []
-        for root in config['roots']:
-            path = pathlib.Path(root)
-            if path.is_absolute():
-                result.append(path)
-            else:
-                result.append(config_dir/path)
-        config['roots'] = result
-
-        for root in config['roots']:
-            if not root.is_dir():
-                raise InvalidPathError(root)
-
-        resolver = bdemeta.resolver.TargetResolver(config,
-                                                   args.incl_test_deps)
-
     if args.mode == 'walk':
+        resolver = make_resolver(args.config, args.incl_test_deps)
         targets = bdemeta.resolver.resolve(resolver, args.targets)
         print(' '.join(t.name for t in targets), file=stdout)
         return 0
     elif args.mode == 'dot':
+        resolver = make_resolver(args.config, args.incl_test_deps)
         targets = bdemeta.resolver.resolve(resolver, args.targets)
         print('digraph G {', file=stdout)
         for t in targets:
@@ -132,6 +134,7 @@ def run(stdout:      TextIO,
         print('}', file=stdout)
         return 0
     elif args.mode == 'cmake':
+        resolver = make_resolver(args.config, args.incl_test_deps)
         targets = bdemeta.resolver.resolve(resolver, args.targets)
         bdemeta.cmake.generate(targets, stdout)
         return 0
@@ -181,6 +184,6 @@ def main(stdout:      TextIO            = sys.stdout,
         return -1
     return 0
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     sys.exit(main())
 

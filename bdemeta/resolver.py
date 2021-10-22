@@ -138,7 +138,7 @@ class TargetResolver(Resolver[Target]):
                 return path
         return None
 
-    def _is_application(Self, root: Path, name: str) -> Optional[Path]:
+    def _is_application(self, root: Path, name: str) -> Optional[Path]:
         path = root/'applications'/name
         if path.is_dir() and (path/'package').is_dir() \
                          and (path/f'{name}.m.cpp').is_file():
@@ -223,14 +223,12 @@ class TargetResolver(Resolver[Target]):
                                list(bde_items(path)))
             result = Group(str(identification.path), deps, packages)
             TargetResolver._add_override(identification, name, result)
-
-        if identification.type == 'package':
+        elif identification.type == 'package':
             assert isinstance(identification.path, Path)
             components = build_components(identification.path)
             result = Package(str(identification.path), deps, components)
             TargetResolver._add_override(identification, name, result)
-
-        if identification.type == 'application':
+        elif identification.type == 'application':
             assert isinstance(identification.path, Path)
             components = build_components(identification.path)
             main_file = str(identification.path/f'{name}.m.cpp')
@@ -242,16 +240,15 @@ class TargetResolver(Resolver[Target]):
                 })
             result = Application(str(identification.path), deps, components)
             TargetResolver._add_override(identification, name, result)
-
-        if identification.type == 'cmake':
+        elif identification.type == 'cmake':
             result = CMake(name, str(identification.path), deps)
-
-        if identification.type == 'pkg_config':
+        elif identification.type == 'pkg_config':
             assert isinstance(identification.package, str)
             result = Pkg(name, identification.package, deps)
-
-        if identification.type == 'virtual':
+        elif identification.type == 'virtual':
             result = Target(name, deps)
+        else: # pragma: no cover
+            raise AssertionError(f'Unknown type: {identification.type}')
 
         if name in self._providers:
             result.has_output = False

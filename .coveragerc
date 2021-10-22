@@ -4,5 +4,5 @@ omit = tests/test_*
        tests/**__init__.py
 
 [report]
-exclude_lines = if __name__ == .__main__.
+exclude_lines = pragma: no cover
 

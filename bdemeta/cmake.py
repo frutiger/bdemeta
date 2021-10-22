@@ -1,8 +1,7 @@
 # bdemeta.cmake
 
-import argparse
 import os
-from typing import Callable, List, Set, TextIO, Tuple, Union
+from typing import List, TextIO, Union
 
 from bdemeta.types import Application, CMake, Group, Package, Pkg, Target
 BdeTarget = Union[Group, Package]
