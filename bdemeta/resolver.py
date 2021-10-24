@@ -122,7 +122,7 @@ class TargetResolver(Resolver[Target]):
         self._providers = set(providers.keys()) - provideds
 
         runtime_libs = cast(List[str], config.get('runtime_libraries', []))
-        self._runtime_libraries = set(runtime_libs)
+        self._runtime_libs = set(runtime_libs)
 
     @staticmethod
     def _is_group(root: Path, name: str) -> Optional[Path]:
@@ -250,14 +250,9 @@ class TargetResolver(Resolver[Target]):
         else: # pragma: no cover
             raise AssertionError(f'Unknown type: {identification.type}')
 
-        if name in self._providers:
-            result.has_output = False
-
-        if any(d.name in self._runtime_libraries for d in deps):
-            result.lazily_bound = True
-
-        if name in self._plugin_tests:
-            result.plugin_tests = True
+        result.has_output   = name not in self._providers
+        result.lazily_bound = any(d.name in self._runtime_libs for d in deps)
+        result.plugin_tests = name in self._plugin_tests
 
         return result
 
