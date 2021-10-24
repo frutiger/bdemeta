@@ -74,8 +74,11 @@ def get_parser() -> argparse.ArgumentParser:
                          help='walk and topologically sort dependencies')
     subparser.add_parser('dot', parents=[resolving_parser],
                          help='generate a directed graph in the DOT language')
-    subparser.add_parser('cmake', parents=[resolving_parser],
-                         help='generate a CMake lists file')
+    cmake_parser = subparser.add_parser('cmake', parents=[resolving_parser],
+                                        help='generate a CMake lists file')
+    cmake_parser.add_argument('-p', '--plugin-tests',
+                              action='store_true',
+                              help='build tests as plugins')
     runtest_parser = subparser.add_parser('runtests',
                                           help='run specified or discovered ' \
                                                'unit tests')
@@ -87,7 +90,8 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 def make_resolver(config_path_str: str,
-                  incl_test_deps: bool) -> bdemeta.resolver.TargetResolver:
+                  incl_test_deps: bool,
+                  plugin_tests: bool) -> bdemeta.resolver.TargetResolver:
     config_path = pathlib.Path(config_path_str)
     config_dir  = config_path.parent
     try:
@@ -109,7 +113,9 @@ def make_resolver(config_path_str: str,
         if not root.is_dir():
             raise InvalidPathError(root)
 
-    return bdemeta.resolver.TargetResolver(config, incl_test_deps)
+    return bdemeta.resolver.TargetResolver(config,
+                                           incl_test_deps,
+                                           plugin_tests)
 
 def run(stdout:      TextIO,
         stderr:      TextIO,
@@ -120,12 +126,16 @@ def run(stdout:      TextIO,
     args = get_parser().parse_args(raw_args)
 
     if args.mode == 'walk':
-        resolver = make_resolver(args.config, args.incl_test_deps)
+        resolver = make_resolver(args.config,
+                                 args.incl_test_deps,
+                                 getattr(args, 'plugin_tests', False))
         targets = bdemeta.resolver.resolve(resolver, args.targets)
         print(' '.join(t.name for t in targets), file=stdout)
         return 0
     elif args.mode == 'dot':
-        resolver = make_resolver(args.config, args.incl_test_deps)
+        resolver = make_resolver(args.config,
+                                 args.incl_test_deps,
+                                 getattr(args, 'plugin_tests', False))
         targets = bdemeta.resolver.resolve(resolver, args.targets)
         print('digraph G {', file=stdout)
         for t in targets:
@@ -134,7 +144,9 @@ def run(stdout:      TextIO,
         print('}', file=stdout)
         return 0
     elif args.mode == 'cmake':
-        resolver = make_resolver(args.config, args.incl_test_deps)
+        resolver = make_resolver(args.config,
+                                 args.incl_test_deps,
+                                 getattr(args, 'plugin_tests', False))
         targets = bdemeta.resolver.resolve(resolver, args.targets)
         bdemeta.cmake.generate(targets, stdout)
         return 0

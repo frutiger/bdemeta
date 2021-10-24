@@ -685,9 +685,6 @@ class PluginTestsTest(TestCase):
             'roots': [
                 P('r'),
             ],
-            'plugin_tests': [
-                'gr2'
-            ]
         }
         self._patcher = OsPatcher({
             'r': {
@@ -735,7 +732,7 @@ class PluginTestsTest(TestCase):
         assert(not gr1.plugin_tests)
 
     def test_plugin_tests(self):
-        r   = TargetResolver(self.config)
+        r   = TargetResolver(self.config, plugin_tests=True)
         gr2 = r.resolve('gr2',  {})
         assert(gr2.plugin_tests)
 

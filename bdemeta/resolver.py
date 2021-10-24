@@ -95,7 +95,10 @@ class PackageResolver(Resolver[Package]):
         return Package(str(path), deps, components)
 
 class TargetResolver(Resolver[Target]):
-    def __init__(self, config: Config, incl_test_deps: bool=False) -> None:
+    def __init__(self,
+                 config: Config,
+                 incl_test_deps: bool=False,
+                 plugin_tests: bool=False) -> None:
         self._roots                     = cast(List[Path], config['roots'])
         self._standalones               = cast(Set[str],
                                                set(config.get('standalones', [])))
@@ -107,8 +110,7 @@ class TargetResolver(Resolver[Target]):
         self._extra_dependencies       = cast(Dict[str, List[str]],
                                               config.get('extra_dependencies',
                                                          {}))
-        self._plugin_tests             = cast(Set[str],
-                                              set(config.get('plugin_tests', [])))
+        self._plugin_tests             = plugin_tests
         self._incl_test_deps           = incl_test_deps
 
         providers = config.get('providers', {})
@@ -252,7 +254,7 @@ class TargetResolver(Resolver[Target]):
 
         result.has_output   = name not in self._providers
         result.lazily_bound = any(d.name in self._runtime_libs for d in deps)
-        result.plugin_tests = name in self._plugin_tests
+        result.plugin_tests = self._plugin_tests
 
         return result
 
