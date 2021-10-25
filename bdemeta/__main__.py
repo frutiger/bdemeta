@@ -69,6 +69,9 @@ def get_parser() -> argparse.ArgumentParser:
                                                'unit tests')
     runtest_parser.add_argument('-e', '--executor', metavar='<executor>',
                                 help='custom test executor')
+    runtest_parser.add_argument('-m', '--max-cases', metavar='<maximum cases>',
+                                type=int, default=100,
+                                help='maximum cases to attempt per driver')
     runtest_parser.add_argument('tests', nargs='*', metavar='<test>',
                                 help='test driver glob pattern')
 
@@ -158,7 +161,8 @@ def run(stdout:      TextIO,
                                          runner,
                                          executor,
                                          get_columns,
-                                         tests)
+                                         tests,
+                                         args.max_cases)
 
 def main(stdout:      TextIO            = sys.stdout,
          stderr:      TextIO            = sys.stderr,

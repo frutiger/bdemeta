@@ -10,7 +10,7 @@ Build and test BDE-style code.
 `bdemeta walk [-t] CONFIG TARGET [TARGET ...]`<br/>
 `bdemeta dot [-t] CONFIG TARGET [TARGET ...]`<br/>
 `bdemeta cmake [-p] [-t] CONFIG TARGET [TARGET ...]`<br/>
-`bdemeta runtests [-e EXECUTOR] [TEST ...]`
+`bdemeta runtests [-e EXECUTOR] [-m MAX_CASES] [TEST ...]`
 
 ## Description
 
@@ -41,7 +41,7 @@ Platforms running Python 3.7 or newer are supported.  Install using `pip`:
   * `cmake [-p] [-t] CONFIG TARGET [TARGET ...]`:<br/>
     Generate a CMake lists file
 
-  * `runtests [-e EXECUTOR] [TEST ...]`:<br/>
+  * `runtests [-e EXECUTOR] [-m MAX_CASES] [TEST ...]`:<br/>
     Run specified or discovered unit tests
 
 ## Configuration
@@ -190,6 +190,9 @@ By default, test drivers are executed by the system.  If a custom
 executor is specified with the `-e` flag, that is invoked instead, supplying
 the test driver and test case as trailing arguments.  The status codes from the
 custom executor must match the rules described in the previous paragraph.
+
+By default, up to 100 cases will be run per test driver.  This can be modified
+by specifiying the number of desired cases with the `-m` flag.
 
 ## License
 

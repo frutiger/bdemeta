@@ -63,7 +63,7 @@ class TestTrim(TestCase):
 class TestRunOne(TestCase):
     def test_driver_with_no_cases(self):
         runner = MockRunner('')
-        test, errors = run_one((runner, [], 'foo', 'foo'))
+        test, errors = run_one((runner, [], -1, 'foo', 'foo'))
         assert('foo' == test)
         assert(1 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -71,7 +71,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_executor(self):
         runner = MockRunner('')
-        test, errors = run_one((runner, ['x', 'y'], 'foo', 'foo'))
+        test, errors = run_one((runner, ['x', 'y'], -1, 'foo', 'foo'))
         assert('foo' == test)
         assert(1 == len(runner.commands))
         assert(['x', 'y', 'foo', '1'] == runner.commands[0])
@@ -79,7 +79,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_four_successes(self):
         runner = MockRunner('ssss')
-        test, errors = run_one((runner, [], 'foo', 'foo'))
+        test, errors = run_one((runner, [], -1, 'foo', 'foo'))
         assert('foo' == test)
         assert(5 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -91,7 +91,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_one_failure(self):
         runner = MockRunner('f')
-        test, errors = run_one((runner, [], 'foo', 'foo'))
+        test, errors = run_one((runner, [], -1, 'foo', 'foo'))
         assert('foo' == test)
         assert(2 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -101,7 +101,7 @@ class TestRunOne(TestCase):
 
     def test_driver_with_mixed_successes_failures(self):
         runner = MockRunner('sfsf')
-        test, errors = run_one((runner, [], 'foo', 'foo'))
+        test, errors = run_one((runner, [], -1, 'foo', 'foo'))
         assert('foo' == test)
         assert(5 == len(runner.commands))
         assert(['foo', '1'] == runner.commands[0])
@@ -112,6 +112,15 @@ class TestRunOne(TestCase):
         assert(2 == len(errors))
         assert(2 in errors)
         assert(4 in errors)
+
+    def test_driver_with_more_cases_than_max(self):
+        runner = MockRunner('ssss')
+        test, errors = run_one((runner, [], 2, 'foo', 'foo'))
+        assert('foo' == test)
+        assert(2 == len(runner.commands))
+        assert(['foo', '1'] == runner.commands[0])
+        assert(['foo', '2'] == runner.commands[1])
+        assert(not errors)
 
 class TestRun(TestCase):
     def test_single_success(self):
@@ -217,4 +226,5 @@ class TestRunnerTest(TestCase):
                               "-c",
                               "import sys; sys.exit(-1)"])
         assert(result == RunResult.NO_SUCH_CASE)
+
 

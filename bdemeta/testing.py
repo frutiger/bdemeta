@@ -1,6 +1,7 @@
 # bdemeta.testing
 
 import enum
+import itertools
 import multiprocessing
 import subprocess
 import sys
@@ -48,18 +49,19 @@ def trim(value: str, max_length: int, trail: str='...') -> str:
         return value
     return value[:max_length - len(trail)] + trail
 
-def run_one(args: Tuple[Runner, List[str], str, str]) -> Tuple[str, Set[int]]:
-    runner, executor, name, test = args
+def run_one(args:      Tuple[Runner, List[str], int, str, str]) \
+                                                       -> Tuple[str, Set[int]]:
+    runner, executor, max_cases, name, test = args
     errors = set()
-    case   = 1
-    while True:
+
+    span = itertools.count(1) if max_cases == -1 else range(1, max_cases + 1)
+    for case in span:
         command = executor + [test, str(case)]
         result  = runner(command)
         if result == RunResult.FAILURE:
             errors.add(case)
         elif result == RunResult.NO_SUCH_CASE:
             break
-        case += 1
     return name, errors
 
 def run_tests(stdout:      TextIO,
@@ -67,12 +69,13 @@ def run_tests(stdout:      TextIO,
               runner:      Runner,
               executor:    List[str],
               get_columns: Callable[[], int],
-              tests:       List[Tuple[str, str]]) -> int:
+              tests:       List[Tuple[str, str]],
+              max_cases:   int=-1) -> int:
     num_drivers  = len(tests) # all test drivers
     run_drivers  = 0          # drivers run so far
 
     with multiprocessing.Pool() as pool:
-        args   = [(runner, executor, t[0], t[1]) for t in tests]
+        args   = [(runner, executor, max_cases, t[0], t[1]) for t in tests]
         jobs   = pool.imap_unordered(run_one, args)
         errors = {}
 
