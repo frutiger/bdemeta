@@ -5,18 +5,14 @@ import shutil
 import sys
 from io       import StringIO
 from pathlib  import Path as P
-from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from bdemeta.__main__ import InvalidArgumentsError, InvalidPathError, \
-                             NoConfigError, run, main, test_runner, \
-                             get_columns, get_parser
+from bdemeta.__main__ import InvalidPathError, \
+                             run, main, test_runner, get_columns, get_parser
 from bdemeta.cmake    import generate
 from bdemeta.resolver import resolve, TargetResolver
 from bdemeta.testing  import run_tests, MockRunner, RunResult
 from tests.patcher    import OsPatcher
-
-import bdemeta
 
 def get_filestore_writer(files):
     def write(path, writer):
