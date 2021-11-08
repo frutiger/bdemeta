@@ -10,7 +10,7 @@ Build and test BDE-style code.
 `bdemeta walk [-t] CONFIG TARGET [TARGET ...]`<br/>
 `bdemeta dot [-t] CONFIG TARGET [TARGET ...]`<br/>
 `bdemeta cmake [-p] [-t] CONFIG TARGET [TARGET ...]`<br/>
-`bdemeta runtests [TEST ...]`
+`bdemeta runtests [-e EXECUTOR] [TEST ...]`
 
 ## Description
 
