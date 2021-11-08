@@ -8,10 +8,10 @@ from pathlib  import Path as P
 from unittest import TestCase
 
 from bdemeta.__main__ import InvalidPathError, \
-                             run, main, test_runner, get_columns, get_parser
+                             run, main, get_columns, get_parser
 from bdemeta.cmake    import generate
 from bdemeta.resolver import resolve, TargetResolver
-from bdemeta.testing  import run_tests, MockRunner, RunResult
+from bdemeta.testing  import run_tests, MockRunner
 from tests.patcher    import OsPatcher
 
 def get_filestore_writer(files):
@@ -369,21 +369,6 @@ class RunTestTest(TestCase):
         assert(stdout1.getvalue() == stdout2.getvalue())
         assert(stderr1.getvalue() == stderr2.getvalue())
         assert(runner1.commands   == runner2.commands)
-
-class TestRunnerTest(TestCase):
-    def test_success(self):
-        result = test_runner([sys.executable, "-c", "import sys; sys.exit(0)"])
-        assert(result == RunResult.SUCCESS)
-
-    def test_failure(self):
-        result = test_runner([sys.executable, "-c", "import sys; sys.exit(1)"])
-        assert(result == RunResult.FAILURE)
-
-    def test_no_such_case(self):
-        result = test_runner([sys.executable,
-                              "-c",
-                              "import sys; sys.exit(-1)"])
-        assert(result == RunResult.NO_SUCH_CASE)
 
 class TerminalSizeTest(TestCase):
     def test_valid(self):

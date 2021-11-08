@@ -1,10 +1,12 @@
 # tests.test_testing
 
 import io
+import sys
 from unittest import TestCase
 from unittest import mock
 
-from bdemeta.testing import trim, run_one, RunResult, run_tests, MockRunner
+from bdemeta.testing import trim, run_one, test_runner, run_tests, \
+                            RunResult, MockRunner
 
 def gen_value(length):
     result = ''
@@ -199,3 +201,19 @@ class TestRun(TestCase):
                        [["foo", "foo"]])
         assert(0 == rc)
         assert('\n' not in stderr.getvalue()[:-1])
+
+class TestRunnerTest(TestCase):
+    def test_success(self):
+        result = test_runner([sys.executable, "-c", "import sys; sys.exit(0)"])
+        assert(result == RunResult.SUCCESS)
+
+    def test_failure(self):
+        result = test_runner([sys.executable, "-c", "import sys; sys.exit(1)"])
+        assert(result == RunResult.FAILURE)
+
+    def test_no_such_case(self):
+        result = test_runner([sys.executable,
+                              "-c",
+                              "import sys; sys.exit(-1)"])
+        assert(result == RunResult.NO_SUCH_CASE)
+

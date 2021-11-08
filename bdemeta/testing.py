@@ -2,6 +2,8 @@
 
 import enum
 import multiprocessing
+import subprocess
+import sys
 from typing import Callable, List, Set, TextIO, Tuple
 
 class RunResult(enum.Enum):
@@ -10,6 +12,20 @@ class RunResult(enum.Enum):
     NO_SUCH_CASE = enum.auto()
 
 Runner = Callable[[List[str]], RunResult]
+
+minus_one_rc = subprocess.run([sys.executable,
+                               '-c',
+                               'import sys; sys.exit(-1)']).returncode
+
+def test_runner(command: List[str]) -> RunResult:
+    try:
+        subprocess.check_output(command, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        if e.returncode == minus_one_rc:
+            return RunResult.NO_SUCH_CASE
+        else:
+            return RunResult.FAILURE
+    return RunResult.SUCCESS
 
 class MockRunner:
     def __init__(self, behaviour: str) -> None:

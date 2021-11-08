@@ -6,7 +6,6 @@ import pathlib
 import shlex
 import shutil
 import signal
-import subprocess
 import sys
 from typing import Callable, List, TextIO
 
@@ -14,7 +13,7 @@ import bdemeta.cmake
 import bdemeta.graph
 import bdemeta.resolver
 import bdemeta.testing
-from bdemeta.testing import Runner, RunResult
+from bdemeta.testing import Runner
 
 class NoConfigError(RuntimeError):
     pass
@@ -25,21 +24,7 @@ class InvalidArgumentsError(RuntimeError):
 class InvalidPathError(RuntimeError):
     pass
 
-minus_one_rc = subprocess.run([sys.executable,
-                               '-c',
-                               'import sys; sys.exit(-1)']).returncode
-
 exec_suffix = '.exe' if sys.platform == 'win32' else ''
-
-def test_runner(command: List[str]) -> RunResult:
-    try:
-        subprocess.check_output(command, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        if e.returncode == minus_one_rc:
-            return RunResult.NO_SUCH_CASE
-        else:
-            return RunResult.FAILURE
-    return RunResult.SUCCESS
 
 def get_columns() -> int:
     return shutil.get_terminal_size().columns
@@ -176,7 +161,7 @@ def run(stdout:      TextIO,
 
 def main(stdout:      TextIO            = sys.stdout,
          stderr:      TextIO            = sys.stderr,
-         runner:      Runner            = test_runner,
+         runner:      Runner            = bdemeta.testing.test_runner,
          get_columns: Callable[[], int] = get_columns,
          exec_suffix: str               = exec_suffix,
          args:        List[str]         = sys.argv) -> int:
