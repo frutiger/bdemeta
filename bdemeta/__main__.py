@@ -147,7 +147,8 @@ def run(stdout:      TextIO,
                 tests.append((str(test), str(test.resolve())))
 
         if args.executor:
-            executor = shlex.split(args.executor)
+            executor = shlex.split(args.executor,
+                                   posix=sys.platform != "win32")
         else:
             executor = []
 
