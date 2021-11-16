@@ -128,6 +128,7 @@ class TestRun(TestCase):
         assert(0 == rc)
 
         assert('foo' in stderr.getvalue())
+        assert('Testing' in stderr.getvalue())
 
     def test_single_failure(self):
         stdout = io.StringIO()

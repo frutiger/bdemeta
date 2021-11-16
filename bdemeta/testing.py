@@ -68,8 +68,6 @@ def run_tests(stdout:      TextIO,
               executor:    List[str],
               get_columns: Callable[[], int],
               tests:       List[Tuple[str, str]]) -> int:
-    status_format = '[{run_drivers}/{num_drivers}] {test}'
-
     num_drivers  = len(tests) # all test drivers
     run_drivers  = 0          # drivers run so far
 
@@ -84,7 +82,8 @@ def run_tests(stdout:      TextIO,
                 errors[test] = test_errors
 
             columns = get_columns()
-            message = trim(status_format.format(**locals()), columns)
+            message = trim(f'[{run_drivers}/{num_drivers}] Testing {test}',
+                           columns)
             if stderr.isatty():
                 print('\r' + ' ' * columns + '\r', end='', file=stderr)
                 print(message, end='', file=stderr, flush=True)
