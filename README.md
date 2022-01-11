@@ -55,6 +55,10 @@ follows:
             "<root>",
             ...
         ],
+        "conan_roots": [
+            "<conan_root>",
+            ...
+        ],
         "standalones": [
             "<standalone>",
             ...
@@ -98,6 +102,11 @@ directory:
 
 The set of directories searched for standalone packages can be extended by
 specifying multiple `<standalone>` directories in the configuration.
+
+### Conan roots
+
+Conan will be relied on to provide binaries for each `<conan_root>` specified.
+`bdemeta` will not attempt to build targets that belong to these roots.
 
 #### Test-only dependencies
 
