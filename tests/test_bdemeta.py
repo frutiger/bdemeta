@@ -193,7 +193,7 @@ class CMakeTest(TestCase):
 class MainTest(TestCase):
     def setUp(self):
         self._patcher = OsPatcher({
-            'bdemeta.json': '{"roots": ["r"]}',
+            'bdemeta.json': '{"roots": ["r", "c"], "conan_roots": ["c"]}',
             'r': {
                 'standalones': {
                     'p1': {
@@ -222,6 +222,16 @@ class MainTest(TestCase):
                     },
                 },
             },
+            'c': {
+                'standalones': {
+                    'c1': {
+                        'package': {
+                            'c1.dep': '',
+                            'c1.mem': '',
+                        },
+                    },
+                },
+            }
         })
 
     def tearDown(self):

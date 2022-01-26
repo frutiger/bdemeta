@@ -3,7 +3,7 @@
 import abc
 from pathlib import Path
 from typing import (Callable, cast, Dict, Generic, List, Mapping, Optional,
-                    Set, Sequence, TypeVar)
+                    Set, Sequence, Tuple, TypeVar)
 Node = TypeVar('Node')
 
 import bdemeta.graph
@@ -12,6 +12,24 @@ from bdemeta.types import (Application, CMake, Config, Group, Identification,
 
 class TargetNotFoundError(RuntimeError):
     pass
+
+class InvalidPathError(RuntimeError):
+    pass
+
+def normalize_roots(roots: List[Path], config_dir: Path) -> List[Path]:
+    result = []
+    for root in roots:
+        path = Path(root)
+        if path.is_absolute():
+            result.append(path)
+        else:
+            result.append(config_dir/path)
+
+    for root in result:
+        if not root.is_dir():
+            raise InvalidPathError(root)
+
+    return result
 
 def bde_items(path: Path) -> Set[str]:
     items: List[str] = []
@@ -100,6 +118,7 @@ class TargetResolver(Resolver[Target]):
                  incl_test_deps: bool=False,
                  plugin_tests: bool=False) -> None:
         self._roots                     = cast(List[Path], config['roots'])
+        self._conan_roots               = cast(List[Path], config.get('conan_roots', []))
         self._standalones               = cast(Set[str],
                                                set(config.get('standalones', [])))
         self._standalones |= {'standalones'}
@@ -156,23 +175,36 @@ class TargetResolver(Resolver[Target]):
             return path
         return None
 
-    def identify(self, name: str) -> Identification:
+    def identify_root(self, name: str) -> Optional[Tuple[Path, Identification]]:
         for root in self._roots:
             path = TargetResolver._is_group(root, name)
             if path is not None:
-                return Identification('group', path)
+                return root, Identification('group', path)
 
             path = self._is_standalone(root, name)
             if path is not None:
-                return Identification('package', path)
+                return root, Identification('package', path)
 
             path = self._is_application(root, name)
             if path is not None:
-                return Identification('application', path)
+                return root, Identification('application', path)
 
             path = TargetResolver._is_cmake(root, name)
             if path is not None:
-                return Identification('cmake', path)
+                return root, Identification('cmake', path)
+
+        return None
+
+    def identify(self, name: str) -> Identification:
+        root_identity = self.identify_root(name)
+        if root_identity:
+            root, identification = root_identity
+
+            if root in self._conan_roots:
+                # This target will be provided by conan.
+                return Identification('conan', root)
+
+            return identification
 
         if name in self._virtuals:
             return Identification('virtual')
@@ -249,6 +281,11 @@ class TargetResolver(Resolver[Target]):
             result = Pkg(name, identification.package, deps)
         elif identification.type == 'virtual':
             result = Target(name, deps)
+        elif identification.type == 'conan':
+            if identification.path and identification.path.stem == name:
+                result = Target(f'CONAN_PKG::{name}-component', deps)
+            else:
+                result = Target(f'CONAN_PKG::{name}', deps)
         else: # pragma: no cover
             raise AssertionError(f'Unknown type: {identification.type}')
 
@@ -257,4 +294,3 @@ class TargetResolver(Resolver[Target]):
         result.plugin_tests = self._plugin_tests
 
         return result
-

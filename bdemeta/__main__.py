@@ -13,15 +13,13 @@ import bdemeta.cmake
 import bdemeta.graph
 import bdemeta.resolver
 import bdemeta.testing
+from bdemeta.resolver import InvalidPathError, normalize_roots
 from bdemeta.testing import Runner
 
 class NoConfigError(RuntimeError):
     pass
 
 class InvalidArgumentsError(RuntimeError):
-    pass
-
-class InvalidPathError(RuntimeError):
     pass
 
 exec_suffix = '.exe' if sys.platform == 'win32' else ''
@@ -88,18 +86,9 @@ def make_resolver(config_path_str: str,
     except FileNotFoundError:
         raise NoConfigError(config_path)
 
-    result = []
-    for root in config['roots']:
-        path = pathlib.Path(root)
-        if path.is_absolute():
-            result.append(path)
-        else:
-            result.append(config_dir/path)
-    config['roots'] = result
-
-    for root in config['roots']:
-        if not root.is_dir():
-            raise InvalidPathError(root)
+    config['roots'] = normalize_roots(config['roots'], config_dir)
+    if 'conan_roots' in config:
+        config['conan_roots'] = normalize_roots(config['conan_roots'], config_dir)
 
     return bdemeta.resolver.TargetResolver(config,
                                            incl_test_deps,

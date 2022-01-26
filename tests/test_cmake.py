@@ -139,6 +139,7 @@ class GenerateTargetTest(TestCase):
 
         find_command(cmake, 'cmake_minimum_required')
         find_command(cmake, 'project')
+        find_command(cmake, 'conan_basic_setup')
 
     def test_empty_package_no_deps_no_test(self):
         self._test_package('target', pjoin('path', 'target'), [], [], False)

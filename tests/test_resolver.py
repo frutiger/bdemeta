@@ -3,10 +3,38 @@
 from pathlib  import Path as P
 from unittest import TestCase
 
-from bdemeta.resolver import bde_items, resolve, PackageResolver, TargetResolver
+from bdemeta.resolver import bde_items, normalize_roots, PackageResolver, resolve, TargetResolver
+from bdemeta.resolver import InvalidPathError
 from bdemeta.resolver import TargetNotFoundError
 from bdemeta.types    import Identification
 from tests.patcher    import OsPatcher
+
+class NormalizeRootsTest(TestCase):
+    def setUp(self):
+        self.config = {
+            'roots': [
+                P('r1'),
+                P('./r2')
+            ]
+        }
+        self._patcher = OsPatcher({
+            'tree': {
+                'r1': {},
+                'r2': {},
+                'r3': 'r3 is a file, not a root'
+            }
+        })
+
+    def tearDown(self):
+        self._patcher.reset()
+
+    def test_normalize_roots(self):
+        roots = normalize_roots(self.config['roots'], 'tree')
+        assert([P('tree/r1'), P('tree/r2')] == roots)
+
+    def test_invalid_root(self):
+        self.assertRaises(InvalidPathError,
+                          normalize_roots, [P('./r3')], 'tree')
 
 class BdeItemsTest(TestCase):
     def setUp(self):
@@ -291,7 +319,11 @@ class TargetResolverTest(TestCase):
         self.config = {
             'roots': [
                 P('r'),
-            ]
+                P('c'),
+            ],
+            'conan_roots': [
+                P('c'),
+            ],
         }
         self._patcher = OsPatcher({
             'r': {
@@ -329,6 +361,30 @@ class TargetResolverTest(TestCase):
                     },
                 },
             },
+            'c': {
+                'groups': {
+                    'c1': {
+                        'group': {
+                            'c1.dep': '',
+                            'c1.mem': 'c1p1',
+                        },
+                        'c1p1': {
+                            'package': {
+                                'c1p1.dep': '',
+                                'c1p1.mem': '',
+                            },
+                        },
+                    },
+                },
+                'standalones': {
+                    'c': {
+                        'package': {
+                            'c.dep': '',
+                            'c.mem': '',
+                        },
+                    },
+                },
+            },
         })
 
     def tearDown(self):
@@ -338,6 +394,15 @@ class TargetResolverTest(TestCase):
         r = TargetResolver(self.config)
         assert(Identification('group', P('r')/'groups'/'gr1') == \
                                                              r.identify('gr1'))
+
+    def test_conan_group_identification(self):
+        r = TargetResolver(self.config)
+        assert(Identification('conan', P('c')) == r.identify('c1'))
+
+    def test_conan_target_resolver(self):
+        r = TargetResolver(self.config)
+        assert('CONAN_PKG::c-component' == r.resolve('c', {}).name)
+        assert('CONAN_PKG::c1' == r.resolve('c1', {}).name)
 
     def test_group_with_one_dependency(self):
         r = TargetResolver(self.config)
@@ -735,4 +800,3 @@ class PluginTestsTest(TestCase):
         r   = TargetResolver(self.config, plugin_tests=True)
         gr2 = r.resolve('gr2',  {})
         assert(gr2.plugin_tests)
-

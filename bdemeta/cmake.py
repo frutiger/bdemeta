@@ -10,6 +10,12 @@ LISTS_PROLOGUE = '''\
 cmake_minimum_required(VERSION 3.8)
 project(bdemeta-generated-{targets[0].name})
 
+set(CONAN_BLD_INFO ${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
+if(EXISTS ${{CONAN_BLD_INFO}})
+    include(${{CONAN_BLD_INFO}})
+    conan_basic_setup(TARGETS)
+endif()
+
 '''
 LIBRARY_PROLOGUE = '''\
 add_library(
